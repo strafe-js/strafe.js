@@ -1,15 +1,20 @@
 // File generated from our OpenAPI spec by Scalar. See README.md for details.
 
-import { APIPromise, type APIResponseProps } from './api-promise';
-import * as Errors from './error';
-import { uuid4 } from './internal/utils/uuid';
-import { validatePositiveInteger, isAbsoluteURL, safeJSON, isEmptyObj } from './internal/utils/values';
-import { sleep } from './internal/utils/sleep';
-import { castToError, isAbortError } from './internal/errors';
-import { getPlatformHeaders } from './internal/detect-platform';
-import * as Shims from './internal/shims';
-import * as Opts from './internal/request-options';
-import { readEnv } from './internal/utils/env';
+import { APIPromise, type APIResponseProps } from "./api-promise";
+import * as Errors from "./error";
+import { uuid4 } from "./internal/utils/uuid";
+import {
+  validatePositiveInteger,
+  isAbsoluteURL,
+  safeJSON,
+  isEmptyObj,
+} from "./internal/utils/values";
+import { sleep } from "./internal/utils/sleep";
+import { castToError, isAbortError } from "./internal/errors";
+import { getPlatformHeaders } from "./internal/detect-platform";
+import * as Shims from "./internal/shims";
+import * as Opts from "./internal/request-options";
+import { readEnv } from "./internal/utils/env";
 import {
   formatRequestDetails,
   loggerFor,
@@ -17,16 +22,33 @@ import {
   redactUrl,
   type LogLevel,
   type Logger,
-} from './internal/utils/log';
-export type { Logger, LogLevel } from './internal/utils/log';
-import type { RequestInit, RequestInfo, BodyInit, Fetch } from './internal/builtin-types';
-import { buildHeaders, type HeadersLike, type NullableHeaders } from './internal/headers';
-import type { FinalRequestOptions, RequestOptions } from './internal/request-options';
-import type { HTTPMethod, FinalizedRequestInit, MergedRequestInit, PromiseOrValue } from './internal/types';
-import { stringifyQuery } from './internal/utils/query';
-import { toFile } from './core/uploads';
-import { VERSION } from './version';
-import { Users } from './resources/users/users';
+} from "./internal/utils/log";
+export type { Logger, LogLevel } from "./internal/utils/log";
+import type {
+  RequestInit,
+  RequestInfo,
+  BodyInit,
+  Fetch,
+} from "./internal/builtin-types";
+import {
+  buildHeaders,
+  type HeadersLike,
+  type NullableHeaders,
+} from "./internal/headers";
+import type {
+  FinalRequestOptions,
+  RequestOptions,
+} from "./internal/request-options";
+import type {
+  HTTPMethod,
+  FinalizedRequestInit,
+  MergedRequestInit,
+  PromiseOrValue,
+} from "./internal/types";
+import { stringifyQuery } from "./internal/utils/query";
+import { toFile } from "./core/uploads";
+import { VERSION } from "./version";
+import { Users } from "./resources/users/users";
 import {
   Spaces,
   type Space,
@@ -35,7 +57,7 @@ import {
   type SpaceListAuditLogResponse,
   type SpaceUpdateParams,
   type SpaceListAuditLogParams,
-} from './resources/spaces/spaces';
+} from "./resources/spaces/spaces";
 import {
   Messages,
   type Message,
@@ -58,8 +80,13 @@ import {
   type MessageDeleteReactionParams,
   type MessageListReactorsParams,
   type MessageUploadAttachmentParams,
-} from './resources/messages';
-import { Rooms, type RoomListResponse, type RoomCreateParams, type RoomAckParams } from './resources/rooms';
+} from "./resources/messages";
+import {
+  Rooms,
+  type RoomListResponse,
+  type RoomCreateParams,
+  type RoomAckParams,
+} from "./resources/rooms";
 import {
   OAuth2,
   type OAuth2Token,
@@ -67,13 +94,13 @@ import {
   type OAuth2Oauth2RevokeResponse,
   type OAuth2Oauth2TokenParams,
   type OAuth2Oauth2RevokeParams,
-} from './resources/o-auth2';
+} from "./resources/o-auth2";
 
 export type AuthTokenProvider = () => string | Promise<string>;
 
 const environments = {
-  app_strafe_chat_instance: 'https://app.strafe.chat/api',
-  custom_instance: 'https://your-instance.example/api',
+  app_strafe_chat_instance: "https://app.strafe.chat/api",
+  custom_instance: "https://your-instance.example/api",
 };
 type Environment = keyof typeof environments;
 
@@ -178,9 +205,9 @@ export type StrafeBotOptions = ClientOptions;
  * API Client for interfacing with the StrafeBot API.
  */
 export class StrafeBot {
-  botAuth: string | AuthTokenProvider;
-  bearerAuth: string | AuthTokenProvider;
-  oAuth2: string | AuthTokenProvider;
+  botAuth: string | AuthTokenProvider | undefined;
+  bearerAuth: string | AuthTokenProvider | undefined;
+  oAuth2: string | AuthTokenProvider | undefined;
 
   baseURL: string;
   maxRetries: number;
@@ -211,28 +238,12 @@ export class StrafeBot {
    * @param {Record<string, string | undefined>} opts.defaultQuery - Default query parameters to include with every request to the API.
    */
   constructor({
-    baseURL = readEnv('STRAFE_BASE_URL'),
-    botAuth = readEnv('BOT_AUTH'),
-    bearerAuth = readEnv('BEARER_AUTH'),
-    oAuth2 = readEnv('O_AUTH2'),
+    baseURL = readEnv("STRAFE_BASE_URL"),
+    botAuth = readEnv("BOT_AUTH"),
+    bearerAuth = readEnv("BEARER_AUTH"),
+    oAuth2 = readEnv("O_AUTH2"),
     ...opts
   }: ClientOptions = {}) {
-    if (botAuth === undefined) {
-      throw new Errors.StrafeBotError(
-        "The BOT_AUTH environment variable is missing or empty; either provide it, or instantiate the StrafeBot client with an botAuth option, like new StrafeBot({ botAuth: 'My Bot Auth' }).",
-      );
-    }
-    if (bearerAuth === undefined) {
-      throw new Errors.StrafeBotError(
-        "The BEARER_AUTH environment variable is missing or empty; either provide it, or instantiate the StrafeBot client with an bearerAuth option, like new StrafeBot({ bearerAuth: 'My Bearer Auth' }).",
-      );
-    }
-    if (oAuth2 === undefined) {
-      throw new Errors.StrafeBotError(
-        "The O_AUTH2 environment variable is missing or empty; either provide it, or instantiate the StrafeBot client with an oAuth2 option, like new StrafeBot({ oAuth2: 'My O Auth2' }).",
-      );
-    }
-
     const options: ClientOptions = {
       botAuth,
       bearerAuth,
@@ -240,47 +251,74 @@ export class StrafeBot {
       ...opts,
       baseURL: baseURL || null,
     };
-    const environment = options.environment ?? 'app_strafe_chat_instance';
-    const baseURLOverridden = baseURL !== null && baseURL !== undefined && baseURL !== '';
+    const environment = options.environment ?? "app_strafe_chat_instance";
+    const baseURLOverridden =
+      baseURL !== null && baseURL !== undefined && baseURL !== "";
     if (baseURLOverridden && options.environment)
       throw new Errors.StrafeBotError(
-        'Ambiguous URL; The `baseURL` option (or STRAFE_BASE_URL env var) and the `environment` option are given. If you want to use the environment you must pass baseURL: null',
+        "Ambiguous URL; The `baseURL` option (or STRAFE_BASE_URL env var) and the `environment` option are given. If you want to use the environment you must pass baseURL: null",
       );
     const defaultBaseURL = environments[environment];
     this.baseURL = options.baseURL || defaultBaseURL;
-    this.timeout = options.timeout ?? StrafeBot.DEFAULT_TIMEOUT /* 1 minute */;
+    this.timeout = options.timeout ?? StrafeBot.DEFAULT_TIMEOUT; /* 1 minute */
     this.logger = options.logger ?? console;
-    const defaultLogLevel = 'warn';
+    const defaultLogLevel = "warn";
     // Set default logLevel early so that we can log a warning in parseLogLevel.
     this.logLevel = defaultLogLevel;
     this.logLevel =
-      parseLogLevel(options.logLevel, 'ClientOptions.logLevel', this) ??
-      parseLogLevel(readEnv('STRAFE_LOG'), 'process.env["STRAFE_LOG"]', this) ??
+      parseLogLevel(options.logLevel, "ClientOptions.logLevel", this) ??
+      parseLogLevel(readEnv("STRAFE_LOG"), 'process.env["STRAFE_LOG"]', this) ??
       defaultLogLevel;
     this.fetchOptions = options.fetchOptions;
     this.maxRetries = options.maxRetries ?? 2;
     this.fetch = options.fetch ?? Shims.getDefaultFetch();
     this.#encoder = Opts.FallbackEncoder;
 
-    const customHeadersEnv = readEnv('STRAFE_CUSTOM_HEADERS');
+    const customHeadersEnv = readEnv("STRAFE_CUSTOM_HEADERS");
     if (customHeadersEnv) {
       const parsed: Record<string, string> = {};
-      for (const line of customHeadersEnv.split('\n')) {
-        const colon = line.indexOf(':');
+      for (const line of customHeadersEnv.split("\n")) {
+        const colon = line.indexOf(":");
         if (colon >= 0) {
-          parsed[line.substring(0, colon).trim()] = line.substring(colon + 1).trim();
+          parsed[line.substring(0, colon).trim()] = line
+            .substring(colon + 1)
+            .trim();
         }
       }
       options.defaultHeaders = { ...parsed, ...options.defaultHeaders };
     }
 
-    this._options = { ...options, baseURL: baseURLOverridden ? this.baseURL : undefined };
+    this._options = {
+      ...options,
+      baseURL: baseURLOverridden ? this.baseURL : undefined,
+    };
     this._baseURLOverridden = baseURLOverridden;
     this._defaultBaseURL = defaultBaseURL;
 
     this.botAuth = botAuth;
     this.bearerAuth = bearerAuth;
     this.oAuth2 = oAuth2;
+  }
+
+  /**
+   * Set the bot token for authentication.
+   * If the token does not start with 'Bot ' or 'Bearer ', 'Bot ' will be prepended automatically.
+   */
+  login(token: string): this {
+    if (token && !token.startsWith("Bot ") && !token.startsWith("Bearer ")) {
+      this.botAuth = `Bot ${token}`;
+    } else {
+      this.botAuth = token;
+    }
+    return this;
+  }
+
+  /**
+   * Set the bot token for authentication.
+   * If the token does not start with 'Bot ' or 'Bearer ', 'Bot ' will be prepended automatically.
+   */
+  setToken(token: string): this {
+    return this.login(token);
   }
 
   withOptions(options: Partial<ClientOptions>): this {
@@ -291,26 +329,38 @@ export class StrafeBot {
     // the default environment. Passing both explicitly still reaches the constructor guard, which is
     // intentional. An environment override clears the base URL as `null`, because only `null` skips the
     // constructor default that would re-read the base-URL env var and be ambiguous all over again.
-    const inheritedBaseURL = this.#baseURLOverridden() ? this.baseURL : undefined;
-    const inheritedEnvironment = inheritedBaseURL ? undefined : this._options.environment;
+    const inheritedBaseURL = this.#baseURLOverridden()
+      ? this.baseURL
+      : undefined;
+    const inheritedEnvironment = inheritedBaseURL
+      ? undefined
+      : this._options.environment;
     const nextBaseURL =
-      options.baseURL !== undefined ? options.baseURL : options.environment ? null : inheritedBaseURL;
-    const nextEnvironment = options.environment ?? (options.baseURL ? undefined : inheritedEnvironment);
-    const client = new (this.constructor as new (props: ClientOptions) => this)({
-      ...this._options,
-      maxRetries: this.maxRetries,
-      timeout: this.timeout,
-      logger: this.logger,
-      logLevel: this.logLevel,
-      fetch: this.fetch,
-      fetchOptions: this.fetchOptions,
-      botAuth: this.botAuth,
-      bearerAuth: this.bearerAuth,
-      oAuth2: this.oAuth2,
-      ...options,
-      baseURL: nextBaseURL,
-      environment: nextEnvironment,
-    });
+      options.baseURL !== undefined
+        ? options.baseURL
+        : options.environment
+          ? null
+          : inheritedBaseURL;
+    const nextEnvironment =
+      options.environment ??
+      (options.baseURL ? undefined : inheritedEnvironment);
+    const client = new (this.constructor as new (props: ClientOptions) => this)(
+      {
+        ...this._options,
+        maxRetries: this.maxRetries,
+        timeout: this.timeout,
+        logger: this.logger,
+        logLevel: this.logLevel,
+        fetch: this.fetch,
+        fetchOptions: this.fetchOptions,
+        botAuth: this.botAuth,
+        bearerAuth: this.bearerAuth,
+        oAuth2: this.oAuth2,
+        ...options,
+        baseURL: nextBaseURL,
+        environment: nextEnvironment,
+      },
+    );
     return client;
   }
 
@@ -349,13 +399,15 @@ export class StrafeBot {
     query: Record<string, unknown> | null | undefined,
     defaultBaseURL?: string | undefined,
   ): string {
-    const baseURL = (!this.#baseURLOverridden() && defaultBaseURL) || this.baseURL;
+    const baseURL =
+      (!this.#baseURLOverridden() && defaultBaseURL) || this.baseURL;
     // Guarantee exactly one "/" between baseURL and path so that bases without a trailing slash
     // and paths without a leading slash do not fuse into a malformed URL (e.g. ".../v1" + "widgets").
     const url = isAbsoluteURL(path)
       ? new URL(path)
       : new URL(
-          (baseURL.endsWith('/') ? baseURL : baseURL + '/') + (path.startsWith('/') ? path.slice(1) : path),
+          (baseURL.endsWith("/") ? baseURL : baseURL + "/") +
+            (path.startsWith("/") ? path.slice(1) : path),
         );
 
     const defaultQuery = this.defaultQuery();
@@ -364,7 +416,7 @@ export class StrafeBot {
       query = { ...pathQuery, ...defaultQuery, ...query };
     }
 
-    if (typeof query === 'object' && query && !Array.isArray(query)) {
+    if (typeof query === "object" && query && !Array.isArray(query)) {
       url.search = this.stringifyQuery(query);
     }
 
@@ -387,24 +439,39 @@ export class StrafeBot {
     { url, options }: { url: string; options: FinalRequestOptions },
   ): Promise<void> {}
 
-  get<Rsp>(path: string, opts?: PromiseOrValue<RequestOptions>): APIPromise<Rsp> {
-    return this.methodRequest('get', path, opts);
+  get<Rsp>(
+    path: string,
+    opts?: PromiseOrValue<RequestOptions>,
+  ): APIPromise<Rsp> {
+    return this.methodRequest("get", path, opts);
   }
 
-  post<Rsp>(path: string, opts?: PromiseOrValue<RequestOptions>): APIPromise<Rsp> {
-    return this.methodRequest('post', path, opts);
+  post<Rsp>(
+    path: string,
+    opts?: PromiseOrValue<RequestOptions>,
+  ): APIPromise<Rsp> {
+    return this.methodRequest("post", path, opts);
   }
 
-  patch<Rsp>(path: string, opts?: PromiseOrValue<RequestOptions>): APIPromise<Rsp> {
-    return this.methodRequest('patch', path, opts);
+  patch<Rsp>(
+    path: string,
+    opts?: PromiseOrValue<RequestOptions>,
+  ): APIPromise<Rsp> {
+    return this.methodRequest("patch", path, opts);
   }
 
-  put<Rsp>(path: string, opts?: PromiseOrValue<RequestOptions>): APIPromise<Rsp> {
-    return this.methodRequest('put', path, opts);
+  put<Rsp>(
+    path: string,
+    opts?: PromiseOrValue<RequestOptions>,
+  ): APIPromise<Rsp> {
+    return this.methodRequest("put", path, opts);
   }
 
-  delete<Rsp>(path: string, opts?: PromiseOrValue<RequestOptions>): APIPromise<Rsp> {
-    return this.methodRequest('delete', path, opts);
+  delete<Rsp>(
+    path: string,
+    opts?: PromiseOrValue<RequestOptions>,
+  ): APIPromise<Rsp> {
+    return this.methodRequest("delete", path, opts);
   }
 
   private methodRequest<Rsp>(
@@ -423,7 +490,10 @@ export class StrafeBot {
     options: PromiseOrValue<FinalRequestOptions>,
     remainingRetries: number | null = null,
   ): APIPromise<Rsp> {
-    return new APIPromise(this, this.makeRequest(options, remainingRetries, undefined));
+    return new APIPromise(
+      this,
+      this.makeRequest(options, remainingRetries, undefined),
+    );
   }
 
   private async makeRequest(
@@ -446,8 +516,12 @@ export class StrafeBot {
     await this.prepareRequest(req, { url, options });
 
     /** Not an API request ID, just for correlating local log entries. */
-    const requestLogID = 'log_' + ((Math.random() * (1 << 24)) | 0).toString(16).padStart(6, '0');
-    const retryLogStr = retryOfRequestLogID === undefined ? '' : `, retryOf: ${retryOfRequestLogID}`;
+    const requestLogID =
+      "log_" + ((Math.random() * (1 << 24)) | 0).toString(16).padStart(6, "0");
+    const retryLogStr =
+      retryOfRequestLogID === undefined
+        ? ""
+        : `, retryOf: ${retryOfRequestLogID}`;
     const startTime = Date.now();
 
     loggerFor(this).debug(
@@ -466,7 +540,12 @@ export class StrafeBot {
     }
 
     const controller = new AbortController();
-    const response = await this.fetchWithTimeout(url, req, timeout, controller).catch(castToError);
+    const response = await this.fetchWithTimeout(
+      url,
+      req,
+      timeout,
+      controller,
+    ).catch(castToError);
     const headersTime = Date.now();
 
     if (response instanceof globalThis.Error) {
@@ -480,13 +559,16 @@ export class StrafeBot {
       // others do not provide enough information to distinguish timeouts from other connection errors
       const isTimeout =
         isAbortError(response) ||
-        /timed? ?out/i.test(String(response) + ('cause' in response ? String(response.cause) : ''));
+        /timed? ?out/i.test(
+          String(response) +
+            ("cause" in response ? String(response.cause) : ""),
+        );
       if (retriesRemaining) {
         loggerFor(this).info(
-          `[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - ${retryMessage}`,
+          `[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} - ${retryMessage}`,
         );
         loggerFor(this).debug(
-          `[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} (${retryMessage})`,
+          `[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} (${retryMessage})`,
           formatRequestDetails({
             retryOfRequestLogID,
             url,
@@ -494,13 +576,17 @@ export class StrafeBot {
             message: response.message,
           }),
         );
-        return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID);
+        return this.retryRequest(
+          options,
+          retriesRemaining,
+          retryOfRequestLogID ?? requestLogID,
+        );
       }
       loggerFor(this).info(
-        `[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - error; no more retries left`,
+        `[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} - error; no more retries left`,
       );
       loggerFor(this).debug(
-        `[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} (error; no more retries left)`,
+        `[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} (error; no more retries left)`,
         formatRequestDetails({
           retryOfRequestLogID,
           url,
@@ -515,7 +601,7 @@ export class StrafeBot {
     }
 
     const responseInfo = `[${requestLogID}${retryLogStr}] ${req.method} ${redactUrl(url)} ${
-      response.ok ? 'succeeded' : 'failed'
+      response.ok ? "succeeded" : "failed"
     } with status ${response.status} in ${headersTime - startTime}ms`;
 
     if (!response.ok) {
@@ -544,11 +630,15 @@ export class StrafeBot {
         );
       }
 
-      const retryMessage = shouldRetry ? `error; no more retries left` : `error; not retryable`;
+      const retryMessage = shouldRetry
+        ? `error; no more retries left`
+        : `error; not retryable`;
 
       loggerFor(this).info(`${responseInfo} - ${retryMessage}`);
 
-      const errText = await response.text().catch((err: any) => castToError(err).message);
+      const errText = await response
+        .text()
+        .catch((err: any) => castToError(err).message);
       const errJSON = safeJSON(errText) as any;
       const errMessage = errJSON ? undefined : errText;
 
@@ -564,7 +654,12 @@ export class StrafeBot {
         }),
       );
 
-      const err = this.makeStatusError(response.status, errJSON, errMessage, response.headers);
+      const err = this.makeStatusError(
+        response.status,
+        errJSON,
+        errMessage,
+        response.headers,
+      );
       throw err;
     }
 
@@ -580,7 +675,14 @@ export class StrafeBot {
       }),
     );
 
-    return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
+    return {
+      response,
+      options,
+      controller,
+      requestLogID,
+      retryOfRequestLogID,
+      startTime,
+    };
   }
 
   async fetchWithTimeout(
@@ -592,18 +694,21 @@ export class StrafeBot {
     const { signal, method, ...options } = init || {};
     const abort = this._makeAbort(controller);
     if (signal?.aborted) abort();
-    else if (signal) signal.addEventListener('abort', abort, { once: true });
+    else if (signal) signal.addEventListener("abort", abort, { once: true });
 
     const timeout = setTimeout(abort, ms);
 
     const isReadableBody =
-      ((globalThis as any).ReadableStream && options.body instanceof (globalThis as any).ReadableStream) ||
-      (typeof options.body === 'object' && options.body !== null && Symbol.asyncIterator in options.body);
+      ((globalThis as any).ReadableStream &&
+        options.body instanceof (globalThis as any).ReadableStream) ||
+      (typeof options.body === "object" &&
+        options.body !== null &&
+        Symbol.asyncIterator in options.body);
 
     const fetchOptions: RequestInit = {
       signal: controller.signal as any,
-      ...(isReadableBody ? { duplex: 'half' } : {}),
-      method: 'GET',
+      ...(isReadableBody ? { duplex: "half" } : {}),
+      method: "GET",
       ...options,
     };
     if (method) {
@@ -622,11 +727,11 @@ export class StrafeBot {
 
   private async shouldRetry(response: Response): Promise<boolean> {
     // Note this is not a standard header.
-    const shouldRetryHeader = response.headers.get('x-should-retry');
+    const shouldRetryHeader = response.headers.get("x-should-retry");
 
     // If the server explicitly says whether or not to retry, obey.
-    if (shouldRetryHeader === 'true') return true;
-    if (shouldRetryHeader === 'false') return false;
+    if (shouldRetryHeader === "true") return true;
+    if (shouldRetryHeader === "false") return false;
 
     // Retry on request timeouts.
     if (response.status === 408) return true;
@@ -652,7 +757,7 @@ export class StrafeBot {
     let timeoutMillis: number | undefined;
 
     // Note the `retry-after-ms` header may not be standard, but is a good idea and we'd like proactive support for it.
-    const retryAfterMillisHeader = responseHeaders?.get('retry-after-ms');
+    const retryAfterMillisHeader = responseHeaders?.get("retry-after-ms");
     if (retryAfterMillisHeader) {
       const timeoutMs = parseFloat(retryAfterMillisHeader);
       if (!Number.isNaN(timeoutMs)) {
@@ -661,7 +766,7 @@ export class StrafeBot {
     }
 
     // About the Retry-After header: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
-    const retryAfterHeader = responseHeaders?.get('retry-after');
+    const retryAfterHeader = responseHeaders?.get("retry-after");
     if (retryAfterHeader && !timeoutMillis) {
       const timeoutSeconds = parseFloat(retryAfterHeader);
       if (!Number.isNaN(timeoutSeconds)) {
@@ -684,21 +789,30 @@ export class StrafeBot {
       timeoutMillis > maxRetryAfterMillis
     ) {
       const maxRetries = options.maxRetries ?? this.maxRetries;
-      timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
+      timeoutMillis = this.calculateDefaultRetryTimeoutMillis(
+        retriesRemaining,
+        maxRetries,
+      );
     }
     await sleep(timeoutMillis);
 
     return this.makeRequest(options, retriesRemaining - 1, requestLogID);
   }
 
-  private calculateDefaultRetryTimeoutMillis(retriesRemaining: number, maxRetries: number): number {
+  private calculateDefaultRetryTimeoutMillis(
+    retriesRemaining: number,
+    maxRetries: number,
+  ): number {
     const initialRetryDelay = 0.5;
     const maxRetryDelay = 8.0;
 
     const numRetries = maxRetries - retriesRemaining;
 
     // Apply exponential backoff, but not more than the max.
-    const sleepSeconds = Math.min(initialRetryDelay * Math.pow(2, numRetries), maxRetryDelay);
+    const sleepSeconds = Math.min(
+      initialRetryDelay * Math.pow(2, numRetries),
+      maxRetryDelay,
+    );
 
     // Apply some jitter, take up to at most 25 percent of the retry time.
     const jitter = 1 - Math.random() * 0.25;
@@ -713,8 +827,13 @@ export class StrafeBot {
     const options = { ...inputOptions };
     const { method, path, query, defaultBaseURL } = options;
 
-    const url = this.buildURL(path!, query as Record<string, unknown>, defaultBaseURL);
-    if ('timeout' in options) validatePositiveInteger('timeout', options.timeout);
+    const url = this.buildURL(
+      path!,
+      query as Record<string, unknown>,
+      defaultBaseURL,
+    );
+    if ("timeout" in options)
+      validatePositiveInteger("timeout", options.timeout);
     options.timeout = options.timeout ?? this.timeout;
     const { bodyHeaders, body } = this.buildBody({ options });
     // Headers read the caller's own options, not the copy defaulted above: `X-Scalar-Timeout`
@@ -733,7 +852,9 @@ export class StrafeBot {
       headers: reqHeaders,
       ...(options.signal && { signal: options.signal }),
       ...((globalThis as any).ReadableStream &&
-        body instanceof (globalThis as any).ReadableStream && { duplex: 'half' }),
+        body instanceof (globalThis as any).ReadableStream && {
+          duplex: "half",
+        }),
       // `buildBody` already collapses no-body into `undefined`; here we only need to drop that
       // sentinel. A truthiness spread would also strip an intentional empty-string body.
       ...(body !== undefined && { body }),
@@ -757,18 +878,21 @@ export class StrafeBot {
     url: string;
   }): Promise<Headers> {
     let idempotencyHeaders: HeadersLike = {};
-    if (this.idempotencyHeader && method !== 'get') {
-      if (!options.idempotencyKey) options.idempotencyKey = this.defaultIdempotencyKey();
+    if (this.idempotencyHeader && method !== "get") {
+      if (!options.idempotencyKey)
+        options.idempotencyKey = this.defaultIdempotencyKey();
       idempotencyHeaders[this.idempotencyHeader] = options.idempotencyKey;
     }
 
     const headers = buildHeaders([
       idempotencyHeaders,
       {
-        Accept: 'application/json',
-        'User-Agent': this.getUserAgent(),
-        'X-Scalar-Retry-Count': String(retryCount),
-        ...(options.timeout ? { 'X-Scalar-Timeout': String(Math.trunc(options.timeout / 1000)) } : {}),
+        Accept: "application/json",
+        "User-Agent": this.getUserAgent(),
+        "X-Scalar-Retry-Count": String(retryCount),
+        ...(options.timeout
+          ? { "X-Scalar-Timeout": String(Math.trunc(options.timeout / 1000)) }
+          : {}),
         ...getPlatformHeaders(),
       },
       await this.authHeaders(options),
@@ -789,7 +913,11 @@ export class StrafeBot {
     return () => controller.abort();
   }
 
-  private buildBody({ options: { body, headers: rawHeaders } }: { options: FinalRequestOptions }): {
+  private buildBody({
+    options: { body, headers: rawHeaders },
+  }: {
+    options: FinalRequestOptions;
+  }): {
     bodyHeaders: HeadersLike;
     body: BodyInit | undefined;
   } {
@@ -813,7 +941,7 @@ export class StrafeBot {
       // ndjson payload reaches the wire byte-for-byte. A string with no `content-type` came
       // from a body the document declared as JSON — `{ "type": "string" }` — and encoding it
       // below is what puts the quotes the server parses for around it.
-      (typeof body === 'string' && headers.values.has('content-type')) ||
+      (typeof body === "string" && headers.values.has("content-type")) ||
       // `Blob` is superset of `File`
       ((globalThis as any).Blob && body instanceof (globalThis as any).Blob) ||
       // `FormData` -> `multipart/form-data`
@@ -821,21 +949,27 @@ export class StrafeBot {
       // `URLSearchParams` -> `application/x-www-form-urlencoded`
       body instanceof URLSearchParams ||
       // Send chunked stream (each chunk has own `length`)
-      ((globalThis as any).ReadableStream && body instanceof (globalThis as any).ReadableStream)
+      ((globalThis as any).ReadableStream &&
+        body instanceof (globalThis as any).ReadableStream)
     ) {
       return { bodyHeaders: undefined, body: body as BodyInit };
     } else if (
-      typeof body === 'object' &&
+      typeof body === "object" &&
       (Symbol.asyncIterator in body ||
-        (Symbol.iterator in body && 'next' in body && typeof body.next === 'function'))
-    ) {
-      return { bodyHeaders: undefined, body: Shims.ReadableStreamFrom(body as AsyncIterable<Uint8Array>) };
-    } else if (
-      typeof body === 'object' &&
-      headers.values.get('content-type') === 'application/x-www-form-urlencoded'
+        (Symbol.iterator in body &&
+          "next" in body &&
+          typeof body.next === "function"))
     ) {
       return {
-        bodyHeaders: { 'content-type': 'application/x-www-form-urlencoded' },
+        bodyHeaders: undefined,
+        body: Shims.ReadableStreamFrom(body as AsyncIterable<Uint8Array>),
+      };
+    } else if (
+      typeof body === "object" &&
+      headers.values.get("content-type") === "application/x-www-form-urlencoded"
+    ) {
+      return {
+        bodyHeaders: { "content-type": "application/x-www-form-urlencoded" },
         body: this.stringifyQuery(body),
       };
     } else {
@@ -843,30 +977,42 @@ export class StrafeBot {
     }
   }
 
-  protected validateAuth(url: string, headers: Headers, options: FinalRequestOptions): void {
+  protected validateAuth(
+    url: string,
+    headers: Headers,
+    options: FinalRequestOptions,
+  ): void {
     return;
   }
 
   authHeadersSync(): Record<string, string> {
     const headers: Record<string, string> = {};
-    const botAuth = this.resolveAuthOptionSync('botAuth', this.botAuth);
-    if (botAuth) headers['Authorization'] = botAuth;
-    const bearerAuth = this.resolveAuthOptionSync('bearerAuth', this.bearerAuth);
-    if (bearerAuth) headers['Authorization'] = `Bearer ${bearerAuth}`;
-    const oAuth2 = this.resolveAuthOptionSync('oAuth2', this.oAuth2);
-    if (oAuth2) headers['Authorization'] = `Bearer ${oAuth2}`;
+    const botAuth = this.resolveAuthOptionSync("botAuth", this.botAuth);
+    if (botAuth) headers["Authorization"] = botAuth;
+    const bearerAuth = this.resolveAuthOptionSync(
+      "bearerAuth",
+      this.bearerAuth,
+    );
+    if (bearerAuth) headers["Authorization"] = `Bearer ${bearerAuth}`;
+    const oAuth2 = this.resolveAuthOptionSync("oAuth2", this.oAuth2);
+    if (oAuth2) headers["Authorization"] = `Bearer ${oAuth2}`;
     return headers;
   }
 
   webSocketAuthHeaders(): Record<string, string> {
-    const bearerAuth = this.resolveAuthOptionSync('bearerAuth', this.bearerAuth);
+    const bearerAuth = this.resolveAuthOptionSync(
+      "bearerAuth",
+      this.bearerAuth,
+    );
     if (bearerAuth) return { Authorization: `Bearer ${bearerAuth}` };
-    const botAuth = this.resolveAuthOptionSync('botAuth', this.botAuth);
+    const botAuth = this.resolveAuthOptionSync("botAuth", this.botAuth);
     if (botAuth) return { Authorization: botAuth };
     return {};
   }
 
-  protected async authHeaders(opts: FinalRequestOptions): Promise<NullableHeaders | undefined> {
+  protected async authHeaders(
+    opts: FinalRequestOptions,
+  ): Promise<NullableHeaders | undefined> {
     return buildHeaders([
       await this.botAuth2(opts),
       await this.bearerAuth2(opts),
@@ -874,24 +1020,33 @@ export class StrafeBot {
     ]);
   }
 
-  protected async botAuth2(opts: FinalRequestOptions): Promise<NullableHeaders | undefined> {
-    const botAuth = await this.resolveAuthOption('botAuth', this.botAuth);
+  protected async botAuth2(
+    opts: FinalRequestOptions,
+  ): Promise<NullableHeaders | undefined> {
+    const botAuth = await this.resolveAuthOption("botAuth", this.botAuth);
     if (botAuth == null) {
       return undefined;
     }
     return buildHeaders([{ Authorization: botAuth }]);
   }
 
-  protected async bearerAuth2(opts: FinalRequestOptions): Promise<NullableHeaders | undefined> {
-    const bearerAuth = await this.resolveAuthOption('bearerAuth', this.bearerAuth);
+  protected async bearerAuth2(
+    opts: FinalRequestOptions,
+  ): Promise<NullableHeaders | undefined> {
+    const bearerAuth = await this.resolveAuthOption(
+      "bearerAuth",
+      this.bearerAuth,
+    );
     if (bearerAuth == null) {
       return undefined;
     }
     return buildHeaders([{ Authorization: `Bearer ${bearerAuth}` }]);
   }
 
-  protected async oAuth2Auth(opts: FinalRequestOptions): Promise<NullableHeaders | undefined> {
-    const oAuth2 = await this.resolveAuthOption('oAuth2', this.oAuth2);
+  protected async oAuth2Auth(
+    opts: FinalRequestOptions,
+  ): Promise<NullableHeaders | undefined> {
+    const oAuth2 = await this.resolveAuthOption("oAuth2", this.oAuth2);
     if (oAuth2 == null) {
       return undefined;
     }
@@ -913,8 +1068,11 @@ export class StrafeBot {
     value: string | AuthTokenProvider | null | undefined,
   ): Promise<string | undefined> {
     if (value == null) return undefined;
-    const token = typeof value === 'function' ? await value() : value;
-    if (!token) throw new Errors.StrafeBotError(`Expected '${optionName}' to resolve to a non-empty string.`);
+    const token = typeof value === "function" ? await value() : value;
+    if (!token)
+      throw new Errors.StrafeBotError(
+        `Expected '${optionName}' to resolve to a non-empty string.`,
+      );
     return token;
   }
 
@@ -923,9 +1081,11 @@ export class StrafeBot {
     value: string | AuthTokenProvider | null | undefined,
   ): string | undefined {
     if (value == null) return undefined;
-    const token = typeof value === 'function' ? value() : value;
-    if (typeof token !== 'string' || !token)
-      throw new Errors.StrafeBotError(`Expected '${optionName}' to resolve to a non-empty string.`);
+    const token = typeof value === "function" ? value() : value;
+    if (typeof token !== "string" || !token)
+      throw new Errors.StrafeBotError(
+        `Expected '${optionName}' to resolve to a non-empty string.`,
+      );
     return token;
   }
 
@@ -1016,23 +1176,32 @@ export declare namespace StrafeBot {
   };
 }
 
-const headerExplicitlyOmitted = (source: HeadersLike | undefined, name: string): boolean => {
-  if (!source || Array.isArray(source) || source instanceof Headers) return false;
+const headerExplicitlyOmitted = (
+  source: HeadersLike | undefined,
+  name: string,
+): boolean => {
+  if (!source || Array.isArray(source) || source instanceof Headers)
+    return false;
   const target = name.toLowerCase();
-  return Object.entries(source).some(([key, value]) => key.toLowerCase() === target && value === null);
+  return Object.entries(source).some(
+    ([key, value]) => key.toLowerCase() === target && value === null,
+  );
 };
 
-const appendAuthCookies = (headers: Headers, cookies: Record<string, string>): void => {
+const appendAuthCookies = (
+  headers: Headers,
+  cookies: Record<string, string>,
+): void => {
   for (const [name, value] of Object.entries(cookies)) {
-    if (cookieHeaderHas(headers.get('Cookie'), name)) continue;
-    const cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value);
-    const existing = headers.get('Cookie');
-    headers.set('Cookie', existing ? existing + '; ' + cookie : cookie);
+    if (cookieHeaderHas(headers.get("Cookie"), name)) continue;
+    const cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+    const existing = headers.get("Cookie");
+    headers.set("Cookie", existing ? existing + "; " + cookie : cookie);
   }
 };
 
 const cookieHeaderHas = (value: string | null, name: string): boolean => {
   if (!value) return false;
-  const target = encodeURIComponent(name) + '=';
-  return value.split(';').some((cookie) => cookie.trim().startsWith(target));
+  const target = encodeURIComponent(name) + "=";
+  return value.split(";").some((cookie) => cookie.trim().startsWith(target));
 };

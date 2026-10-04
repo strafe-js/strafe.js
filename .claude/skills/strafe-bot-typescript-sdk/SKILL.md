@@ -21,9 +21,11 @@ import StrafeBot from '@strafebot/strafebot';
 const client = new StrafeBot({
   environment: 'app_strafe_chat_instance',
 });
+
+client.login('your_bot_token_here');
 ```
 
-Provide credentials using the options below. Environment variables are read automatically when the target runtime supports them:
+Provide credentials using `client.login(token)` (which handles formatting automatically) or using the options below. Environment variables are read automatically when the target runtime supports them:
 
 - `botAuth` (env: `BOT_AUTH`) — Bot token: `Bot <token>`
 - `bearerAuth` (env: `BEARER_AUTH`) — OAuth2 access token. Scopes: identify, email, spaces, spaces.join, bot
@@ -37,6 +39,7 @@ import StrafeBot from '@strafebot/strafebot';
 const client = new StrafeBot({
   environment: 'app_strafe_chat_instance',
 });
+client.login('your_bot_token_here');
 
 const user = await client.users.me.list();
 

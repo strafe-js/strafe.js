@@ -39,6 +39,9 @@ const client = new StrafeBot({
   environment: 'app_strafe_chat_instance',
 });
 
+// Easily set your bot token for authentication
+client.login('your_bot_token_here');
+
 const user = await client.users.me.list();
 
 console.log(user);
@@ -52,7 +55,20 @@ See the [API reference](./api.md) for every available operation.
 
 ## Authentication
 
-Pass credentials to the generated client constructor. Environment variables are read automatically when supported by the target runtime.
+Pass credentials to the generated client constructor, or use helper methods. Environment variables are read automatically when supported by the target runtime.
+
+### The easiest way: `client.login()`
+
+For bots, you can just use `.login()` to easily set the token:
+
+```ts
+const client = new StrafeBot();
+client.login('your_bot_token_here');
+```
+
+This will automatically prepend `Bot ` to your token if needed and handle authentication for you.
+
+### Constructor Authentication
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
