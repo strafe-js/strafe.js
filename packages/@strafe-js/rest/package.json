@@ -1,13 +1,14 @@
 {
   "name": "@strafe-js/rest",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "REST client for the Strafe Chat API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
@@ -24,7 +25,7 @@
   },
   "author": "strafe-js",
   "dependencies": {
-    "@strafe-js/util": "1.0.0"
+    "@strafe-js/util": "1.0.1"
   },
   "engines": {
     "node": ">=18"
