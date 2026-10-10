@@ -1,0 +1,39 @@
+{
+  "name": "@RUTUJEKWIELKI/formatters",
+  "version": "1.0.0",
+  "description": "String formatters for mentions, rooms, emoji",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot.git",
+    "directory": "packages/@RUTUJEKWIELKI/formatters"
+  },
+  "author": "RUTUJEKWIELKI",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@RUTUJEKWIELKI/util": "1.0.0"
+  },
+  "homepage": "https://github.com/RUTUJEKWIELKI/strafe-bot",
+  "bugs": {
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"
+  }
+}

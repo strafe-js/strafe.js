@@ -1,0 +1,39 @@
+{
+  "name": "@RUTUJEKWIELKI/rest",
+  "version": "1.0.0",
+  "description": "REST client for the Strafe Chat API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot.git",
+    "directory": "packages/@RUTUJEKWIELKI/rest"
+  },
+  "author": "RUTUJEKWIELKI",
+  "dependencies": {
+    "@RUTUJEKWIELKI/util": "1.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "homepage": "https://github.com/RUTUJEKWIELKI/strafe-bot",
+  "bugs": {
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"
+  }
+}

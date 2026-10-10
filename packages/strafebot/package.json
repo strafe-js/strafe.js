@@ -1,0 +1,50 @@
+{
+  "name": "@RUTUJEKWIELKI/strafebot",
+  "version": "1.0.0",
+  "description": "TypeScript library for the Strafe Chat API and Gateway",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot.git"
+  },
+  "homepage": "https://github.com/RUTUJEKWIELKI/strafe-bot#readme",
+  "author": "RUTUJEKWIELKI",
+  "dependencies": {
+    "@RUTUJEKWIELKI/rest": "1.0.0",
+    "@RUTUJEKWIELKI/ws": "1.0.0",
+    "@RUTUJEKWIELKI/collection": "1.0.0",
+    "@RUTUJEKWIELKI/util": "1.0.0",
+    "@RUTUJEKWIELKI/builders": "1.0.0",
+    "@RUTUJEKWIELKI/formatters": "1.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "strafe",
+    "strafechat",
+    "bot",
+    "api",
+    "strafebot"
+  ],
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "bugs": {
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"
+  }
+}

@@ -1,0 +1,3 @@
+# Copy lines into project .npmrc to install from GitHub Packages:
+@RUTUJEKWIELKI:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}

@@ -1,0 +1,24 @@
+{
+  "name": "create-strafebot",
+  "version": "1.0.0",
+  "description": "CLI to scaffold a Strafe bot project and commands",
+  "type": "module",
+  "bin": {
+    "create-strafebot": "./src/cli.js",
+    "create-strafe-bot": "./src/cli.js"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot.git",
+    "directory": "packages/create-strafe-bot"
+  },
+  "author": "RUTUJEKWIELKI",
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/RUTUJEKWIELKI/strafe-bot",
+  "bugs": {
+    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"
+  }
+}

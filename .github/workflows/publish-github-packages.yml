@@ -1,0 +1,100 @@
+name: Publish GitHub Packages
+
+# Publishes scoped packages to GitHub Packages npm registry
+# https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry
+#
+# Trigger: push a version tag (v1.0.0) or publish a GitHub Release.
+# Scope note: GitHub Packages requires the package scope to match the
+# repo owner or org. This repo is under RUTUJEKWIELKI — if publish fails
+# with 403/404 on @RUTUJEKWIELKI/*, either create a GitHub org "strafebot"
+# and move the repo, or rename packages to @RUTUJEKWIELKI/*.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com
+          scope: '@RUTUJEKWIELKI'
+
+      - name: Install
+        run: npm install
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@RUTUJEKWIELKI:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
+          echo "always-auth=true" >> .npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Dependency order: util → others → main client → CLI
+      - name: Publish @RUTUJEKWIELKI/util
+        working-directory: packages/@RUTUJEKWIELKI/util
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @RUTUJEKWIELKI/collection
+        working-directory: packages/@RUTUJEKWIELKI/collection
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @RUTUJEKWIELKI/formatters
+        working-directory: packages/@RUTUJEKWIELKI/formatters
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @RUTUJEKWIELKI/builders
+        working-directory: packages/@RUTUJEKWIELKI/builders
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @RUTUJEKWIELKI/rest
+        working-directory: packages/@RUTUJEKWIELKI/rest
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @RUTUJEKWIELKI/ws
+        working-directory: packages/@RUTUJEKWIELKI/ws
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @RUTUJEKWIELKI/strafebot
+        working-directory: packages/strafebot
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish create-strafebot
+        working-directory: packages/create-strafe-bot
+        run: npm publish --access public
+        continue-on-error: true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
