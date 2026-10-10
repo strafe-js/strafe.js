@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: '@RUTUJEKWIELKI'
+          scope: '@strafe-js'
 
       - name: Install
         run: npm install
@@ -31,12 +31,12 @@ jobs:
         run: |
           set -e
           for dir in \
-            packages/@RUTUJEKWIELKI/util \
-            packages/@RUTUJEKWIELKI/collection \
-            packages/@RUTUJEKWIELKI/formatters \
-            packages/@RUTUJEKWIELKI/builders \
-            packages/@RUTUJEKWIELKI/rest \
-            packages/@RUTUJEKWIELKI/ws \
+            packages/@strafe-js/util \
+            packages/@strafe-js/collection \
+            packages/@strafe-js/formatters \
+            packages/@strafe-js/builders \
+            packages/@strafe-js/rest \
+            packages/@strafe-js/ws \
             packages/strafebot
           do
             echo "Building $dir"
@@ -45,49 +45,49 @@ jobs:
 
       - name: Configure npm for GitHub Packages
         run: |
-          echo "@RUTUJEKWIELKI:registry=https://npm.pkg.github.com" > .npmrc
+          echo "@strafe-js:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
           echo "always-auth=true" >> .npmrc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/util
-        working-directory: packages/@RUTUJEKWIELKI/util
+      - name: Publish @strafe-js/util
+        working-directory: packages/@strafe-js/util
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/collection
-        working-directory: packages/@RUTUJEKWIELKI/collection
+      - name: Publish @strafe-js/collection
+        working-directory: packages/@strafe-js/collection
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/formatters
-        working-directory: packages/@RUTUJEKWIELKI/formatters
+      - name: Publish @strafe-js/formatters
+        working-directory: packages/@strafe-js/formatters
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/builders
-        working-directory: packages/@RUTUJEKWIELKI/builders
+      - name: Publish @strafe-js/builders
+        working-directory: packages/@strafe-js/builders
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/rest
-        working-directory: packages/@RUTUJEKWIELKI/rest
+      - name: Publish @strafe-js/rest
+        working-directory: packages/@strafe-js/rest
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/ws
-        working-directory: packages/@RUTUJEKWIELKI/ws
+      - name: Publish @strafe-js/ws
+        working-directory: packages/@strafe-js/ws
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @RUTUJEKWIELKI/strafebot
+      - name: Publish @strafe-js/strafebot
         working-directory: packages/strafebot
         run: npm publish --access public
         env:

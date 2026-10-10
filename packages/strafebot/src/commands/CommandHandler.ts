@@ -1,4 +1,4 @@
-import { Permission, resolvePermission, type Message, type Snowflake } from '@RUTUJEKWIELKI/util';
+import { Permission, resolvePermission, type Message, type Snowflake } from '@strafe-js/util';
 import type { Client } from '../Client.js';
 import { Command, type CommandOptions } from './Command.js';
 import { Context } from './Context.js';

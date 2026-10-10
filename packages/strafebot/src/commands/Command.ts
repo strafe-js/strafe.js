@@ -1,4 +1,4 @@
-import type { PermissionName } from '@RUTUJEKWIELKI/util';
+import type { PermissionName } from '@strafe-js/util';
 import type { Context } from './Context.js';
 
 export interface CommandOptions {

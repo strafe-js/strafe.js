@@ -26,12 +26,12 @@ jobs:
         run: |
           set -e
           for dir in \
-            packages/@RUTUJEKWIELKI/util \
-            packages/@RUTUJEKWIELKI/collection \
-            packages/@RUTUJEKWIELKI/formatters \
-            packages/@RUTUJEKWIELKI/builders \
-            packages/@RUTUJEKWIELKI/rest \
-            packages/@RUTUJEKWIELKI/ws \
+            packages/@strafe-js/util \
+            packages/@strafe-js/collection \
+            packages/@strafe-js/formatters \
+            packages/@strafe-js/builders \
+            packages/@strafe-js/rest \
+            packages/@strafe-js/ws \
             packages/strafebot
           do
             echo "Building $dir"

@@ -1,5 +1,5 @@
 {
-  "name": "@RUTUJEKWIELKI/strafebot",
+  "name": "@strafe-js/strafebot",
   "version": "1.0.0",
   "description": "TypeScript library for the Strafe Chat API and Gateway",
   "main": "dist/index.js",
@@ -19,17 +19,18 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot.git"
+    "url": "https://github.com/strafe-js/strafe.js.git",
+    "directory": "packages/strafebot"
   },
-  "homepage": "https://github.com/RUTUJEKWIELKI/strafe-bot#readme",
-  "author": "RUTUJEKWIELKI",
+  "homepage": "https://github.com/strafe-js/strafe.js#readme",
+  "author": "strafe-js",
   "dependencies": {
-    "@RUTUJEKWIELKI/rest": "1.0.0",
-    "@RUTUJEKWIELKI/ws": "1.0.0",
-    "@RUTUJEKWIELKI/collection": "1.0.0",
-    "@RUTUJEKWIELKI/util": "1.0.0",
-    "@RUTUJEKWIELKI/builders": "1.0.0",
-    "@RUTUJEKWIELKI/formatters": "1.0.0"
+    "@strafe-js/rest": "1.0.0",
+    "@strafe-js/ws": "1.0.0",
+    "@strafe-js/collection": "1.0.0",
+    "@strafe-js/util": "1.0.0",
+    "@strafe-js/builders": "1.0.0",
+    "@strafe-js/formatters": "1.0.0"
   },
   "engines": {
     "node": ">=18"
@@ -46,6 +47,6 @@
     "@types/ws": "^8.5.12"
   },
   "bugs": {
-    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"
+    "url": "https://github.com/strafe-js/strafe.js/issues"
   }
 }

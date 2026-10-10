@@ -10,15 +10,15 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot.git",
+    "url": "https://github.com/strafe-js/strafe.js.git",
     "directory": "packages/create-strafe-bot"
   },
-  "author": "RUTUJEKWIELKI",
+  "author": "strafe-js",
   "engines": {
     "node": ">=18"
   },
-  "homepage": "https://github.com/RUTUJEKWIELKI/strafe-bot",
+  "homepage": "https://github.com/strafe-js/strafe.js#readme",
   "bugs": {
-    "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"
+    "url": "https://github.com/strafe-js/strafe.js/issues"
   }
 }

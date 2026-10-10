@@ -7,7 +7,7 @@ import {
   type CreateMessageBody,
   type PermissionResolvable,
   type Snowflake,
-} from '@RUTUJEKWIELKI/util';
+} from '@strafe-js/util';
 import type { Client } from '../Client.js';
 import type { Command } from './Command.js';
 

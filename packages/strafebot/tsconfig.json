@@ -19,22 +19,22 @@
   ],
   "references": [
     {
-      "path": "../@RUTUJEKWIELKI/util"
+      "path": "../@strafe-js/util"
     },
     {
-      "path": "../@RUTUJEKWIELKI/rest"
+      "path": "../@strafe-js/rest"
     },
     {
-      "path": "../@RUTUJEKWIELKI/ws"
+      "path": "../@strafe-js/ws"
     },
     {
-      "path": "../@RUTUJEKWIELKI/collection"
+      "path": "../@strafe-js/collection"
     },
     {
-      "path": "../@RUTUJEKWIELKI/builders"
+      "path": "../@strafe-js/builders"
     },
     {
-      "path": "../@RUTUJEKWIELKI/formatters"
+      "path": "../@strafe-js/formatters"
     }
   ]
 }

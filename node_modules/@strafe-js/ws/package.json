@@ -1,0 +1,41 @@
+{
+  "name": "@strafe-js/ws",
+  "version": "1.0.0",
+  "description": "Gateway WebSocket client for Strafe Chat",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/strafe-js/strafe.js.git",
+    "directory": "packages/@strafe-js/ws"
+  },
+  "author": "strafe-js",
+  "dependencies": {
+    "@strafe-js/util": "1.0.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.12",
+    "typescript": "^5.6.0"
+  },
+  "homepage": "https://github.com/strafe-js/strafe.js#readme",
+  "bugs": {
+    "url": "https://github.com/strafe-js/strafe.js/issues"
+  }
+}

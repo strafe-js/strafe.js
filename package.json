@@ -5,18 +5,18 @@
   "description": "TypeScript libraries for the Strafe Chat API and Gateway",
   "workspaces": [
     "packages/*",
-    "packages/@RUTUJEKWIELKI/*"
+    "packages/@strafe-js/*"
   ],
   "scripts": {
     "build": "npm run build:util && npm run build:collection && npm run build:formatters && npm run build:builders && npm run build:rest && npm run build:ws && npm run build:client",
-    "build:util": "npm run build -w @RUTUJEKWIELKI/util",
-    "build:collection": "npm run build -w @RUTUJEKWIELKI/collection",
-    "build:formatters": "npm run build -w @RUTUJEKWIELKI/formatters",
-    "build:builders": "npm run build -w @RUTUJEKWIELKI/builders",
-    "build:rest": "npm run build -w @RUTUJEKWIELKI/rest",
-    "build:ws": "npm run build -w @RUTUJEKWIELKI/ws",
-    "build:client": "npm run build -w @RUTUJEKWIELKI/strafebot",
-    "clean": "rm -rf packages/*/dist packages/@RUTUJEKWIELKI/*/dist"
+    "build:util": "npm run build -w @strafe-js/util",
+    "build:collection": "npm run build -w @strafe-js/collection",
+    "build:formatters": "npm run build -w @strafe-js/formatters",
+    "build:builders": "npm run build -w @strafe-js/builders",
+    "build:rest": "npm run build -w @strafe-js/rest",
+    "build:ws": "npm run build -w @strafe-js/ws",
+    "build:client": "npm run build -w @strafe-js/strafebot",
+    "clean": "rm -rf packages/*/dist packages/@strafe-js/*/dist"
   },
   "engines": {
     "node": ">=18"

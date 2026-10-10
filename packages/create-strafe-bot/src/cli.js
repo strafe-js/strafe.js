@@ -51,7 +51,7 @@ if (cmd === 'command') {
 
   writeFileSync(
     file,
-    `import { command } from '@RUTUJEKWIELKI/strafebot';
+    `import { command } from '@strafe-js/strafebot';
 
 export default command({
   name: '${name}',
@@ -120,7 +120,7 @@ writeFileSync(
         'new-command': 'create-strafebot command',
       },
       dependencies: {
-        '@RUTUJEKWIELKI/strafebot': '^1.0.0',
+        '@strafe-js/strafebot': '^1.0.0',
       },
       devDependencies: {
         typescript: '^5.6.0',
@@ -188,7 +188,7 @@ dist/
 
 writeFileSync(
   join(root, 'src/index.ts'),
-  `import { Client } from '@RUTUJEKWIELKI/strafebot';
+  `import { Client } from '@strafe-js/strafebot';
 import { readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -281,7 +281,7 @@ export function config(path = resolve(process.cwd(), '.env')): void {
 
 writeFileSync(
   join(root, 'src/commands/ping.ts'),
-  `import { command } from '@RUTUJEKWIELKI/strafebot';
+  `import { command } from '@strafe-js/strafebot';
 
 export default command({
   name: 'ping',
@@ -296,7 +296,7 @@ export default command({
 
 writeFileSync(
   join(root, 'src/commands/help.ts'),
-  `import { command } from '@RUTUJEKWIELKI/strafebot';
+  `import { command } from '@strafe-js/strafebot';
 
 export default command({
   name: 'help',
@@ -314,7 +314,7 @@ export default command({
 
 writeFileSync(
   join(root, 'src/commands/kick.ts'),
-  `import { command } from '@RUTUJEKWIELKI/strafebot';
+  `import { command } from '@strafe-js/strafebot';
 
 export default command({
   name: 'kick',
@@ -341,7 +341,7 @@ writeFileSync(
   join(root, 'README.md'),
   `# ${name}
 
-Strafe bot (\`@RUTUJEKWIELKI/strafebot\`).
+Strafe bot (\`@strafe-js/strafebot\`).
 
 ## Setup
 

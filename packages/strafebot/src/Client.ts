@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
-import { REST } from '@RUTUJEKWIELKI/rest';
-import { Gateway } from '@RUTUJEKWIELKI/ws';
-import { Collection } from '@RUTUJEKWIELKI/collection';
+import { REST } from '@strafe-js/rest';
+import { Gateway } from '@strafe-js/ws';
+import { Collection } from '@strafe-js/collection';
 import {
   StrafeError,
   Permission,
@@ -15,7 +15,7 @@ import {
   type GatewayEventEnvelope,
   type Role,
   type PermissionOverride,
-} from '@RUTUJEKWIELKI/util';
+} from '@strafe-js/util';
 import { CommandHandler, type CommandHandlerOptions } from './commands/CommandHandler.js';
 
 export interface ClientOptions extends CommandHandlerOptions {
