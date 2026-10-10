@@ -42,7 +42,8 @@
     "strafebot"
   ],
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "@types/ws": "^8.5.12"
   },
   "bugs": {
     "url": "https://github.com/RUTUJEKWIELKI/strafe-bot/issues"

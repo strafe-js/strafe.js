@@ -1,9 +1,5 @@
 name: Publish on main
 
-# On every push to main: build and try to publish to GitHub Packages.
-# npm publish fails if the same version already exists — bump version in package.json
-# before pushing, or use the tag/release workflow instead.
-
 on:
   push:
     branches: [main, master]
@@ -24,21 +20,32 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://npm.pkg.github.com
           scope: '@RUTUJEKWIELKI'
 
       - name: Install
         run: npm install
 
-      - name: Build
-        run: npm run build --if-present
+      - name: Build (dependency order)
+        run: |
+          set -e
+          for dir in \
+            packages/@RUTUJEKWIELKI/util \
+            packages/@RUTUJEKWIELKI/collection \
+            packages/@RUTUJEKWIELKI/formatters \
+            packages/@RUTUJEKWIELKI/builders \
+            packages/@RUTUJEKWIELKI/rest \
+            packages/@RUTUJEKWIELKI/ws \
+            packages/strafebot
+          do
+            echo "Building $dir"
+            (cd "$dir" && npx tsc -p tsconfig.json)
+          done
 
       - name: Configure npm for GitHub Packages
         run: |
@@ -59,7 +66,7 @@ jobs:
             (cd "$dir" && npm publish --access public)
             local code=$?
             if [ $code -ne 0 ]; then
-              echo "publish skipped or failed for $dir (exit $code) — often means version already exists"
+              echo "publish skipped or failed for $dir (exit $code)"
             fi
             echo "::endgroup::"
           }

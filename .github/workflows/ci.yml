@@ -11,18 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20, 22]
+        node-version: [20, 22]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
       - name: Install
         run: npm install
 
-      - name: Build packages
-        run: npm run build --if-present
+      - name: Build (dependency order)
+        run: |
+          set -e
+          for dir in \
+            packages/@RUTUJEKWIELKI/util \
+            packages/@RUTUJEKWIELKI/collection \
+            packages/@RUTUJEKWIELKI/formatters \
+            packages/@RUTUJEKWIELKI/builders \
+            packages/@RUTUJEKWIELKI/rest \
+            packages/@RUTUJEKWIELKI/ws \
+            packages/strafebot
+          do
+            echo "Building $dir"
+            (cd "$dir" && npx tsc -p tsconfig.json)
+          done

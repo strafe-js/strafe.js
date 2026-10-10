@@ -13,6 +13,8 @@ import {
   type SpaceMember,
   type ReadyPayload,
   type GatewayEventEnvelope,
+  type Role,
+  type PermissionOverride,
 } from '@RUTUJEKWIELKI/util';
 import { CommandHandler, type CommandHandlerOptions } from './commands/CommandHandler.js';
 
@@ -108,13 +110,15 @@ export class Client extends EventEmitter {
     const member = memberCol?.get(userId);
     if (!member) return 0;
 
-    const roleMap = new Map(space.roles.map((r) => [r.id, r]));
+    const roles: Role[] = space.roles ?? [];
+    const roleMap = new Map<Snowflake, Role>(roles.map((r: Role) => [r.id, r]));
     let mask = 0;
 
     const everyone = roleMap.get(space.everyone_role_id);
     if (everyone) mask |= everyone.permissions || 0;
 
-    for (const rid of member.role_ids ?? member.roles ?? []) {
+    const memberRoles: Snowflake[] = member.role_ids ?? member.roles ?? [];
+    for (const rid of memberRoles) {
       const role = roleMap.get(rid);
       if (role) mask |= role.permissions || 0;
     }
@@ -126,15 +130,14 @@ export class Client extends EventEmitter {
       for (const ov of room.permission_overrides) {
         if (!ov.role_id) continue;
         const holds =
-          ov.role_id === space.everyone_role_id ||
-          (member.role_ids ?? member.roles ?? []).includes(ov.role_id);
+          ov.role_id === space.everyone_role_id || memberRoles.includes(ov.role_id);
         if (holds) {
           mask = (mask & ~ov.deny) | ov.allow;
         }
       }
     }
     if (room?.user_overrides) {
-      const uov = room.user_overrides.find((o) => o.user_id === userId);
+      const uov = room.user_overrides.find((o: PermissionOverride) => o.user_id === userId);
       if (uov) mask = (mask & ~uov.deny) | uov.allow;
     }
 
@@ -156,7 +159,9 @@ export class Client extends EventEmitter {
       for (const room of payload.rooms ?? []) {
         this.rooms.set(room.id, room);
       }
-      for (const [spaceId, roomList] of Object.entries(payload.space_rooms ?? {})) {
+      const spaceRooms = (payload.space_rooms ?? {}) as Record<Snowflake, Room[]>;
+      for (const spaceId of Object.keys(spaceRooms) as Snowflake[]) {
+        const roomList: Room[] = spaceRooms[spaceId] ?? [];
         const col = new Collection<Snowflake, Room>();
         for (const room of roomList) {
           col.set(room.id, room);

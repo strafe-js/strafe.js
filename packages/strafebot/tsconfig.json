@@ -11,7 +11,30 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "composite": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../@RUTUJEKWIELKI/util"
+    },
+    {
+      "path": "../@RUTUJEKWIELKI/rest"
+    },
+    {
+      "path": "../@RUTUJEKWIELKI/ws"
+    },
+    {
+      "path": "../@RUTUJEKWIELKI/collection"
+    },
+    {
+      "path": "../@RUTUJEKWIELKI/builders"
+    },
+    {
+      "path": "../@RUTUJEKWIELKI/formatters"
+    }
+  ]
 }
