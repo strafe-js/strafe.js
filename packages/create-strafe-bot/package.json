@@ -1,6 +1,6 @@
 {
   "name": "create-strafebot",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "CLI to scaffold a Strafe bot project and commands",
   "type": "module",
   "bin": {
