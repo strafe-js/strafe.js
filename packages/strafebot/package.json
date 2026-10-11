@@ -1,6 +1,6 @@
 {
   "name": "@strafe-js/strafebot",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "TypeScript library for the Strafe Chat API and Gateway",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -26,12 +26,12 @@
   "homepage": "https://github.com/strafe-js/strafe.js#readme",
   "author": "strafe-js",
   "dependencies": {
-    "@strafe-js/rest": "1.0.1",
-    "@strafe-js/ws": "1.0.1",
-    "@strafe-js/collection": "1.0.1",
-    "@strafe-js/util": "1.0.1",
-    "@strafe-js/builders": "1.0.1",
-    "@strafe-js/formatters": "1.0.1"
+    "@strafe-js/rest": "^1.0.2",
+    "@strafe-js/ws": "^1.0.2",
+    "@strafe-js/collection": "^1.0.2",
+    "@strafe-js/util": "^1.0.2",
+    "@strafe-js/builders": "^1.0.2",
+    "@strafe-js/formatters": "^1.0.2"
   },
   "engines": {
     "node": ">=18"
