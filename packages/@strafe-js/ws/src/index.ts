@@ -15,6 +15,8 @@ export interface GatewayOptions {
   token: string;
   tokenType?: 'Bot' | 'Bearer';
   reconnectDelay?: number;
+  maxReconnectDelay?: number;
+  heartbeatInterval?: number;
 }
 
 export interface GatewayEvents {
@@ -32,7 +34,7 @@ export interface GatewayEvents {
   spaceRoomDelete: [unknown];
   spaceMemberAdd: [unknown];
   spaceMemberRemove: [unknown];
-  spaceMemberUpdate: [unknown];
+  spaceMemberUpdate: [unknown, GatewayEventEnvelope];
   typingStart: [unknown];
   sessionRevoked: [unknown];
   error: [Error];
@@ -46,29 +48,57 @@ export class Gateway extends EventEmitter {
   token: string;
   tokenType: 'Bot' | 'Bearer';
   reconnectDelay: number;
+  maxReconnectDelay: number;
+  heartbeatIntervalMs: number;
   ws: WebSocket | null = null;
   sessionId: string | null = null;
   user: User | null = null;
+
   private _closed = false;
+  private _reconnectAttempts = 0;
+  private _reconnectTimer: NodeJS.Timeout | null = null;
+  private _heartbeatTimer: NodeJS.Timeout | null = null;
 
   constructor(opts: GatewayOptions) {
     super();
     this.url = opts.url;
     this.token = opts.token;
     this.tokenType = opts.tokenType ?? 'Bot';
-    this.reconnectDelay = opts.reconnectDelay ?? 5000;
+    this.reconnectDelay = opts.reconnectDelay ?? 1000;
+    this.maxReconnectDelay = opts.maxReconnectDelay ?? 30000;
+    this.heartbeatIntervalMs = opts.heartbeatInterval ?? 45000;
   }
 
   connect(): void {
     this._closed = false;
+    this._clearTimers();
+
+    if (this.ws) {
+      try {
+        this.ws.removeAllListeners();
+        this.ws.close();
+      } catch {
+        /* ignore */
+      }
+      this.ws = null;
+    }
+
     const headers = {
       Authorization: `${this.tokenType} ${this.token}`,
     };
 
-    this.ws = new WebSocket(this.url, { headers });
+    try {
+      this.ws = new WebSocket(this.url, { headers });
+    } catch (err) {
+      this.emit('error', err instanceof Error ? err : new Error(String(err)));
+      this._scheduleReconnect();
+      return;
+    }
 
     this.ws.on('open', () => {
+      this._reconnectAttempts = 0;
       this.emit('debug', 'gateway open');
+      this._startHeartbeat();
     });
 
     this.ws.on('message', (raw) => {
@@ -84,10 +114,11 @@ export class Gateway extends EventEmitter {
 
     this.ws.on('close', (code, reason) => {
       this.emit('debug', `gateway close ${code} ${reason.toString()}`);
+      this._stopHeartbeat();
       this.ws = null;
       if (!this._closed) {
         this.emit('disconnect', code);
-        setTimeout(() => this.connect(), this.reconnectDelay);
+        this._scheduleReconnect();
       }
     });
 
@@ -98,15 +129,28 @@ export class Gateway extends EventEmitter {
 
   disconnect(): void {
     this._closed = true;
+    this._clearTimers();
     if (this.ws) {
-      this.ws.close(1000);
+      try {
+        this.ws.close(1000);
+      } catch {
+        /* ignore */
+      }
       this.ws = null;
     }
   }
 
+  ping(): void {
+    this.send(GatewayOp.Ping);
+  }
+
   send(op: number, d?: unknown): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(JSON.stringify({ op, d }));
+    try {
+      this.ws.send(JSON.stringify({ op, d }));
+    } catch (err) {
+      this.emit('error', err instanceof Error ? err : new Error(String(err)));
+    }
   }
 
   subscribe(id: Snowflake): void {
@@ -118,7 +162,48 @@ export class Gateway extends EventEmitter {
   }
 
   sendTyping(roomId: Snowflake): void {
-    this.send(GatewayOp.Send, { space_id: roomId, type: 'typing' });
+    this.send(GatewayOp.Send, { room_id: roomId, type: 'typing' });
+  }
+
+  private _startHeartbeat(): void {
+    this._stopHeartbeat();
+    if (this.heartbeatIntervalMs > 0) {
+      this._heartbeatTimer = setInterval(() => {
+        this.ping();
+      }, this.heartbeatIntervalMs);
+    }
+  }
+
+  private _stopHeartbeat(): void {
+    if (this._heartbeatTimer) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = null;
+    }
+  }
+
+  private _scheduleReconnect(): void {
+    if (this._closed || this._reconnectTimer) return;
+    this._reconnectAttempts++;
+    // Exponential backoff with jitter
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this._reconnectAttempts - 1) + Math.random() * 1000,
+      this.maxReconnectDelay,
+    );
+    this.emit('debug', `scheduling reconnect in ${Math.round(delay)}ms (attempt ${this._reconnectAttempts})`);
+    this._reconnectTimer = setTimeout(() => {
+      this._reconnectTimer = null;
+      if (!this._closed) {
+        this.connect();
+      }
+    }, delay);
+  }
+
+  private _clearTimers(): void {
+    this._stopHeartbeat();
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = null;
+    }
   }
 
   private _handle(frame: GatewayFrame): void {
@@ -134,7 +219,7 @@ export class Gateway extends EventEmitter {
         const envelope = frame.d as GatewayEventEnvelope;
         const t = envelope.t;
         const payload = envelope.d as Record<string, unknown> | unknown;
-        if (payload && typeof payload === 'object') {
+        if (payload && typeof payload === 'object' && payload !== null) {
           const p = payload as Record<string, unknown>;
           if (envelope.room_id && p.room_id == null) p.room_id = envelope.room_id;
           if (envelope.space_id && p.space_id == null) p.space_id = envelope.space_id;

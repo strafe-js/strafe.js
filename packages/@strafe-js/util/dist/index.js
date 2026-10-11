@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.Permission = void 0;
+exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.Permission = void 0;
 exports.resolvePermission = resolvePermission;
 exports.isSnowflake = isSnowflake;
 exports.sleep = sleep;
@@ -35,6 +35,7 @@ exports.Permission = {
     SendMessagesInThreads: 1 << 26, // 67108864
     ManageThreads: 1 << 27, // 134217728
 };
+exports.ALL_PERMISSIONS = Object.values(exports.Permission).reduce((acc, val) => acc | (typeof val === 'number' ? val : 0), 0);
 exports.RoomType = {
     PM: 1,
     GroupPM: 2,
@@ -79,7 +80,7 @@ exports.RateLimitError = RateLimitError;
 class BitField {
     bitfield;
     constructor(bits = 0) {
-        this.bitfield = bits instanceof BitField ? bits.bitfield : Number(bits) || 0;
+        this.bitfield = typeof bits === 'number' ? bits : resolvePermission(bits);
     }
     has(bit) {
         const mask = resolvePermission(bit);
@@ -94,6 +95,15 @@ class BitField {
         for (const bit of bits)
             this.bitfield &= ~resolvePermission(bit);
         return this;
+    }
+    toArray() {
+        const names = [];
+        for (const [key, val] of Object.entries(exports.Permission)) {
+            if (typeof val === 'number' && (this.bitfield & val) === val) {
+                names.push(key);
+            }
+        }
+        return names;
     }
     toJSON() {
         return this.bitfield;
@@ -112,14 +122,14 @@ function resolvePermission(bit) {
             throw new Error(`unknown permission: ${bit}`);
         return v;
     }
-    let mask = 0;
-    for (const name of bit) {
-        const v = exports.Permission[name];
-        if (v == null)
-            throw new Error(`unknown permission: ${name}`);
-        mask |= v;
+    if (Array.isArray(bit)) {
+        let mask = 0;
+        for (const item of bit) {
+            mask |= resolvePermission(item);
+        }
+        return mask;
     }
-    return mask;
+    throw new Error(`invalid permission resolvable: ${String(bit)}`);
 }
 function isSnowflake(id) {
     return typeof id === 'string' && /^\d{16,20}$/.test(id);

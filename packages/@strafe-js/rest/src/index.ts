@@ -83,7 +83,7 @@ export class REST {
         }
         const wait = bodyJson?.retry_after ?? retryAfterHeader;
         if (attempt >= this.retries) {
-          throw new RateLimitError(bodyJson?.error || 'rate limited', wait);
+          throw new RateLimitError(bodyJson?.error || 'rate limited', wait, res.status);
         }
         await sleep(wait * 1000);
         attempt++;
@@ -156,6 +156,10 @@ export class REST {
 
   getSpaceMembers(spaceId: Snowflake): Promise<SpaceMember[]> {
     return this.get<SpaceMember[]>(`/spaces/${spaceId}/members`);
+  }
+
+  getSpaceMember(spaceId: Snowflake, userId: Snowflake): Promise<SpaceMember> {
+    return this.get<SpaceMember>(`/spaces/${spaceId}/members/${userId}`);
   }
 
   createMessage(roomId: Snowflake, body: CreateMessageBody): Promise<Message> {

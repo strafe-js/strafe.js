@@ -18,6 +18,7 @@ class Client extends node_events_1.EventEmitter {
     spaceRooms = new collection_1.Collection();
     members = new collection_1.Collection();
     commands;
+    _fetchingMembers = new Map();
     constructor(options) {
         super();
         if (!options.apiBase || !options.gatewayUrl) {
@@ -65,13 +66,50 @@ class Client extends node_events_1.EventEmitter {
         }
         for (const m of list) {
             const id = (m.id ?? m.user_id);
-            col.set(id, m);
+            if (id)
+                col.set(id, m);
         }
         return col;
     }
+    async fetchMember(spaceId, userId) {
+        const key = `${spaceId}:${userId}`;
+        const existing = this._fetchingMembers.get(key);
+        if (existing)
+            return existing;
+        const promise = (async () => {
+            try {
+                const member = await this.rest.getSpaceMember(spaceId, userId);
+                if (member) {
+                    let col = this.members.get(spaceId);
+                    if (!col) {
+                        col = new collection_1.Collection();
+                        this.members.set(spaceId, col);
+                    }
+                    const id = (member.id ?? member.user_id ?? userId);
+                    col.set(id, member);
+                    return member;
+                }
+                return null;
+            }
+            catch {
+                return null;
+            }
+            finally {
+                this._fetchingMembers.delete(key);
+            }
+        })();
+        this._fetchingMembers.set(key, promise);
+        return promise;
+    }
     /**
      * Resolve effective permission mask for a user in a space/room.
-     * Owner → Administrator. Else OR of roles, then room overrides.
+     * Follows exact equinox rules:
+     * 1. Space Owner / Administrator bit => ALL_PERMISSIONS
+     * 2. @everyone role base + user role bases
+     * 3. Room overrides: @everyone deny/allow
+     * 4. Room overrides: aggregated role denies, then aggregated role allows
+     * 5. Room overrides: user deny, then user allow
+     * 6. Dependent permission cascades (e.g. !ViewRoom clears room perms)
      */
     resolveMemberPermissions(userId, spaceId, roomId) {
         if (!spaceId)
@@ -80,7 +118,7 @@ class Client extends node_events_1.EventEmitter {
         if (!space)
             return 0;
         if (space.owner_id === userId)
-            return util_1.Permission.Administrator;
+            return util_1.ALL_PERMISSIONS;
         const memberCol = this.members.get(spaceId);
         const member = memberCol?.get(userId);
         if (!member)
@@ -98,22 +136,43 @@ class Client extends node_events_1.EventEmitter {
                 mask |= role.permissions || 0;
         }
         if (mask & util_1.Permission.Administrator)
-            return util_1.Permission.Administrator;
+            return util_1.ALL_PERMISSIONS;
         const room = roomId ? this.rooms.get(roomId) : null;
-        if (room?.permission_overrides) {
-            for (const ov of room.permission_overrides) {
-                if (!ov.role_id)
+        if (room) {
+            const roleOverrides = room.permission_overrides ?? [];
+            // 1) @everyone override
+            const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
+            if (everyoneOv) {
+                mask = (mask & ~everyoneOv.deny) | everyoneOv.allow;
+            }
+            // 2) Aggregated member role overrides: all denies first, then all allows
+            let aggregatedDeny = 0;
+            let aggregatedAllow = 0;
+            for (const ov of roleOverrides) {
+                if (!ov.role_id || ov.role_id === space.everyone_role_id)
                     continue;
-                const holds = ov.role_id === space.everyone_role_id || memberRoles.includes(ov.role_id);
-                if (holds) {
-                    mask = (mask & ~ov.deny) | ov.allow;
+                if (memberRoles.includes(ov.role_id)) {
+                    aggregatedDeny |= ov.deny;
+                    aggregatedAllow |= ov.allow;
                 }
             }
-        }
-        if (room?.user_overrides) {
-            const uov = room.user_overrides.find((o) => o.user_id === userId);
-            if (uov)
-                mask = (mask & ~uov.deny) | uov.allow;
+            mask = (mask & ~aggregatedDeny) | aggregatedAllow;
+            // 3) Individual user override
+            const userOverrides = room.user_overrides ?? [];
+            const userOv = userOverrides.find((o) => o.user_id === userId);
+            if (userOv) {
+                mask = (mask & ~userOv.deny) | userOv.allow;
+            }
+            // Dependent permission rules
+            if (!(mask & util_1.Permission.ViewRoom)) {
+                mask = 0;
+            }
+            else {
+                if (!(mask & util_1.Permission.SendMessages)) {
+                    mask &= ~util_1.Permission.AttachFiles;
+                    mask &= ~util_1.Permission.MentionEveryone;
+                }
+            }
         }
         return mask;
     }
@@ -205,7 +264,9 @@ class Client extends node_events_1.EventEmitter {
                 col = new collection_1.Collection();
                 this.members.set(spaceId, col);
             }
-            col.set((m.id ?? m.user_id), m);
+            const id = (m.id ?? m.user_id);
+            if (id)
+                col.set(id, m);
             this.emit('spaceMemberAdd', m);
         });
         gw.on('spaceMemberRemove', (data) => {
@@ -213,14 +274,14 @@ class Client extends node_events_1.EventEmitter {
             this.members.get(d.space_id)?.delete(d.user_id);
             this.emit('spaceMemberRemove', d);
         });
-        gw.on('spaceMemberUpdate', (data) => {
+        gw.on('spaceMemberUpdate', (data, envelope) => {
             const d = data;
-            // SPACE_MEMBER_UPDATE may not always carry space_id in envelope; try both
-            const spaceId = d.space_id;
+            const spaceId = d.space_id || envelope?.space_id;
             if (spaceId) {
+                const roleIds = d.role_ids ?? d.roles;
                 const existing = this.members.get(spaceId)?.get(d.user_id);
-                if (existing) {
-                    existing.role_ids = d.role_ids;
+                if (existing && roleIds) {
+                    existing.role_ids = roleIds;
                 }
             }
             this.emit('spaceMemberUpdate', d);

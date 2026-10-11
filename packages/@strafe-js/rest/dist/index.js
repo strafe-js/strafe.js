@@ -52,7 +52,7 @@ class REST {
                 }
                 const wait = bodyJson?.retry_after ?? retryAfterHeader;
                 if (attempt >= this.retries) {
-                    throw new util_1.RateLimitError(bodyJson?.error || 'rate limited', wait);
+                    throw new util_1.RateLimitError(bodyJson?.error || 'rate limited', wait, res.status);
                 }
                 await (0, util_1.sleep)(wait * 1000);
                 attempt++;
@@ -114,6 +114,9 @@ class REST {
     }
     getSpaceMembers(spaceId) {
         return this.get(`/spaces/${spaceId}/members`);
+    }
+    getSpaceMember(spaceId, userId) {
+        return this.get(`/spaces/${spaceId}/members/${userId}`);
     }
     createMessage(roomId, body) {
         return this.post(`/rooms/${roomId}/messages`, { body });

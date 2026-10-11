@@ -12,25 +12,52 @@ class Gateway extends node_events_1.EventEmitter {
     token;
     tokenType;
     reconnectDelay;
+    maxReconnectDelay;
+    heartbeatIntervalMs;
     ws = null;
     sessionId = null;
     user = null;
     _closed = false;
+    _reconnectAttempts = 0;
+    _reconnectTimer = null;
+    _heartbeatTimer = null;
     constructor(opts) {
         super();
         this.url = opts.url;
         this.token = opts.token;
         this.tokenType = opts.tokenType ?? 'Bot';
-        this.reconnectDelay = opts.reconnectDelay ?? 5000;
+        this.reconnectDelay = opts.reconnectDelay ?? 1000;
+        this.maxReconnectDelay = opts.maxReconnectDelay ?? 30000;
+        this.heartbeatIntervalMs = opts.heartbeatInterval ?? 45000;
     }
     connect() {
         this._closed = false;
+        this._clearTimers();
+        if (this.ws) {
+            try {
+                this.ws.removeAllListeners();
+                this.ws.close();
+            }
+            catch {
+                /* ignore */
+            }
+            this.ws = null;
+        }
         const headers = {
             Authorization: `${this.tokenType} ${this.token}`,
         };
-        this.ws = new ws_1.default(this.url, { headers });
+        try {
+            this.ws = new ws_1.default(this.url, { headers });
+        }
+        catch (err) {
+            this.emit('error', err instanceof Error ? err : new Error(String(err)));
+            this._scheduleReconnect();
+            return;
+        }
         this.ws.on('open', () => {
+            this._reconnectAttempts = 0;
             this.emit('debug', 'gateway open');
+            this._startHeartbeat();
         });
         this.ws.on('message', (raw) => {
             let frame;
@@ -45,10 +72,11 @@ class Gateway extends node_events_1.EventEmitter {
         });
         this.ws.on('close', (code, reason) => {
             this.emit('debug', `gateway close ${code} ${reason.toString()}`);
+            this._stopHeartbeat();
             this.ws = null;
             if (!this._closed) {
                 this.emit('disconnect', code);
-                setTimeout(() => this.connect(), this.reconnectDelay);
+                this._scheduleReconnect();
             }
         });
         this.ws.on('error', (err) => {
@@ -57,15 +85,29 @@ class Gateway extends node_events_1.EventEmitter {
     }
     disconnect() {
         this._closed = true;
+        this._clearTimers();
         if (this.ws) {
-            this.ws.close(1000);
+            try {
+                this.ws.close(1000);
+            }
+            catch {
+                /* ignore */
+            }
             this.ws = null;
         }
+    }
+    ping() {
+        this.send(util_1.GatewayOp.Ping);
     }
     send(op, d) {
         if (!this.ws || this.ws.readyState !== ws_1.default.OPEN)
             return;
-        this.ws.send(JSON.stringify({ op, d }));
+        try {
+            this.ws.send(JSON.stringify({ op, d }));
+        }
+        catch (err) {
+            this.emit('error', err instanceof Error ? err : new Error(String(err)));
+        }
     }
     subscribe(id) {
         this.send(util_1.GatewayOp.Subscribe, { space_id: id });
@@ -74,7 +116,42 @@ class Gateway extends node_events_1.EventEmitter {
         this.send(util_1.GatewayOp.Unsubscribe, { space_id: id });
     }
     sendTyping(roomId) {
-        this.send(util_1.GatewayOp.Send, { space_id: roomId, type: 'typing' });
+        this.send(util_1.GatewayOp.Send, { room_id: roomId, type: 'typing' });
+    }
+    _startHeartbeat() {
+        this._stopHeartbeat();
+        if (this.heartbeatIntervalMs > 0) {
+            this._heartbeatTimer = setInterval(() => {
+                this.ping();
+            }, this.heartbeatIntervalMs);
+        }
+    }
+    _stopHeartbeat() {
+        if (this._heartbeatTimer) {
+            clearInterval(this._heartbeatTimer);
+            this._heartbeatTimer = null;
+        }
+    }
+    _scheduleReconnect() {
+        if (this._closed || this._reconnectTimer)
+            return;
+        this._reconnectAttempts++;
+        // Exponential backoff with jitter
+        const delay = Math.min(this.reconnectDelay * Math.pow(2, this._reconnectAttempts - 1) + Math.random() * 1000, this.maxReconnectDelay);
+        this.emit('debug', `scheduling reconnect in ${Math.round(delay)}ms (attempt ${this._reconnectAttempts})`);
+        this._reconnectTimer = setTimeout(() => {
+            this._reconnectTimer = null;
+            if (!this._closed) {
+                this.connect();
+            }
+        }, delay);
+    }
+    _clearTimers() {
+        this._stopHeartbeat();
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
     }
     _handle(frame) {
         switch (frame.op) {
@@ -89,7 +166,7 @@ class Gateway extends node_events_1.EventEmitter {
                 const envelope = frame.d;
                 const t = envelope.t;
                 const payload = envelope.d;
-                if (payload && typeof payload === 'object') {
+                if (payload && typeof payload === 'object' && payload !== null) {
                     const p = payload;
                     if (envelope.room_id && p.room_id == null)
                         p.room_id = envelope.room_id;
