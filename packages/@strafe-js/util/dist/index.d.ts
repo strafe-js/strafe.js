@@ -32,7 +32,8 @@ export declare const Permission: {
     readonly ManageThreads: number;
 };
 export type PermissionName = keyof typeof Permission;
-export type PermissionResolvable = PermissionName | number | PermissionName[];
+export type PermissionResolvable = PermissionName | number | PermissionResolvable[];
+export declare const ALL_PERMISSIONS: number;
 export declare const RoomType: {
     readonly PM: 1;
     readonly GroupPM: 2;
@@ -66,10 +67,11 @@ export declare class RateLimitError extends StrafeError {
 }
 export declare class BitField {
     bitfield: number;
-    constructor(bits?: number | BitField);
+    constructor(bits?: PermissionResolvable);
     has(bit: PermissionResolvable): boolean;
     add(...bits: PermissionResolvable[]): this;
     remove(...bits: PermissionResolvable[]): this;
+    toArray(): PermissionName[];
     toJSON(): number;
     valueOf(): number;
 }

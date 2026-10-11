@@ -30,6 +30,7 @@ export declare class REST {
     getSpace(id: Snowflake): Promise<Space>;
     getSpaceRooms(spaceId: Snowflake): Promise<Room[]>;
     getSpaceMembers(spaceId: Snowflake): Promise<SpaceMember[]>;
+    getSpaceMember(spaceId: Snowflake, userId: Snowflake): Promise<SpaceMember>;
     createMessage(roomId: Snowflake, body: CreateMessageBody): Promise<Message>;
     editMessage(roomId: Snowflake, messageId: Snowflake, body: {
         plaintext: string;

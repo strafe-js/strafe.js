@@ -6,6 +6,8 @@ export interface GatewayOptions {
     token: string;
     tokenType?: 'Bot' | 'Bearer';
     reconnectDelay?: number;
+    maxReconnectDelay?: number;
+    heartbeatInterval?: number;
 }
 export interface GatewayEvents {
     ready: [ReadyPayload];
@@ -22,7 +24,7 @@ export interface GatewayEvents {
     spaceRoomDelete: [unknown];
     spaceMemberAdd: [unknown];
     spaceMemberRemove: [unknown];
-    spaceMemberUpdate: [unknown];
+    spaceMemberUpdate: [unknown, GatewayEventEnvelope];
     typingStart: [unknown];
     sessionRevoked: [unknown];
     error: [Error];
@@ -35,17 +37,27 @@ export declare class Gateway extends EventEmitter {
     token: string;
     tokenType: 'Bot' | 'Bearer';
     reconnectDelay: number;
+    maxReconnectDelay: number;
+    heartbeatIntervalMs: number;
     ws: WebSocket | null;
     sessionId: string | null;
     user: User | null;
     private _closed;
+    private _reconnectAttempts;
+    private _reconnectTimer;
+    private _heartbeatTimer;
     constructor(opts: GatewayOptions);
     connect(): void;
     disconnect(): void;
+    ping(): void;
     send(op: number, d?: unknown): void;
     subscribe(id: Snowflake): void;
     unsubscribe(id: Snowflake): void;
     sendTyping(roomId: Snowflake): void;
+    private _startHeartbeat;
+    private _stopHeartbeat;
+    private _scheduleReconnect;
+    private _clearTimers;
     private _handle;
     private _eventName;
 }

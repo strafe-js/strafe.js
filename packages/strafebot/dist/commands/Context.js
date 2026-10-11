@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Permission = exports.Context = void 0;
 const util_1 = require("@strafe-js/util");
 Object.defineProperty(exports, "Permission", { enumerable: true, get: function () { return util_1.Permission; } });
+const CommandArgument_js_1 = require("./CommandArgument.js");
 class Context {
     client;
     message;
@@ -13,6 +14,8 @@ class Context {
     space;
     room;
     memberPermissions;
+    botPermissions;
+    parsedArguments;
     constructor(opts) {
         this.client = opts.client;
         this.message = opts.message;
@@ -23,15 +26,36 @@ class Context {
         this.space = opts.space;
         this.room = opts.room;
         this.memberPermissions = opts.memberPermissions;
+        this.botPermissions = opts.botPermissions;
+        this.parsedArguments = opts.parsedArguments ?? new CommandArgument_js_1.ParsedArguments();
+    }
+    get arguments() {
+        return this.parsedArguments;
     }
     get authorId() {
         return this.message.sender_id;
     }
+    get author() {
+        return this.client.user?.id === this.authorId ? this.client.user : null;
+    }
     get roomId() {
         return this.message.room_id;
     }
+    get spaceId() {
+        return this.space?.id ?? this.message.space_id ?? null;
+    }
     get content() {
         return this.message.plaintext ?? '';
+    }
+    get member() {
+        if (!this.spaceId)
+            return null;
+        return this.client.members.get(this.spaceId)?.get(this.authorId) ?? null;
+    }
+    get botMember() {
+        if (!this.spaceId || !this.client.user?.id)
+            return null;
+        return this.client.members.get(this.spaceId)?.get(this.client.user.id) ?? null;
     }
     async reply(content, extra = {}) {
         const body = typeof content === 'string'
@@ -58,8 +82,20 @@ class Context {
         const mask = (0, util_1.resolvePermission)(required);
         return (this.memberPermissions & mask) === mask;
     }
-    isOwner() {
+    hasBotPermissions(required) {
+        const mask = (0, util_1.resolvePermission)(required);
+        return (this.botPermissions & mask) === mask;
+    }
+    isBotOwner() {
         return this.client.commands.owners.has(this.authorId);
+    }
+    isOwner() {
+        return this.isBotOwner();
+    }
+    isSpaceOwner() {
+        if (!this.space)
+            return false;
+        return this.space.owner_id === this.authorId;
     }
 }
 exports.Context = Context;

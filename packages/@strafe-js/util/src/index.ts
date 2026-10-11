@@ -34,7 +34,13 @@ export const Permission = {
 } as const;
 
 export type PermissionName = keyof typeof Permission;
-export type PermissionResolvable = PermissionName | number | PermissionName[];
+
+export type PermissionResolvable =
+  | PermissionName
+  | number
+  | PermissionResolvable[];
+
+export const ALL_PERMISSIONS = Object.values(Permission).reduce((acc, val) => acc | (typeof val === 'number' ? val : 0), 0);
 
 export const RoomType = {
   PM: 1,
@@ -88,8 +94,8 @@ export class RateLimitError extends StrafeError {
 export class BitField {
   bitfield: number;
 
-  constructor(bits: number | BitField = 0) {
-    this.bitfield = bits instanceof BitField ? bits.bitfield : Number(bits) || 0;
+  constructor(bits: PermissionResolvable = 0) {
+    this.bitfield = typeof bits === 'number' ? bits : resolvePermission(bits);
   }
 
   has(bit: PermissionResolvable): boolean {
@@ -107,6 +113,16 @@ export class BitField {
     return this;
   }
 
+  toArray(): PermissionName[] {
+    const names: PermissionName[] = [];
+    for (const [key, val] of Object.entries(Permission)) {
+      if (typeof val === 'number' && (this.bitfield & val) === val) {
+        names.push(key as PermissionName);
+      }
+    }
+    return names;
+  }
+
   toJSON(): number {
     return this.bitfield;
   }
@@ -119,17 +135,18 @@ export class BitField {
 export function resolvePermission(bit: PermissionResolvable): number {
   if (typeof bit === 'number') return bit;
   if (typeof bit === 'string') {
-    const v = Permission[bit];
+    const v = Permission[bit as PermissionName];
     if (v == null) throw new Error(`unknown permission: ${bit}`);
     return v;
   }
-  let mask = 0;
-  for (const name of bit) {
-    const v = Permission[name];
-    if (v == null) throw new Error(`unknown permission: ${name}`);
-    mask |= v;
+  if (Array.isArray(bit)) {
+    let mask = 0;
+    for (const item of bit) {
+      mask |= resolvePermission(item);
+    }
+    return mask;
   }
-  return mask;
+  throw new Error(`invalid permission resolvable: ${String(bit)}`);
 }
 
 export function isSnowflake(id: unknown): id is Snowflake {

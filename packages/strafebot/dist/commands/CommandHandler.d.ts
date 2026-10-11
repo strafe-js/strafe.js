@@ -9,7 +9,7 @@ export interface CommandHandlerOptions {
 }
 export declare class CommandHandler {
     readonly client: Client;
-    readonly commands: Map<string, Command>;
+    readonly commands: Map<string, Command<any>>;
     readonly aliases: Map<string, string>;
     readonly cooldowns: Map<string, number>;
     readonly owners: Set<Snowflake>;
@@ -20,9 +20,9 @@ export declare class CommandHandler {
     constructor(client: Client, opts?: CommandHandlerOptions);
     setPrefix(prefix: string | string[]): this;
     setOwners(ids: Snowflake[]): this;
-    register(cmd: Command | CommandOptions): this;
-    registerAll(list: Array<Command | CommandOptions>): this;
-    get(name: string): Command | null;
+    register(cmd: Command<any> | CommandOptions<any>): this;
+    registerAll(list: Array<Command<any> | CommandOptions<any>>): this;
+    get(name: string): Command<any> | null;
     attach(): this;
     private _onMessage;
     private _safeReply;

@@ -5,6 +5,7 @@ import { Collection } from '@strafe-js/collection';
 import {
   StrafeError,
   Permission,
+  ALL_PERMISSIONS,
   type Snowflake,
   type User,
   type Space,
@@ -38,6 +39,7 @@ export class Client extends EventEmitter {
   readonly members = new Collection<Snowflake, Collection<Snowflake, SpaceMember>>();
 
   readonly commands: CommandHandler;
+  private _fetchingMembers = new Map<string, Promise<SpaceMember | null>>();
 
   constructor(options: ClientOptions) {
     super();
@@ -91,20 +93,56 @@ export class Client extends EventEmitter {
     }
     for (const m of list) {
       const id = (m.id ?? m.user_id) as Snowflake;
-      col.set(id, m);
+      if (id) col.set(id, m);
     }
     return col;
   }
 
+  async fetchMember(spaceId: Snowflake, userId: Snowflake): Promise<SpaceMember | null> {
+    const key = `${spaceId}:${userId}`;
+    const existing = this._fetchingMembers.get(key);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      try {
+        const member = await this.rest.getSpaceMember(spaceId, userId);
+        if (member) {
+          let col = this.members.get(spaceId);
+          if (!col) {
+            col = new Collection();
+            this.members.set(spaceId, col);
+          }
+          const id = (member.id ?? member.user_id ?? userId) as Snowflake;
+          col.set(id, member);
+          return member;
+        }
+        return null;
+      } catch {
+        return null;
+      } finally {
+        this._fetchingMembers.delete(key);
+      }
+    })();
+
+    this._fetchingMembers.set(key, promise);
+    return promise;
+  }
+
   /**
    * Resolve effective permission mask for a user in a space/room.
-   * Owner → Administrator. Else OR of roles, then room overrides.
+   * Follows exact equinox rules:
+   * 1. Space Owner / Administrator bit => ALL_PERMISSIONS
+   * 2. @everyone role base + user role bases
+   * 3. Room overrides: @everyone deny/allow
+   * 4. Room overrides: aggregated role denies, then aggregated role allows
+   * 5. Room overrides: user deny, then user allow
+   * 6. Dependent permission cascades (e.g. !ViewRoom clears room perms)
    */
   resolveMemberPermissions(userId: Snowflake, spaceId: Snowflake | null | undefined, roomId?: Snowflake): number {
     if (!spaceId) return 0;
     const space = this.spaces.get(spaceId);
     if (!space) return 0;
-    if (space.owner_id === userId) return Permission.Administrator;
+    if (space.owner_id === userId) return ALL_PERMISSIONS;
 
     const memberCol = this.members.get(spaceId);
     const member = memberCol?.get(userId);
@@ -123,22 +161,46 @@ export class Client extends EventEmitter {
       if (role) mask |= role.permissions || 0;
     }
 
-    if (mask & Permission.Administrator) return Permission.Administrator;
+    if (mask & Permission.Administrator) return ALL_PERMISSIONS;
 
     const room = roomId ? this.rooms.get(roomId) : null;
-    if (room?.permission_overrides) {
-      for (const ov of room.permission_overrides) {
-        if (!ov.role_id) continue;
-        const holds =
-          ov.role_id === space.everyone_role_id || memberRoles.includes(ov.role_id);
-        if (holds) {
-          mask = (mask & ~ov.deny) | ov.allow;
+    if (room) {
+      const roleOverrides = room.permission_overrides ?? [];
+
+      // 1) @everyone override
+      const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
+      if (everyoneOv) {
+        mask = (mask & ~everyoneOv.deny) | everyoneOv.allow;
+      }
+
+      // 2) Aggregated member role overrides: all denies first, then all allows
+      let aggregatedDeny = 0;
+      let aggregatedAllow = 0;
+      for (const ov of roleOverrides) {
+        if (!ov.role_id || ov.role_id === space.everyone_role_id) continue;
+        if (memberRoles.includes(ov.role_id)) {
+          aggregatedDeny |= ov.deny;
+          aggregatedAllow |= ov.allow;
         }
       }
-    }
-    if (room?.user_overrides) {
-      const uov = room.user_overrides.find((o: PermissionOverride) => o.user_id === userId);
-      if (uov) mask = (mask & ~uov.deny) | uov.allow;
+      mask = (mask & ~aggregatedDeny) | aggregatedAllow;
+
+      // 3) Individual user override
+      const userOverrides = room.user_overrides ?? [];
+      const userOv = userOverrides.find((o: PermissionOverride) => o.user_id === userId);
+      if (userOv) {
+        mask = (mask & ~userOv.deny) | userOv.allow;
+      }
+
+      // Dependent permission rules
+      if (!(mask & Permission.ViewRoom)) {
+        mask = 0;
+      } else {
+        if (!(mask & Permission.SendMessages)) {
+          mask &= ~Permission.AttachFiles;
+          mask &= ~Permission.MentionEveryone;
+        }
+      }
     }
 
     return mask;
@@ -235,7 +297,8 @@ export class Client extends EventEmitter {
         col = new Collection();
         this.members.set(spaceId, col);
       }
-      col.set((m.id ?? m.user_id) as Snowflake, m);
+      const id = (m.id ?? m.user_id) as Snowflake;
+      if (id) col.set(id, m);
       this.emit('spaceMemberAdd', m);
     });
     gw.on('spaceMemberRemove', (data: unknown) => {
@@ -243,14 +306,14 @@ export class Client extends EventEmitter {
       this.members.get(d.space_id)?.delete(d.user_id);
       this.emit('spaceMemberRemove', d);
     });
-    gw.on('spaceMemberUpdate', (data: unknown) => {
-      const d = data as { space_id?: Snowflake; user_id: Snowflake; role_ids: Snowflake[] };
-      // SPACE_MEMBER_UPDATE may not always carry space_id in envelope; try both
-      const spaceId = d.space_id;
+    gw.on('spaceMemberUpdate', (data: unknown, envelope: GatewayEventEnvelope) => {
+      const d = data as { space_id?: Snowflake; user_id: Snowflake; role_ids?: Snowflake[]; roles?: Snowflake[] };
+      const spaceId = d.space_id || envelope?.space_id;
       if (spaceId) {
+        const roleIds = d.role_ids ?? d.roles;
         const existing = this.members.get(spaceId)?.get(d.user_id);
-        if (existing) {
-          existing.role_ids = d.role_ids;
+        if (existing && roleIds) {
+          existing.role_ids = roleIds;
         }
       }
       this.emit('spaceMemberUpdate', d);
