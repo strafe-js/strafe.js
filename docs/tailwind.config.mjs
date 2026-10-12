@@ -10,11 +10,19 @@ export default {
     extend: {
       colors: {
         strafe: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
+          bg: '#101114',
+          card: '#17191c',
+          border: '#2f3237',
+          green: {
+            DEFAULT: '#509b6b',
+            hover: '#45875d',
+            light: '#6db888',
+          },
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          500: '#509b6b',
+          600: '#45875d',
+          700: '#386f4c',
         },
       },
     },

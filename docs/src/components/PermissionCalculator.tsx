@@ -52,13 +52,7 @@ export function PermissionCalculator() {
     else if (preset === 'admin') setMask(1 << 11);
   };
 
-  const codeSnippet = `import { permissions } from '@strafe-js/builders';
-
-// Permission Bitfield Value: ${mask} (0x${mask.toString(16)})
-const requiredPermissions = permissions([
-${selectedNames.map((n) => `  '${n}',`).join('
-')}
-]);`;
+  const codeSnippet = `import { permissions } from '@strafe-js/builders';\n\n// Permission Bitfield Value: ${mask} (0x${mask.toString(16)})\nconst requiredPermissions = permissions([\n${selectedNames.map((n) => `  '${n}',`).join('\n')}\n]);`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(codeSnippet);
@@ -69,29 +63,29 @@ ${selectedNames.map((n) => `  '${n}',`).join('
   const groups = ['General', 'Text', 'Voice', 'Moderation', 'Threads'] as const;
 
   return (
-    <div className="my-8 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900/80 shadow-lg overflow-hidden">
-      <div className="p-6 bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-purple-500/10 border-b border-zinc-200 dark:border-zinc-800">
+    <div className="my-8 border border-[#2f3237] rounded-2xl bg-[#17191c] shadow-lg overflow-hidden text-[#f3f5f7]">
+      <div className="p-6 bg-gradient-to-r from-[#509b6b]/10 via-[#26282c] to-[#101114] border-b border-[#2f3237]">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-sky-500 text-white shadow-md">
+          <div className="p-2.5 rounded-xl bg-[#509b6b] text-white shadow-md">
             <Shield className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+            <h3 className="text-lg font-bold text-[#f3f5f7]">
               Interactive Permission Bitfield Calculator
             </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-[#aeb6c2]">
               Toggle Strafe permissions to instantly calculate integer masks, binary bits, and generate code snippets.
             </p>
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-zinc-500 mr-2">Presets:</span>
-          <button onClick={() => setPreset('member')} className="px-2.5 py-1 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-sky-500 hover:text-white transition-colors">Basic Member</button>
-          <button onClick={() => setPreset('mod')} className="px-2.5 py-1 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-sky-500 hover:text-white transition-colors">Moderator</button>
-          <button onClick={() => setPreset('admin')} className="px-2.5 py-1 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-sky-500 hover:text-white transition-colors">Administrator</button>
-          <button onClick={() => setPreset('all')} className="px-2.5 py-1 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-sky-500 hover:text-white transition-colors">Select All</button>
-          <button onClick={() => setPreset('none')} className="px-2.5 py-1 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-red-500 hover:text-white transition-colors">Clear All</button>
+          <span className="text-xs font-semibold text-[#aeb6c2] mr-2">Presets:</span>
+          <button onClick={() => setPreset('member')} className="px-2.5 py-1 text-xs rounded-lg bg-[#26282c] text-[#f3f5f7] hover:bg-[#509b6b] hover:text-white transition-colors">Basic Member</button>
+          <button onClick={() => setPreset('mod')} className="px-2.5 py-1 text-xs rounded-lg bg-[#26282c] text-[#f3f5f7] hover:bg-[#509b6b] hover:text-white transition-colors">Moderator</button>
+          <button onClick={() => setPreset('admin')} className="px-2.5 py-1 text-xs rounded-lg bg-[#26282c] text-[#f3f5f7] hover:bg-[#509b6b] hover:text-white transition-colors">Administrator</button>
+          <button onClick={() => setPreset('all')} className="px-2.5 py-1 text-xs rounded-lg bg-[#26282c] text-[#f3f5f7] hover:bg-[#509b6b] hover:text-white transition-colors">Select All</button>
+          <button onClick={() => setPreset('none')} className="px-2.5 py-1 text-xs rounded-lg bg-[#26282c] text-[#f3f5f7] hover:bg-red-500 hover:text-white transition-colors">Clear All</button>
         </div>
       </div>
 
@@ -99,17 +93,17 @@ ${selectedNames.map((n) => `  '${n}',`).join('
         {groups.map((group) => {
           const items = PERMISSION_LIST.filter((p) => p.group === group);
           return (
-            <div key={group} className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-950/40">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800">{group} Permissions</h4>
+            <div key={group} className="p-4 rounded-xl border border-[#2f3237] bg-[#101114]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#509b6b] mb-3 pb-1 border-b border-[#2f3237]">{group} Permissions</h4>
               <div className="space-y-2.5">
                 {items.map((p) => {
                   const isChecked = (mask & p.bit) === p.bit;
                   return (
                     <label key={p.name} className="flex items-start gap-2.5 cursor-pointer select-none group text-xs">
-                      <input type="checkbox" checked={isChecked} onChange={() => toggle(p.bit)} className="mt-0.5 rounded border-zinc-300 dark:border-zinc-700 text-sky-600 focus:ring-sky-500" />
+                      <input type="checkbox" checked={isChecked} onChange={() => toggle(p.bit)} className="mt-0.5 rounded border-[#2f3237] text-[#509b6b] focus:ring-[#57a875]" />
                       <div>
-                        <div className={`font-mono font-semibold transition-colors ${isChecked ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-700 dark:text-zinc-300'}`}>{p.name}</div>
-                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{p.desc}</div>
+                        <div className={`font-mono font-semibold transition-colors ${isChecked ? 'text-[#509b6b]' : 'text-[#f3f5f7]'}`}>{p.name}</div>
+                        <div className="text-[11px] text-[#aeb6c2]">{p.desc}</div>
                       </div>
                     </label>
                   );
@@ -120,16 +114,16 @@ ${selectedNames.map((n) => `  '${n}',`).join('
         })}
       </div>
 
-      <div className="p-6 bg-zinc-950 text-zinc-100 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
+      <div className="p-6 bg-[#101114] text-[#f3f5f7] border-t border-[#2f3237] space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-between"><span className="text-zinc-400 flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-sky-400" /> Mask Decimal</span><span className="font-bold text-sky-400 text-sm">{mask}</span></div>
-          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-between"><span className="text-zinc-400 flex items-center gap-1.5"><Code2 className="w-3.5 h-3.5 text-purple-400" /> Hex Value</span><span className="font-bold text-purple-400 text-sm">0x{mask.toString(16).toUpperCase()}</span></div>
-          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-between"><span className="text-zinc-400 flex items-center gap-1.5"><Binary className="w-3.5 h-3.5 text-emerald-400" /> Active Bits</span><span className="font-bold text-emerald-400 text-sm">{selectedNames.length} / 28</span></div>
+          <div className="p-3 rounded-xl bg-[#17191c] border border-[#2f3237] flex items-center justify-between"><span className="text-[#aeb6c2] flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-[#509b6b]" /> Mask Decimal</span><span className="font-bold text-[#509b6b] text-sm">{mask}</span></div>
+          <div className="p-3 rounded-xl bg-[#17191c] border border-[#2f3237] flex items-center justify-between"><span className="text-[#aeb6c2] flex items-center gap-1.5"><Code2 className="w-3.5 h-3.5 text-[#509b6b]" /> Hex Value</span><span className="font-bold text-[#509b6b] text-sm">0x{mask.toString(16).toUpperCase()}</span></div>
+          <div className="p-3 rounded-xl bg-[#17191c] border border-[#2f3237] flex items-center justify-between"><span className="text-[#aeb6c2] flex items-center gap-1.5"><Binary className="w-3.5 h-3.5 text-[#509b6b]" /> Active Bits</span><span className="font-bold text-[#509b6b] text-sm">{selectedNames.length} / 28</span></div>
         </div>
 
         <div className="relative group">
-          <button onClick={copyCode} className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-300 hover:text-white transition-colors text-xs flex items-center gap-1.5 z-10">{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}<span>{copied ? 'Copied Code' : 'Copy Snippet'}</span></button>
-          <pre className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800 font-mono text-xs text-sky-300 overflow-x-auto leading-relaxed"><code>{codeSnippet}</code></pre>
+          <button onClick={copyCode} className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-[#26282c] text-[#f3f5f7] hover:bg-[#2e2e2e] transition-colors text-xs flex items-center gap-1.5 z-10">{copied ? <Check className="w-3.5 h-3.5 text-[#509b6b]" /> : <Copy className="w-3.5 h-3.5" />}<span>{copied ? 'Copied Code' : 'Copy Snippet'}</span></button>
+          <pre className="p-4 rounded-xl bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto leading-relaxed"><code>{codeSnippet}</code></pre>
         </div>
       </div>
     </div>

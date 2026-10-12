@@ -19,23 +19,10 @@ export function ApiPlayground() {
   const [copied, setCopied] = useState(false);
 
   const getCodeSnippet = () => {
-    if (activeTab === 'ws') return `import { Gateway } from '@strafe-js/ws';
-
-const gateway = new Gateway({
-  url: 'wss://app.strafe.chat/gateway/events',
-  token: 'YOUR_BOT_TOKEN',
-});
-
-gateway.on('messageCreate', (message, envelope) => {
-  console.log('New Gateway Event Received:', message);
-});
-
-gateway.connect();`;
+    if (activeTab === 'ws') return `import { Gateway } from '@strafe-js/ws';\n\nconst gateway = new Gateway({\n  url: 'wss://app.strafe.chat/gateway/events',\n  token: 'YOUR_BOT_TOKEN',\n});\n\ngateway.on('messageCreate', (message, envelope) => {\n  console.log('New Gateway Event Received:', message);\n});\n\ngateway.connect();`;
 
     switch (method) {
-      case 'createMessage': return `const message = await client.rest.createMessage('${roomId}', {
-  plaintext: '${plaintext}',
-});`;
+      case 'createMessage': return `const message = await client.rest.createMessage('${roomId}', {\n  plaintext: '${plaintext}',\n});`;
       case 'kickMember': return `await client.rest.kickMember('${spaceId}', '${userId}');`;
       case 'listMessages': return `const messages = await client.rest.listMessages('${roomId}', { limit: 25 });`;
       case 'addReaction': return `await client.rest.addReaction('${roomId}', '${messageId}', '${emoji}');`;
@@ -68,15 +55,15 @@ gateway.connect();`;
   };
 
   return (
-    <div className="my-8 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900/80 shadow-lg overflow-hidden">
-      <div className="p-4 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+    <div className="my-8 border border-[#2f3237] rounded-2xl bg-[#17191c] shadow-lg overflow-hidden text-[#f3f5f7]">
+      <div className="p-4 bg-[#101114] border-b border-[#2f3237] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button onClick={() => { setActiveTab('rest'); setResponse(null); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${activeTab === 'rest' ? 'bg-sky-500 text-white' : 'text-zinc-500'}`}><Send className="w-3.5 h-3.5" /> REST API Simulator</button>
-          <button onClick={() => { setActiveTab('ws'); setResponse(null); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${activeTab === 'ws' ? 'bg-purple-600 text-white' : 'text-zinc-500'}`}><Radio className="w-3.5 h-3.5" /> Gateway Simulator</button>
+          <button onClick={() => { setActiveTab('rest'); setResponse(null); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${activeTab === 'rest' ? 'bg-[#509b6b] text-white' : 'text-[#aeb6c2] hover:text-[#f3f5f7]'}`}><Send className="w-3.5 h-3.5" /> REST API Simulator</button>
+          <button onClick={() => { setActiveTab('ws'); setResponse(null); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${activeTab === 'ws' ? 'bg-[#26282c] border border-[#2f3237] text-[#f3f5f7]' : 'text-[#aeb6c2] hover:text-[#f3f5f7]'}`}><Radio className="w-3.5 h-3.5 text-[#509b6b]" /> Gateway Simulator</button>
         </div>
 
         {activeTab === 'rest' && (
-          <select value={method} onChange={(e) => setMethod(e.target.value as any)} className="px-3 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 font-mono text-xs">
+          <select value={method} onChange={(e) => setMethod(e.target.value as any)} className="px-3 py-1 rounded-lg border border-[#2f3237] bg-[#17191c] text-[#f3f5f7] font-mono text-xs">
             <option value="createMessage">createMessage(roomId, body)</option>
             <option value="kickMember">kickMember(spaceId, userId)</option>
             <option value="listMessages">listMessages(roomId, query)</option>
@@ -85,29 +72,29 @@ gateway.connect();`;
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 dark:divide-zinc-800">
+      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#2f3237]">
         <div className="p-6 space-y-4 text-xs">
-          <h4 className="font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider text-[11px]">{activeTab === 'rest' ? 'Method Parameters' : 'Gateway Connection Payload'}</h4>
+          <h4 className="font-bold text-[#509b6b] uppercase tracking-wider text-[11px]">{activeTab === 'rest' ? 'Method Parameters' : 'Gateway Connection Payload'}</h4>
           {activeTab === 'rest' && (
             <div className="space-y-3">
-              {(method === 'createMessage' || method === 'listMessages' || method === 'addReaction') && (<div><label className="block font-semibold mb-1">Room ID</label><input type="text" value={roomId} onChange={(e) => setRoomId(e.target.value)} className="w-full px-3 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-mono text-xs" /></div>)}
-              {method === 'createMessage' && (<div><label className="block font-semibold mb-1">Message Plaintext</label><input type="text" value={plaintext} onChange={(e) => setPlaintext(e.target.value)} className="w-full px-3 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-xs" /></div>)}
+              {(method === 'createMessage' || method === 'listMessages' || method === 'addReaction') && (<div><label className="block font-semibold mb-1 text-[#f3f5f7]">Room ID</label><input type="text" value={roomId} onChange={(e) => setRoomId(e.target.value)} className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs" /></div>)}
+              {method === 'createMessage' && (<div><label className="block font-semibold mb-1 text-[#f3f5f7]">Message Plaintext</label><input type="text" value={plaintext} onChange={(e) => setPlaintext(e.target.value)} className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] text-xs" /></div>)}
             </div>
           )}
-          <button onClick={executeRequest} disabled={loading} className="w-full py-2 px-4 rounded-xl bg-sky-500 text-white font-semibold hover:bg-sky-600 flex items-center justify-center gap-2">
+          <button onClick={executeRequest} disabled={loading} className="w-full py-2 px-4 rounded-xl bg-[#509b6b] hover:bg-[#45875d] text-white font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm">
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             <span>{loading ? 'Executing...' : 'Simulate Call'}</span>
           </button>
         </div>
 
-        <div className="p-6 bg-zinc-950 text-zinc-100 flex flex-col justify-between space-y-4">
+        <div className="p-6 bg-[#101114] text-[#f3f5f7] flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center justify-between mb-2"><span className="font-mono text-xs text-sky-400 font-bold uppercase tracking-wider flex items-center gap-1.5"><Code2 className="w-4 h-4" /> SDK Code</span><button onClick={copySnippet} className="px-2 py-1 rounded bg-zinc-800 text-zinc-300 text-[11px] flex items-center gap-1">{copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}<span>{copied ? 'Copied' : 'Copy'}</span></button></div>
-            <pre className="p-3 rounded bg-zinc-900 border border-zinc-800 font-mono text-xs text-sky-300 overflow-x-auto"><code>{getCodeSnippet()}</code></pre>
+            <div className="flex items-center justify-between mb-2"><span className="font-mono text-xs text-[#509b6b] font-bold uppercase tracking-wider flex items-center gap-1.5"><Code2 className="w-4 h-4" /> SDK Code</span><button onClick={copySnippet} className="px-2 py-1 rounded bg-[#26282c] text-[#f3f5f7] text-[11px] flex items-center gap-1">{copied ? <Check className="w-3 h-3 text-[#509b6b]" /> : <Copy className="w-3 h-3" />}<span>{copied ? 'Copied' : 'Copy'}</span></button></div>
+            <pre className="p-3 rounded bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto"><code>{getCodeSnippet()}</code></pre>
           </div>
           <div>
-            <span className="font-mono text-xs text-emerald-400 font-bold uppercase tracking-wider block mb-2">Response Payload</span>
-            <pre className="p-3 rounded bg-zinc-900 border border-zinc-800 font-mono text-xs text-emerald-300 overflow-x-auto min-h-[100px]"><code>{response ? JSON.stringify(response, null, 2) : '// Response output'}</code></pre>
+            <span className="font-mono text-xs text-[#509b6b] font-bold uppercase tracking-wider block mb-2">Response Payload</span>
+            <pre className="p-3 rounded bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto min-h-[100px]"><code>{response ? JSON.stringify(response, null, 2) : '// Response output'}</code></pre>
           </div>
         </div>
       </div>
