@@ -1,0 +1,10 @@
+{
+  "title": "Command Framework",
+  "pages": [
+    "index",
+    "command-definition",
+    "command-handler",
+    "context",
+    "typed-arguments"
+  ]
+}

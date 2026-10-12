@@ -1,0 +1,10 @@
+{
+  "title": "StrafeBot Client",
+  "pages": [
+    "index",
+    "client-options",
+    "client-properties",
+    "client-methods",
+    "client-events"
+  ]
+}
