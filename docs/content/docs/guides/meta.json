@@ -1,8 +1,3 @@
 {
-  "title": "Guides & Tutorials",
-  "pages": [
-    "moderation-bot",
-    "permissions-guide",
-    "deployment"
-  ]
+  "title": "Guides & Tutorials"
 }

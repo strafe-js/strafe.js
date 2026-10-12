@@ -1,8 +1,3 @@
 {
-  "title": "Interactive Tools",
-  "pages": [
-    "permission-calculator",
-    "command-builder",
-    "api-playground"
-  ]
+  "title": "Interactive Tools"
 }

@@ -1,9 +1,3 @@
 {
-  "title": "REST API SDK",
-  "pages": [
-    "index",
-    "rest-class",
-    "methods",
-    "rate-limiting"
-  ]
+  "title": "REST API SDK"
 }
