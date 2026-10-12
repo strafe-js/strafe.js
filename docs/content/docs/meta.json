@@ -1,0 +1,17 @@
+{
+  "title": "Overview",
+  "pages": [
+    "index",
+    "installation",
+    "quickstart",
+    "monorepo",
+    "strafebot",
+    "commands",
+    "rest",
+    "ws",
+    "packages",
+    "cli",
+    "tools",
+    "guides"
+  ]
+}

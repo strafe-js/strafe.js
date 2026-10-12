@@ -1,0 +1,9 @@
+{
+  "title": "Gateway WebSocket SDK",
+  "pages": [
+    "index",
+    "gateway-class",
+    "opcodes",
+    "events"
+  ]
+}
