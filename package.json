@@ -5,7 +5,8 @@
   "description": "TypeScript libraries for the Strafe Chat API and Gateway",
   "workspaces": [
     "packages/*",
-    "packages/@strafe-js/*"
+    "packages/@strafe-js/*",
+    "docs"
   ],
   "scripts": {
     "build": "npm run build:util && npm run build:collection && npm run build:formatters && npm run build:builders && npm run build:rest && npm run build:ws && npm run build:client",
@@ -16,7 +17,9 @@
     "build:rest": "npm run build -w @strafe-js/rest",
     "build:ws": "npm run build -w @strafe-js/ws",
     "build:client": "npm run build -w @strafe-js/strafebot",
-    "clean": "rm -rf packages/*/dist packages/@strafe-js/*/dist",
+    "docs:dev": "npm --prefix docs run dev",
+    "docs:build": "npm --prefix docs run build",
+    "clean": "rm -rf packages/*/dist packages/@strafe-js/*/dist docs/.next docs/out",
     "test": "npm run build && node --import tsx --test tests/**/*.test.ts"
   },
   "engines": {

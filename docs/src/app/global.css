@@ -1,0 +1,76 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import 'fumadocs-ui/dist/style.css';
+
+:root {
+  --fd-background: #f4f6f8;
+  --fd-foreground: #1b1f26;
+  --fd-card: #ffffff;
+  --fd-card-foreground: #1b1f26;
+  --fd-popover: #ffffff;
+  --fd-popover-foreground: #1b1f26;
+  --fd-primary: #3f8a5a;
+  --fd-primary-foreground: #ffffff;
+  --fd-secondary: #e8ecf0;
+  --fd-secondary-foreground: #1b1f26;
+  --fd-muted: #e8ecf0;
+  --fd-muted-foreground: #5b6470;
+  --fd-accent: #e1e6ec;
+  --fd-accent-foreground: #1b1f26;
+  --fd-border: #d6dce3;
+  --fd-ring: #3f8a5a;
+
+  --color-fd-background: #f4f6f8;
+  --color-fd-foreground: #1b1f26;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #1b1f26;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #1b1f26;
+  --color-fd-primary: #3f8a5a;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #e8ecf0;
+  --color-fd-secondary-foreground: #1b1f26;
+  --color-fd-muted: #e8ecf0;
+  --color-fd-muted-foreground: #5b6470;
+  --color-fd-accent: #e1e6ec;
+  --color-fd-accent-foreground: #1b1f26;
+  --color-fd-border: #d6dce3;
+  --color-fd-ring: #3f8a5a;
+}
+
+.dark {
+  --fd-background: #101114;
+  --fd-foreground: #f3f5f7;
+  --fd-card: #17191c;
+  --fd-card-foreground: #f3f5f7;
+  --fd-popover: #191b1f;
+  --fd-popover-foreground: #f3f5f7;
+  --fd-primary: #509b6b;
+  --fd-primary-foreground: #f5f9f7;
+  --fd-secondary: #26282c;
+  --fd-secondary-foreground: #edf0f2;
+  --fd-muted: #26282c;
+  --fd-muted-foreground: #aeb6c2;
+  --fd-accent: #2e2e2e;
+  --fd-accent-foreground: #f2f2f2;
+  --fd-border: #2f3237;
+  --fd-ring: #57a875;
+
+  --color-fd-background: #101114;
+  --color-fd-foreground: #f3f5f7;
+  --color-fd-card: #17191c;
+  --color-fd-card-foreground: #f3f5f7;
+  --color-fd-popover: #191b1f;
+  --color-fd-popover-foreground: #f3f5f7;
+  --color-fd-primary: #509b6b;
+  --color-fd-primary-foreground: #f5f9f7;
+  --color-fd-secondary: #26282c;
+  --color-fd-secondary-foreground: #edf0f2;
+  --color-fd-muted: #26282c;
+  --color-fd-muted-foreground: #aeb6c2;
+  --color-fd-accent: #2e2e2e;
+  --color-fd-accent-foreground: #f2f2f2;
+  --color-fd-border: #2f3237;
+  --color-fd-ring: #57a875;
+}
