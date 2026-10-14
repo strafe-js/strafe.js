@@ -51,8 +51,37 @@ export async function generateMetadata(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const title = page.data.title;
+  const description =
+    page.data.description ||
+    'Complete TypeScript & JavaScript SDK suite for the Strafe Chat REST API and WebSocket Gateway.';
+  const pageTitle = `${title} | Strafe.js`;
+  const strafeIcon512 = 'https://app.strafe.chat/icons/icon-512.png';
+
   return {
-    title: page.data.title,
-    description: page.data.description,
+    title,
+    description,
+    openGraph: {
+      type: 'article',
+      siteName: 'Strafe.js Documentation',
+      title: pageTitle,
+      description,
+      url: page.url,
+      images: [
+        {
+          url: strafeIcon512,
+          width: 512,
+          height: 512,
+          alt: pageTitle,
+          type: 'image/png',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary',
+      title: pageTitle,
+      description,
+      images: [strafeIcon512],
+    },
   };
 }
