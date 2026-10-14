@@ -1,6 +1,6 @@
 {
   "name": "@strafe-js/formatters",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "String formatters for mentions, rooms, emoji",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,7 +31,7 @@
     "typescript": "^5.6.0"
   },
   "dependencies": {
-    "@strafe-js/util": "^1.0.2"
+    "@strafe-js/util": "^1.1.0"
   },
   "homepage": "https://github.com/strafe-js/strafe.js#readme",
   "bugs": {

@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.Permission = void 0;
+exports.sleep = exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.Permission = void 0;
 exports.resolvePermission = resolvePermission;
 exports.isSnowflake = isSnowflake;
-exports.sleep = sleep;
-/** Full permission table from https://app.strafe.chat/docs/permissions/ */
+/**
+ * Strafe permission bitflags matching https://app.strafe.chat/docs/permissions/#the-bits
+ */
 exports.Permission = {
     ViewRoom: 1 << 0, // 1
     SendMessages: 1 << 1, // 2
@@ -20,6 +21,7 @@ exports.Permission = {
     Administrator: 1 << 11, // 2048
     ManageSpace: 1 << 12, // 4096
     CreateInvite: 1 << 13, // 8192
+    CreateInvites: 1 << 13, // Alias for CreateInvite (8192)
     ManageEmojis: 1 << 14, // 16384
     Connect: 1 << 15, // 32768
     Speak: 1 << 16, // 65536
@@ -34,8 +36,11 @@ exports.Permission = {
     CreatePrivateThreads: 1 << 25, // 33554432
     SendMessagesInThreads: 1 << 26, // 67108864
     ManageThreads: 1 << 27, // 134217728
+    ChangeNickname: 1 << 21, // Legacy alias
+    ManageNicknames: 1 << 7, // Legacy alias
+    SendVoiceMessages: 1 << 16, // Legacy alias
 };
-exports.ALL_PERMISSIONS = Object.values(exports.Permission).reduce((acc, val) => acc | (typeof val === 'number' ? val : 0), 0);
+exports.ALL_PERMISSIONS = Object.values(exports.Permission).reduce((a, b) => a | b, 0);
 exports.RoomType = {
     PM: 1,
     GroupPM: 2,
@@ -59,7 +64,7 @@ class StrafeError extends Error {
     status;
     code;
     body;
-    constructor(message, status = 0, code = null, body = null) {
+    constructor(message, status, code, body) {
         super(message);
         this.name = 'StrafeError';
         this.status = status;
@@ -70,71 +75,98 @@ class StrafeError extends Error {
 exports.StrafeError = StrafeError;
 class RateLimitError extends StrafeError {
     retryAfter;
-    constructor(message, retryAfter, status = 429) {
-        super(message, status, 'rate_limit');
+    constructor(retryAfter, body) {
+        super(`Rate limited; retry after ${retryAfter}s`, 429, 'rate_limited', body);
         this.name = 'RateLimitError';
         this.retryAfter = retryAfter;
     }
 }
 exports.RateLimitError = RateLimitError;
+const CANONICAL_PERMISSIONS = [
+    ['ViewRoom', exports.Permission.ViewRoom],
+    ['SendMessages', exports.Permission.SendMessages],
+    ['ReadMessageHistory', exports.Permission.ReadMessageHistory],
+    ['AddReactions', exports.Permission.AddReactions],
+    ['UseExternalEmojis', exports.Permission.UseExternalEmojis],
+    ['MentionEveryone', exports.Permission.MentionEveryone],
+    ['ManageMessages', exports.Permission.ManageMessages],
+    ['ManageRoles', exports.Permission.ManageRoles],
+    ['ManageRooms', exports.Permission.ManageRooms],
+    ['KickMembers', exports.Permission.KickMembers],
+    ['BanMembers', exports.Permission.BanMembers],
+    ['Administrator', exports.Permission.Administrator],
+    ['ManageSpace', exports.Permission.ManageSpace],
+    ['CreateInvite', exports.Permission.CreateInvite],
+    ['ManageEmojis', exports.Permission.ManageEmojis],
+    ['Connect', exports.Permission.Connect],
+    ['Speak', exports.Permission.Speak],
+    ['Video', exports.Permission.Video],
+    ['MuteMembers', exports.Permission.MuteMembers],
+    ['DeafenMembers', exports.Permission.DeafenMembers],
+    ['MoveMembers', exports.Permission.MoveMembers],
+    ['UseVoiceActivity', exports.Permission.UseVoiceActivity],
+    ['PrioritySpeaker', exports.Permission.PrioritySpeaker],
+    ['AttachFiles', exports.Permission.AttachFiles],
+    ['CreatePublicThreads', exports.Permission.CreatePublicThreads],
+    ['CreatePrivateThreads', exports.Permission.CreatePrivateThreads],
+    ['SendMessagesInThreads', exports.Permission.SendMessagesInThreads],
+    ['ManageThreads', exports.Permission.ManageThreads],
+];
 class BitField {
-    bitfield;
+    bits;
     constructor(bits = 0) {
-        this.bitfield = typeof bits === 'number' ? bits : resolvePermission(bits);
+        this.bits = resolvePermission(bits);
     }
-    has(bit) {
-        const mask = resolvePermission(bit);
-        return (this.bitfield & mask) === mask;
+    get bitfield() {
+        return this.bits;
     }
-    add(...bits) {
-        for (const bit of bits)
-            this.bitfield |= resolvePermission(bit);
+    has(perm) {
+        const mask = resolvePermission(perm);
+        return (this.bits & mask) === mask;
+    }
+    add(...perms) {
+        for (const p of perms)
+            this.bits |= resolvePermission(p);
         return this;
     }
-    remove(...bits) {
-        for (const bit of bits)
-            this.bitfield &= ~resolvePermission(bit);
+    remove(...perms) {
+        for (const p of perms)
+            this.bits &= ~resolvePermission(p);
         return this;
     }
     toArray() {
-        const names = [];
-        for (const [key, val] of Object.entries(exports.Permission)) {
-            if (typeof val === 'number' && (this.bitfield & val) === val) {
-                names.push(key);
-            }
+        const out = [];
+        for (const [k, v] of CANONICAL_PERMISSIONS) {
+            if ((this.bits & v) === v)
+                out.push(k);
         }
-        return names;
+        return out;
     }
     toJSON() {
-        return this.bitfield;
+        return this.bits;
     }
     valueOf() {
-        return this.bitfield;
+        return this.bits;
     }
 }
 exports.BitField = BitField;
-function resolvePermission(bit) {
-    if (typeof bit === 'number')
-        return bit;
-    if (typeof bit === 'string') {
-        const v = exports.Permission[bit];
-        if (v == null)
-            throw new Error(`unknown permission: ${bit}`);
+function resolvePermission(input) {
+    if (typeof input === 'number')
+        return input;
+    if (typeof input === 'string') {
+        const v = exports.Permission[input];
+        if (v === undefined)
+            throw new Error(`Unknown permission: ${input}`);
         return v;
     }
-    if (Array.isArray(bit)) {
-        let mask = 0;
-        for (const item of bit) {
-            mask |= resolvePermission(item);
-        }
-        return mask;
+    if (Array.isArray(input)) {
+        return input.reduce((acc, cur) => acc | resolvePermission(cur), 0);
     }
-    throw new Error(`invalid permission resolvable: ${String(bit)}`);
+    return 0;
 }
 function isSnowflake(id) {
     return typeof id === 'string' && /^\d{16,20}$/.test(id);
 }
-function sleep(ms) {
-    return new Promise((r) => setTimeout(r, ms));
-}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+exports.sleep = sleep;
 //# sourceMappingURL=index.js.map

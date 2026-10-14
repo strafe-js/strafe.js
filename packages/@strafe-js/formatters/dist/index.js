@@ -1,23 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.escapeMarkdown = exports.customReactionEmoji = exports.customEmoji = exports.roomMention = exports.roleMention = exports.userMention = void 0;
+const userMention = (id) => `<@${id}>`;
 exports.userMention = userMention;
+const roleMention = (id) => `<@&${id}>`;
 exports.roleMention = roleMention;
+const roomMention = (id) => `<#${id}>`;
 exports.roomMention = roomMention;
+const customEmoji = (name, id, animated = false) => `<${animated ? 'a' : ''}:${name}:${id}>`;
 exports.customEmoji = customEmoji;
+const customReactionEmoji = (id) => `custom:${id}`;
+exports.customReactionEmoji = customReactionEmoji;
+const escapeMarkdown = (text) => text.replace(/([*_`~|\\])/g, '\\$1');
 exports.escapeMarkdown = escapeMarkdown;
-function userMention(id) {
-    return `<@${id}>`;
-}
-function roleMention(id) {
-    return `<@&${id}>`;
-}
-function roomMention(id) {
-    return `<#${id}>`;
-}
-function customEmoji(name, id, animated = false) {
-    return animated ? `<a:${name}:${id}>` : `<:${name}:${id}>`;
-}
-function escapeMarkdown(text) {
-    return String(text).replace(/([*_`~|\\])/g, '\\$1');
-}
 //# sourceMappingURL=index.js.map

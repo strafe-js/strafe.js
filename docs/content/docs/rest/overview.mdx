@@ -1,9 +1,9 @@
 ---
 title: REST API SDK (@strafe-js/rest)
-description: Standalone Fetch-based HTTP client with automatic 429 rate-limit retries and typed endpoints.
+description: Standalone Fetch-based HTTP client with automatic 429 rate-limit retries and typed endpoints for the Strafe API.
 ---
 
-`@strafe-js/rest` provides the `REST` class for interacting with the Strafe HTTP API. It is exposed as `client.rest` on `@strafe-js/strafebot` or can be instantiated standalone.
+`@strafe-js/rest` provides the `REST` class for interacting with the Strafe HTTP API (`https://app.strafe.chat/api`). It is exposed as `client.rest` on `@strafe-js/strafebot` or can be instantiated standalone.
 
 ## Installation
 
@@ -36,7 +36,7 @@ console.log(`Authenticated as ${me.username}`);
     { name: 'token', type: 'string', optional: true, description: 'Bot or Bearer token used in the Authorization header.' },
     { name: 'authScheme', type: "'Bot' | 'Bearer'", optional: true, description: 'Authorization scheme prefix (default: "Bot").' },
     { name: 'retries', type: 'number', optional: true, description: 'Number of automatic retries on HTTP 429 responses (default: 3).' },
-    { name: 'userAgent', type: 'string', optional: true, description: 'Custom User-Agent header (default: "strafebot-js/0.1").' },
+    { name: 'userAgent', type: 'string', optional: true, description: 'Custom User-Agent header (default: "strafebot-js/1.1").' },
   ]}
 />
 
@@ -49,144 +49,93 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
 ### Users & Spaces
 
 <MethodCard
-  name="rest.getMe"
-  signature="() => Promise<User>"
+  name="rest.getMe / rest.updateProfile"
+  signature="getMe() => Promise<User> | updateProfile(body) => Promise<User>"
   returnType="Promise<User>"
-  description="Fetches the currently authenticated bot User object (GET /users/@me)."
-  example={`const me = await rest.getMe();`}
+  description="Fetches (GET /users/@me) or updates (PATCH /users/@me) the currently authenticated bot User profile."
+  example={`const me = await rest.getMe();\nawait rest.updateProfile({ display_name: 'StrafeHelper', bio: 'Moderation bot' });`}
 />
 
 <MethodCard
-  name="rest.getMySpaces / rest.getSpaces"
-  signature="() => Promise<Space[]>"
-  returnType="Promise<Space[]>"
-  description="Lists all Spaces the authenticated user belongs to (GET /users/@me/spaces)."
-  example={`const spaces = await rest.getSpaces();`}
+  name="rest.getSpaces / rest.getSpace / rest.editSpace"
+  signature="getSpaces() => Promise<Space[]> | getSpace(spaceId) => Promise<Space>"
+  returnType="Promise<Space[] | Space>"
+  description="Lists all Spaces the bot belongs to (GET /spaces), fetches a Space (GET /spaces/:id), or updates Space settings (PATCH /spaces/:id)."
+  example={`const spaces = await rest.getSpaces();\nconst space = await rest.getSpace(spaceId);`}
 />
 
 <MethodCard
-  name="rest.getSpace"
-  signature="(spaceId: Snowflake) => Promise<Space>"
-  returnType="Promise<Space>"
-  description="Fetches a single Space by ID (GET /spaces/:spaceId)."
-  parameters={[
-    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
-  ]}
-  example={`const space = await rest.getSpace(spaceId);`}
+  name="rest.getSpaceRooms / rest.createRoom / rest.editRoom / rest.deleteRoom"
+  signature="(spaceId: Snowflake, ...) => Promise<Room[] | Room | null>"
+  returnType="Promise<Room[] | Room | null>"
+  description="Manages Space rooms (GET /spaces/:id/rooms, POST /spaces/:id/rooms, PATCH /rooms/:id, DELETE /rooms/:id)."
+  example={`const rooms = await rest.getSpaceRooms(spaceId);\nconst room = await rest.createRoom(spaceId, { name: 'announcements', type: 3 });`}
 />
 
 <MethodCard
-  name="rest.getSpaceRooms"
-  signature="(spaceId: Snowflake) => Promise<Room[]>"
-  returnType="Promise<Room[]>"
-  description="Fetches all rooms belonging to a Space (GET /spaces/:spaceId/rooms)."
-  parameters={[
-    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
-  ]}
-  example={`const rooms = await rest.getSpaceRooms(spaceId);`}
+  name="rest.getSpaceMembers / rest.getSpaceMember / rest.setMemberRoles"
+  signature="(spaceId: Snowflake, userId: Snowflake, roleIds?: Snowflake[]) => Promise<...>"
+  returnType="Promise<SpaceMember[] | SpaceMember | null>"
+  description="Fetches Space members or replaces a member's assigned role list (PUT /spaces/:id/members/:userId/roles)."
+  example={`await rest.setMemberRoles(spaceId, userId, [verifiedRoleId]);`}
+/>
+
+### Messages, Search, Reactions & Pins
+
+<MethodCard
+  name="rest.createMessage / rest.editMessage / rest.deleteMessage"
+  signature="(roomId: Snowflake, ...) => Promise<Message | null>"
+  returnType="Promise<Message | null>"
+  description="Sends (POST /rooms/:id/messages), edits (PATCH /rooms/:id/messages/:msgId), or deletes (DELETE /rooms/:id/messages/:msgId) a room message."
+  example={`const msg = await rest.createMessage(roomId, { plaintext: 'Hello Strafe!' });`}
 />
 
 <MethodCard
-  name="rest.getSpaceMembers / rest.getSpaceMember"
-  signature="(spaceId: Snowflake, userId?: Snowflake) => Promise<SpaceMember[] | SpaceMember>"
-  returnType="Promise<SpaceMember[] | SpaceMember>"
-  description="Fetches all members of a Space or a single member by User ID."
-  parameters={[
-    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
-    { name: 'userId', type: 'Snowflake', required: false, description: 'User ID (for getSpaceMember).' },
-  ]}
-  example={`const allMembers = await rest.getSpaceMembers(spaceId);\nconst oneMember = await rest.getSpaceMember(spaceId, userId);`}
-/>
-
-### Messages & Reactions
-
-<MethodCard
-  name="rest.createMessage"
-  signature="(roomId: Snowflake, body: CreateMessageBody | string) => Promise<Message>"
-  returnType="Promise<Message>"
-  description="Sends a new message (or MessageBuilder JSON payload) to a room."
-  parameters={[
-    { name: 'roomId', type: 'Snowflake', required: true, description: 'Target Room ID.' },
-    { name: 'body', type: 'CreateMessageBody | string', required: true, description: 'Plaintext string or structured message payload.' },
-  ]}
-  example={`await rest.createMessage(roomId, {\n  plaintext: 'Hello from @strafe-js/rest!',\n});`}
-/>
-
-<MethodCard
-  name="rest.editMessage"
-  signature="(roomId: Snowflake, messageId: Snowflake, body: EditMessageBody | string) => Promise<Message>"
-  returnType="Promise<Message>"
-  description="Edits an existing message in a room."
-  parameters={[
-    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
-    { name: 'messageId', type: 'Snowflake', required: true, description: 'Message ID to edit.' },
-    { name: 'body', type: 'EditMessageBody | string', required: true, description: 'Updated message content.' },
-  ]}
-  example={`await rest.editMessage(roomId, messageId, 'Updated content');`}
-/>
-
-<MethodCard
-  name="rest.deleteMessage"
-  signature="(roomId: Snowflake, messageId: Snowflake) => Promise<void>"
-  returnType="Promise<void>"
-  description="Deletes a message in a room (DELETE /rooms/:roomId/messages/:messageId)."
-  parameters={[
-    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
-    { name: 'messageId', type: 'Snowflake', required: true, description: 'Message ID to delete.' },
-  ]}
-  example={`await rest.deleteMessage(roomId, messageId);`}
-/>
-
-<MethodCard
-  name="rest.listMessages"
-  signature="(roomId: Snowflake, params?: { limit?: number; before?: Snowflake; after?: Snowflake }) => Promise<Message[]>"
+  name="rest.listMessages / rest.searchRoomMessages / rest.searchSpaceMessages"
+  signature="(id: Snowflake, params) => Promise<Message[]>"
   returnType="Promise<Message[]>"
-  description="Fetches message history for a room with optional pagination parameters."
-  parameters={[
-    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
-    { name: 'params', type: '{ limit?: number; before?: Snowflake; after?: Snowflake }', required: false, description: 'Pagination query parameters.' },
-  ]}
-  example={`const messages = await rest.listMessages(roomId, { limit: 25 });`}
+  description="Fetches message history (before/after/limit) or searches messages by query, sender_id, or date range."
+  example={`const hits = await rest.searchSpaceMessages(spaceId, { q: 'deploy', limit: 20 });`}
 />
 
 <MethodCard
-  name="rest.addReaction / rest.removeReaction"
-  signature="(roomId: Snowflake, messageId: Snowflake, emoji: string, userId?: Snowflake) => Promise<void>"
-  returnType="Promise<void>"
-  description="Adds or removes an emoji reaction on a message."
-  parameters={[
-    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
-    { name: 'messageId', type: 'Snowflake', required: true, description: 'Message ID.' },
-    { name: 'emoji', type: 'string', required: true, description: 'Unicode emoji or custom emoji identifier.' },
-    { name: 'userId', type: 'Snowflake', required: false, default: "'@me'", description: '(removeReaction only) User ID whose reaction to remove.' },
-  ]}
+  name="rest.addReaction / rest.removeReaction / rest.getReactions"
+  signature="(roomId: Snowflake, messageId: Snowflake, emoji: string) => Promise<null | User[]>"
+  returnType="Promise<null | User[]>"
+  description="Adds (PUT), removes (DELETE), or lists (GET) reactions on a message. Supports Unicode emoji or custom:<emoji_id>."
   example={`await rest.addReaction(roomId, messageId, '🔥');`}
 />
 
-### Moderation, Invites & Attachments
+<MethodCard
+  name="rest.pinMessage / rest.unpinMessage / rest.getPinnedMessages"
+  signature="(roomId: Snowflake, messageId?: Snowflake) => Promise<null | Message[]>"
+  returnType="Promise<null | Message[]>"
+  description="Pins (PUT /rooms/:id/pins/:msgId), unpins (DELETE /rooms/:id/pins/:msgId), or lists pinned messages in a room."
+  example={`await rest.pinMessage(roomId, messageId);\nconst pins = await rest.getPinnedMessages(roomId);`}
+/>
+
+### Threads, Roles, Bans & Attachments
 
 <MethodCard
-  name="rest.uploadAttachment"
-  signature="(file: Blob | Buffer, filename: string, uploadUrl?: string) => Promise<Attachment>"
-  returnType="Promise<Attachment>"
-  description="Uploads a file via multipart/form-data and returns an Attachment object."
-  parameters={[
-    { name: 'file', type: 'Blob | Buffer', required: true, description: 'Binary file content.' },
-    { name: 'filename', type: 'string', required: true, description: 'Filename for the uploaded attachment.' },
-    { name: 'uploadUrl', type: 'string', required: false, default: "'/attachments'", description: 'Custom upload endpoint path.' },
-  ]}
-  example={`const attachment = await rest.uploadAttachment(Buffer.from('hello'), 'hello.txt');\nawait rest.createMessage(roomId, { plaintext: 'File attached!', attachments: [attachment.id] });`}
+  name="rest.createThreadFromMessage / rest.createThread / rest.editThread"
+  signature="(roomId: Snowflake, ...) => Promise<Room>"
+  returnType="Promise<Room>"
+  description="Creates a thread from a message (POST /rooms/:id/messages/:msgId/threads), standalone thread (POST /rooms/:id/threads), or archives/locks a thread (PATCH /threads/:id)."
+  example={`const thread = await rest.createThreadFromMessage(roomId, messageId, { name: 'Bug triage' });`}
 />
 
 <MethodCard
-  name="rest.kickMember / rest.banMember"
-  signature="(spaceId: Snowflake, userId: Snowflake, reason?: string) => Promise<void>"
-  returnType="Promise<void>"
-  description="Kicks (DELETE /spaces/:spaceId/members/:userId) or bans (PUT /spaces/:spaceId/bans/:userId) a member from a Space."
-  parameters={[
-    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
-    { name: 'userId', type: 'Snowflake', required: true, description: 'User ID to kick or ban.' },
-    { name: 'reason', type: 'string', required: false, description: '(banMember only) Optional audit reason.' },
-  ]}
-  example={`await rest.kickMember(spaceId, userId);\nawait rest.banMember(spaceId, userId, 'Spamming');`}
+  name="rest.uploadAttachment"
+  signature="(roomIdOrFile: Snowflake | Blob | Buffer, fileOrFilename: Blob | Buffer | string, filename?: string) => Promise<Attachment>"
+  returnType="Promise<Attachment>"
+  description="Uploads a file via multipart/form-data to POST /rooms/:roomId/attachments and returns an Attachment object."
+  example={`const att = await rest.uploadAttachment(roomId, Buffer.from('log data'), 'debug.log');\nawait rest.createMessage(roomId, { plaintext: 'Logs attached', attachments: [att.id] });`}
+/>
+
+<MethodCard
+  name="rest.kickMember / rest.banMember / rest.unbanMember"
+  signature="(spaceId: Snowflake, userId: Snowflake, reason?: string) => Promise<null>"
+  returnType="Promise<null>"
+  description="Kicks (DELETE /spaces/:id/members/:userId), bans (POST /spaces/:id/bans/:userId), or unbans (DELETE /spaces/:id/bans/:userId) a member."
+  example={`await rest.banMember(spaceId, userId, 'Spamming');`}
 />

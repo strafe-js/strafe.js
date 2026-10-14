@@ -1,21 +1,18 @@
-import type { Snowflake } from '@strafe-js/util';
+import { Snowflake } from '@strafe-js/util';
 
-export function userMention(id: Snowflake): string {
-  return `<@${id}>`;
-}
+export const userMention = (id: Snowflake): string => `<@${id}>`;
 
-export function roleMention(id: Snowflake): string {
-  return `<@&${id}>`;
-}
+export const roleMention = (id: Snowflake): string => `<@&${id}>`;
 
-export function roomMention(id: Snowflake): string {
-  return `<#${id}>`;
-}
+export const roomMention = (id: Snowflake): string => `<#${id}>`;
 
-export function customEmoji(name: string, id: Snowflake, animated = false): string {
-  return animated ? `<a:${name}:${id}>` : `<:${name}:${id}>`;
-}
+export const customEmoji = (
+  name: string,
+  id: Snowflake,
+  animated = false,
+): string => `<${animated ? 'a' : ''}:${name}:${id}>`;
 
-export function escapeMarkdown(text: string): string {
-  return String(text).replace(/([*_`~|\\])/g, '\\$1');
-}
+export const customReactionEmoji = (id: Snowflake): string => `custom:${id}`;
+
+export const escapeMarkdown = (text: string): string =>
+  text.replace(/([*_`~|\\])/g, '\\$1');

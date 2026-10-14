@@ -6,12 +6,19 @@
 @source '../**/*.{ts,tsx}';
 
 @theme {
-  --color-strafe-bg: #101114;
-  --color-strafe-card: #17191c;
-  --color-strafe-border: #2f3237;
+  --color-strafe-bg: #101216;
+  --color-strafe-bg-2: #171a20;
+  --color-strafe-bg-3: #1e222a;
+  --color-strafe-card: #171a20;
+  --color-strafe-border: #2a2f39;
+  --color-strafe-border-2: #363c48;
+  --color-strafe-fg: #e6e8ec;
+  --color-strafe-fg-2: #b4bac6;
+  --color-strafe-fg-3: #7f8797;
   --color-strafe-green: #509b6b;
   --color-strafe-green-hover: #45875d;
-  --color-strafe-green-light: #6db888;
+  --color-strafe-green-light: #6ab585;
+  --color-strafe-code: #0b0d11;
   --color-strafe-50: #f0fdf4;
   --color-strafe-100: #dcfce7;
   --color-strafe-500: #509b6b;
@@ -20,6 +27,25 @@
 }
 
 :root {
+  --bg: #101216;
+  --bg-2: #171a20;
+  --bg-3: #1e222a;
+  --border: #2a2f39;
+  --border-2: #363c48;
+  --fg: #e6e8ec;
+  --fg-2: #b4bac6;
+  --fg-3: #7f8797;
+  --brand: #509b6b;
+  --brand-2: #6ab585;
+  --brand-soft: rgba(80, 155, 107, 0.15);
+  --warn: #e0a526;
+  --warn-soft: rgba(224, 165, 38, 0.12);
+  --danger: #e25555;
+  --danger-soft: rgba(226, 85, 85, 0.12);
+  --info: #4b8fe2;
+  --info-soft: rgba(75, 143, 226, 0.12);
+  --code-bg: #0b0d11;
+
   --fd-background: #f4f6f8;
   --fd-foreground: #1b1f26;
   --fd-card: #ffffff;
@@ -56,46 +82,125 @@
 }
 
 .dark {
-  --fd-background: #0d0f12;
-  --fd-foreground: #f3f5f7;
-  --fd-card: #15181d;
-  --fd-card-foreground: #f3f5f7;
+  --fd-background: #101216;
+  --fd-foreground: #e6e8ec;
+  --fd-card: #171a20;
+  --fd-card-foreground: #e6e8ec;
   --fd-popover: #171a20;
-  --fd-popover-foreground: #f3f5f7;
+  --fd-popover-foreground: #e6e8ec;
   --fd-primary: #509b6b;
-  --fd-primary-foreground: #f5f9f7;
-  --fd-secondary: #1e2229;
-  --fd-secondary-foreground: #edf0f2;
-  --fd-muted: #1b1f26;
-  --fd-muted-foreground: #9ba5b4;
-  --fd-accent: #232830;
-  --fd-accent-foreground: #f2f2f2;
-  --fd-border: #262b33;
-  --fd-ring: #57a875;
+  --fd-primary-foreground: #e6e8ec;
+  --fd-secondary: #1e222a;
+  --fd-secondary-foreground: #e6e8ec;
+  --fd-muted: #171a20;
+  --fd-muted-foreground: #b4bac6;
+  --fd-accent: rgba(80, 155, 107, 0.15);
+  --fd-accent-foreground: #6ab585;
+  --fd-border: #2a2f39;
+  --fd-ring: #509b6b;
 
-  --color-fd-background: #0d0f12;
-  --color-fd-foreground: #f3f5f7;
-  --color-fd-card: #15181d;
-  --color-fd-card-foreground: #f3f5f7;
+  --color-fd-background: #101216;
+  --color-fd-foreground: #e6e8ec;
+  --color-fd-card: #171a20;
+  --color-fd-card-foreground: #e6e8ec;
   --color-fd-popover: #171a20;
-  --color-fd-popover-foreground: #f3f5f7;
+  --color-fd-popover-foreground: #e6e8ec;
   --color-fd-primary: #509b6b;
-  --color-fd-primary-foreground: #f5f9f7;
-  --color-fd-secondary: #1e2229;
-  --color-fd-secondary-foreground: #edf0f2;
-  --color-fd-muted: #1b1f26;
-  --color-fd-muted-foreground: #9ba5b4;
-  --color-fd-accent: #232830;
-  --color-fd-accent-foreground: #f2f2f2;
-  --color-fd-border: #262b33;
-  --color-fd-ring: #57a875;
+  --color-fd-primary-foreground: #e6e8ec;
+  --color-fd-secondary: #1e222a;
+  --color-fd-secondary-foreground: #e6e8ec;
+  --color-fd-muted: #171a20;
+  --color-fd-muted-foreground: #b4bac6;
+  --color-fd-accent: rgba(80, 155, 107, 0.15);
+  --color-fd-accent-foreground: #6ab585;
+  --color-fd-border: #2a2f39;
+  --color-fd-ring: #509b6b;
 }
 
 .dark #nd-sidebar {
-  --color-fd-muted: #14171c;
-  --color-fd-secondary: #1d2229;
-  --color-fd-muted-foreground: #9ba5b4;
-  background-color: #101317;
+  --color-fd-muted: #171a20;
+  --color-fd-secondary: #1e222a;
+  --color-fd-muted-foreground: #b4bac6;
+  background-color: rgba(23, 26, 32, 0.55);
+  border-right-color: #2a2f39;
+}
+
+/* Brand Header Logo matching https://app.strafe.chat/docs/ */
+.strafe-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: #e6e8ec;
+  white-space: nowrap;
+}
+
+.strafe-brand-mark {
+  color: #e6e8ec;
+}
+
+.strafe-brand-dot {
+  color: #509b6b;
+}
+
+.strafe-brand-docs {
+  margin-left: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #7f8797;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Official Strafe Docs Hero & Card Aesthetics */
+.strafe-hero {
+  padding: 28px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(80, 155, 107, 0.18), rgba(23, 26, 32, 0.6) 60%);
+  border: 1px solid #363c48;
+}
+
+.strafe-card {
+  padding: 18px 20px;
+  border-radius: 10px;
+  background: #171a20;
+  border: 1px solid #2a2f39;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+
+.strafe-card:hover {
+  border-color: #509b6b;
+  background: #1e222a;
+}
+
+/* Code & Table Refinements matching Strafe Docs */
+.dark pre {
+  background-color: #0b0d11 !important;
+  border-color: #2a2f39 !important;
+}
+
+.dark :not(pre) > code {
+  background-color: #1e222a;
+  border: 1px solid #2a2f39;
+  color: #e6e8ec;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
+.dark table {
+  border-color: #2a2f39;
+}
+
+.dark th {
+  background-color: #171a20;
+  color: #7f8797;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 html {
@@ -105,5 +210,6 @@ html {
 body {
   background-color: var(--color-fd-background);
   color: var(--color-fd-foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Oxygen, Ubuntu, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }

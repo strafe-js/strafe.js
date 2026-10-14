@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   Shield,
-  Zap,
   ArrowRight,
   Cpu,
   Wrench,
@@ -11,164 +10,247 @@ import {
   Sparkles,
   BookOpen,
   Layers,
+  ExternalLink,
 } from 'lucide-react';
+
+const DOC_SECTIONS = [
+  {
+    title: 'Getting Started & Bot Client',
+    desc: 'Create a bot application, connect to Stargate Gateway, and use the high-level @strafe-js/strafebot Client.',
+    href: '/docs/guides/getting-started',
+    badge: 'Start Here',
+  },
+  {
+    title: 'Command Framework',
+    desc: 'Declarative prefix commands, typed argument schemas, cooldowns, and Equinox permission guards.',
+    href: '/docs/commands/overview',
+    badge: 'Commands',
+  },
+  {
+    title: 'WebSocket Gateway (@strafe-js/ws)',
+    desc: 'Connect to wss://app.strafe.chat/gateway/events, handle opcodes 0–8, space_rooms, and real-time events.',
+    href: '/docs/ws/overview',
+    badge: 'Gateway',
+  },
+  {
+    title: 'REST API (@strafe-js/rest)',
+    desc: 'Full HTTP reference for Spaces, Rooms, Messages, Threads, Reactions, Pins, Roles, Bans, and Invites.',
+    href: '/docs/rest/overview',
+    badge: 'REST API',
+  },
+  {
+    title: 'Permissions & Bitfields',
+    desc: 'The 28-bit Strafe permission table, role & user room overrides, and the 6-stage Equinox resolver.',
+    href: '/docs/tools/permission-calculator',
+    badge: 'Permissions',
+  },
+  {
+    title: 'Packages & Builders',
+    desc: 'Explore @strafe-js/builders, @strafe-js/formatters, @strafe-js/collection, @strafe-js/util, and create-strafebot.',
+    href: '/docs/packages/builders',
+    badge: 'Ecosystem',
+  },
+];
 
 const PACKAGES = [
   {
     name: '@strafe-js/strafebot',
-    desc: 'High-level Bot Client, state caches, Equinox permission engine, and typed Command Framework.',
+    version: 'v1.1.0',
+    desc: 'High-level Bot Client, state caches (spaces, rooms, spaceRooms, members), Equinox permission engine, and typed Command Framework.',
     href: '/docs/strafebot/client',
-    badge: 'Core SDK',
   },
   {
     name: '@strafe-js/rest',
-    desc: 'Fetch-based HTTP REST client with automatic 429 Retry-After backoff and multipart uploads.',
+    version: 'v1.1.0',
+    desc: 'Fetch-based HTTP REST client with automatic 429 Retry-After backoff, threads, reactions, pins, search, and multipart uploads.',
     href: '/docs/rest/overview',
-    badge: 'HTTP Client',
   },
   {
     name: '@strafe-js/ws',
-    desc: 'Persistent WebSocket Gateway client with automatic heartbeating, jitter backoff, and event normalization.',
+    version: 'v1.1.0',
+    desc: 'Stargate WebSocket Gateway client supporting nested & flat op:3 event envelopes, heartbeats, and jittered reconnects.',
     href: '/docs/ws/overview',
-    badge: 'Gateway WS',
   },
   {
     name: '@strafe-js/builders',
+    version: 'v1.1.0',
     desc: 'Fluent MessageBuilder and permission bitmask factories for clean payload construction.',
     href: '/docs/packages/builders',
-    badge: 'Builders',
+  },
+  {
+    name: '@strafe-js/formatters',
+    version: 'v1.1.0',
+    desc: 'Markdown, mention (<@id>, <#id>, <@&id>), custom emoji (<:name:id>, custom:id), and codeblock formatters.',
+    href: '/docs/packages/formatters',
   },
   {
     name: '@strafe-js/collection',
+    version: 'v1.1.0',
     desc: 'Extended Map<K, V> data structure with functional query helpers (find, filter, map, first).',
     href: '/docs/packages/collection',
-    badge: 'Data Structure',
+  },
+  {
+    name: '@strafe-js/util',
+    version: 'v1.1.0',
+    desc: '28-bit Strafe Permission flags, BitField class, GatewayOp & RoomType constants, error classes, and TypeScript interfaces.',
+    href: '/docs/packages/util',
   },
   {
     name: 'create-strafebot',
+    version: 'v1.1.0',
     desc: 'Interactive CLI tool to scaffold new TypeScript bots and generate command modules.',
     href: '/docs/cli/overview',
-    badge: 'CLI Tool',
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="flex-1 flex flex-col justify-between bg-[#0d0f12] text-[#f3f5f7] min-h-screen">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0d0f12]/80 border-b border-[#262b33]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 font-extrabold text-lg tracking-tight">
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-[#509b6b]/15 border border-[#509b6b]/30 text-[#509b6b]">
-              <Zap className="w-4 h-4" />
-            </span>
-            <span>Strafe.js</span>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#509b6b]/15 text-[#6db888] border border-[#509b6b]/25">
-              v1.0.5
-            </span>
-          </Link>
+    <div className="flex-1 flex flex-col justify-between bg-[#101216] text-[#e6e8ec] min-h-screen">
+      {/* Topbar matching https://app.strafe.chat/docs/ */}
+      <header className="sticky top-0 z-40 h-14 backdrop-blur-md bg-[#101216]/85 border-b border-[#2a2f39]">
+        <div className="max-w-[1380px] mx-auto px-5 h-full flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="strafe-brand">
+              <span className="strafe-brand-mark">Strafe</span>
+              <span className="strafe-brand-dot">.js</span>
+              <span className="strafe-brand-docs">DOCS</span>
+            </Link>
 
-          <nav className="flex items-center gap-5 text-xs sm:text-sm font-medium text-[#9ba5b4]">
-            <Link href="/docs" className="hover:text-[#f3f5f7] transition-colors flex items-center gap-1.5">
-              <BookOpen className="w-4 h-4 text-[#509b6b]" />
-              <span>Docs</span>
-            </Link>
-            <Link
-              href="/docs/tools/permission-calculator"
-              className="hidden sm:flex hover:text-[#f3f5f7] transition-colors items-center gap-1.5"
+            <nav className="hidden md:flex items-center gap-1 text-[13px] font-medium text-[#b4bac6]">
+              <Link
+                href="/docs"
+                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
+              >
+                Overview
+              </Link>
+              <Link
+                href="/docs/strafebot/client"
+                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
+              >
+                Client & Bots
+              </Link>
+              <Link
+                href="/docs/ws/overview"
+                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
+              >
+                Gateway
+              </Link>
+              <Link
+                href="/docs/rest/overview"
+                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
+              >
+                REST API
+              </Link>
+              <Link
+                href="/docs/tools/permission-calculator"
+                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
+              >
+                Permissions
+              </Link>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-2.5 text-xs">
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] bg-[#509b6b]/15 text-[#6ab585] border border-[#509b6b]/30">
+              v1.1.0
+            </span>
+            <a
+              href="https://app.strafe.chat/docs/"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[#b4bac6] hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors font-medium"
             >
-              <Shield className="w-4 h-4 text-[#509b6b]" />
-              <span>Permissions</span>
-            </Link>
-            <Link
-              href="/docs/tools/command-builder"
-              className="hidden md:flex hover:text-[#f3f5f7] transition-colors items-center gap-1.5"
-            >
-              <Sparkles className="w-4 h-4 text-[#509b6b]" />
-              <span>Command Builder</span>
-            </Link>
-            <Link
-              href="/docs/tools/api-playground"
-              className="hidden md:flex hover:text-[#f3f5f7] transition-colors items-center gap-1.5"
-            >
-              <Radio className="w-4 h-4 text-[#509b6b]" />
-              <span>API Playground</span>
-            </Link>
+              <span>Strafe API Docs</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
             <a
               href="https://github.com/strafe-js/strafe.js"
               target="_blank"
               rel="noreferrer"
-              className="px-3.5 py-1.5 rounded-lg bg-[#15181d] hover:bg-[#1e2229] text-[#f3f5f7] border border-[#262b33] transition-colors text-xs font-semibold"
+              className="px-3 py-1.5 rounded-md bg-[#171a20] hover:bg-[#1e222a] text-[#e6e8ec] border border-[#2a2f39] transition-colors font-semibold"
             >
               GitHub
             </a>
-          </nav>
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-16 px-6 max-w-6xl mx-auto w-full text-center">
-        <div className="absolute inset-0 -z-10 flex items-center justify-center opacity-35 pointer-events-none">
-          <div className="w-[620px] h-[620px] bg-[#509b6b]/20 rounded-full blur-3xl" />
-          <div className="w-[420px] h-[420px] bg-[#3f8a5a]/15 rounded-full blur-3xl" />
-        </div>
-
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#509b6b]/10 border border-[#509b6b]/25 text-[#6db888] text-xs font-semibold mb-6">
-          <Zap className="w-3.5 h-3.5 text-[#509b6b]" /> Next-Gen Strafe Chat Bot SDK Suite
-        </div>
-
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[#f3f5f7] max-w-4xl mx-auto leading-tight">
-          Build powerful bots on{' '}
-          <span className="bg-gradient-to-r from-[#509b6b] to-[#6db888] bg-clip-text text-transparent">
-            Strafe Chat
-          </span>{' '}
-          with TypeScript
-        </h1>
-
-        <p className="mt-6 text-base sm:text-lg text-[#9ba5b4] max-w-2xl mx-auto leading-relaxed">
-          Complete, strictly-typed monorepo suite featuring a REST API client, WebSocket Gateway engine, Equinox permission resolver, typed Command Framework, and interactive CLI scaffolder.
-        </p>
-
-        {/* Quick Install Pill */}
-        <div className="mt-8 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#15181d] border border-[#262b33] font-mono text-xs text-[#d4dbe3] shadow-inner">
-          <Terminal className="w-4 h-4 text-[#509b6b]" />
-          <span>npm create strafebot@latest my-bot</span>
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
-          <Link
-            href="/docs"
-            className="px-6 py-3 rounded-xl bg-[#509b6b] hover:bg-[#45875d] text-[#f5f9f7] font-bold text-sm transition-all shadow-lg shadow-[#509b6b]/20 flex items-center gap-2"
-          >
-            Read Documentation <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            href="/docs/guides/getting-started"
-            className="px-5 py-3 rounded-xl bg-[#15181d] hover:bg-[#1e2229] text-[#f3f5f7] border border-[#262b33] font-bold text-sm transition-all flex items-center gap-2"
-          >
-            <Layers className="w-4 h-4 text-[#509b6b]" /> Quickstart Guide
-          </Link>
-          <Link
-            href="/docs/tools/permission-calculator"
-            className="px-5 py-3 rounded-xl bg-[#15181d] hover:bg-[#1e2229] text-[#f3f5f7] border border-[#262b33] font-bold text-sm transition-all flex items-center gap-2"
-          >
-            <Shield className="w-4 h-4 text-[#509b6b]" /> Permission Calculator
-          </Link>
-        </div>
-
-        {/* Code Snippet Banner */}
-        <div className="mt-14 max-w-3xl mx-auto text-left rounded-2xl border border-[#262b33] bg-[#15181d] p-6 shadow-2xl overflow-hidden font-mono text-xs text-[#f3f5f7]">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#262b33] text-[#9ba5b4]">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500/80" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-              <div className="w-3 h-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 text-[11px]">src/index.ts — @strafe-js/strafebot</span>
-            </div>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-[#509b6b]/15 text-[#6db888]">TypeScript ESM</span>
+      {/* Main Content Container inspired by https://app.strafe.chat/docs/ */}
+      <main className="max-w-[960px] mx-auto w-full px-6 py-11 flex-1">
+        {/* Hero Box */}
+        <div className="strafe-hero mb-9">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-[#509b6b]/15 text-[#6ab585] border border-[#509b6b]/30 mb-3">
+            @strafe-js/strafebot • v1.1.0
           </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-[#e6e8ec] leading-tight">
+            Strafe.js Developer Documentation
+          </h1>
+          <p className="mt-3 text-[15px] text-[#b4bac6] max-w-[66ch] leading-relaxed">
+            Build bots and integrations on{' '}
+            <a
+              href="https://app.strafe.chat/docs/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6ab585] hover:underline"
+            >
+              Strafe Chat
+            </a>{' '}
+            with TypeScript. Everything you need to authenticate with the REST API, stream live events over the Stargate WebSocket Gateway, compute 28-bit room permissions, and build typed prefix commands.
+          </p>
 
-          <pre className="text-[#6db888] leading-relaxed overflow-x-auto">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link
+              href="/docs"
+              className="px-4 py-2 rounded-lg bg-[#509b6b] hover:bg-[#45875d] text-[#e6e8ec] font-semibold text-xs sm:text-sm transition-colors inline-flex items-center gap-1.5"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Browse Documentation</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              href="/docs/guides/getting-started"
+              className="px-4 py-2 rounded-lg bg-[#171a20] hover:bg-[#1e222a] text-[#e6e8ec] border border-[#2a2f39] hover:border-[#363c48] font-semibold text-xs sm:text-sm transition-colors inline-flex items-center gap-1.5"
+            >
+              <Layers className="w-4 h-4 text-[#509b6b]" />
+              <span>Quickstart Guide</span>
+            </Link>
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0b0d11] border border-[#2a2f39] font-mono text-xs text-[#b4bac6]">
+              <Terminal className="w-3.5 h-3.5 text-[#509b6b]" />
+              <span>npm create strafebot@latest my-bot</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Documentation Sections Card Grid */}
+        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+          Documentation Sections
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-10">
+          {DOC_SECTIONS.map((item) => (
+            <Link key={item.title} href={item.href} className="strafe-card block group">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <h3 className="font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] transition-colors">
+                  {item.title}
+                </h3>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#509b6b]/15 text-[#6ab585]">
+                  {item.badge}
+                </span>
+              </div>
+              <p className="text-[13px] text-[#b4bac6] leading-snug">{item.desc}</p>
+            </Link>
+          ))}
+        </div>
+
+        {/* Quick Example */}
+        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+          Quick Example
+        </h2>
+        <div className="rounded-[10px] border border-[#2a2f39] bg-[#0b0d11] overflow-hidden mb-10">
+          <div className="px-4 py-2.5 bg-[#171a20] border-b border-[#2a2f39] flex items-center justify-between text-xs text-[#7f8797] font-mono">
+            <span>src/index.ts — @strafe-js/strafebot v1.1.0</span>
+            <span className="text-[#6ab585]">TypeScript ESM</span>
+          </div>
+          <pre className="p-4 text-[13px] leading-[1.55] font-mono text-[#e6e8ec] overflow-x-auto bg-[#0b0d11]">
             <code>{`import { Client, command } from '@strafe-js/strafebot';
 
 const client = new Client({
@@ -179,108 +261,96 @@ const client = new Client({
 
 client.commands.register(
   command({
-    name: 'ban',
-    description: 'Ban a member with typed arguments',
-    permissions: ['BanMembers'],
-    botPermissions: ['BanMembers'],
+    name: 'thread',
+    description: 'Start a thread and react to the starter message',
+    permissions: ['CreatePublicThreads'],
+    botPermissions: ['CreatePublicThreads', 'AddReactions'],
     arguments: {
-      target: { type: 'user', required: true },
-      reason: { type: 'string', default: 'No reason provided' },
+      name: { type: 'string', required: true },
     },
     async run(ctx) {
-      const targetId = ctx.arguments.get('target');
-      const reason = ctx.arguments.get('reason');
-      await ctx.client.rest.banMember(ctx.spaceId!, targetId, reason);
-      await ctx.reply(\`Banned <@\${targetId}> (\${reason})\`);
+      await ctx.react('🧵');
+      const thread = await ctx.client.rest.createThreadFromMessage(
+        ctx.roomId,
+        ctx.message.id,
+        { name: ctx.arguments.get('name') },
+      );
+      await ctx.client.rest.createMessage(thread.id, {
+        plaintext: \`Thread created by <@\${ctx.authorId}>!\`,
+      });
     },
-  })
+  }),
 );
 
 await client.login(process.env.BOT_TOKEN!);`}</code>
           </pre>
         </div>
-      </section>
 
-      {/* Monorepo Ecosystem Grid */}
-      <section className="py-16 px-6 max-w-6xl mx-auto w-full border-t border-[#262b33]">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#f3f5f7]">
-            Modular Monorepo Architecture
-          </h2>
-          <p className="mt-2 text-sm text-[#9ba5b4]">
-            Install the full <code className="text-[#6db888] font-mono">@strafe-js/strafebot</code> suite or cherry-pick standalone packages.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* Monorepo Packages Table / Cards */}
+        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+          Monorepo Packages (v1.1.0)
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-10">
           {PACKAGES.map((pkg) => (
-            <Link
-              key={pkg.name}
-              href={pkg.href}
-              className="group p-5 rounded-2xl border border-[#262b33] bg-[#15181d] hover:border-[#509b6b]/60 hover:bg-[#191d24] transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1.5 font-mono font-bold text-sm text-[#6db888] group-hover:text-[#509b6b] transition-colors">
-                    <Package className="w-4 h-4" />
-                    {pkg.name}
-                  </span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#509b6b]/10 text-[#6db888] border border-[#509b6b]/20">
-                    {pkg.badge}
-                  </span>
-                </div>
-                <p className="text-xs text-[#9ba5b4] leading-relaxed">{pkg.desc}</p>
+            <Link key={pkg.name} href={pkg.href} className="strafe-card block group">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="inline-flex items-center gap-1.5 font-mono font-bold text-sm text-[#6ab585] group-hover:text-[#509b6b] transition-colors">
+                  <Package className="w-3.5 h-3.5" />
+                  {pkg.name}
+                </span>
+                <span className="text-[11px] font-mono text-[#7f8797]">{pkg.version}</span>
               </div>
-              <div className="mt-4 pt-3 border-t border-[#262b33]/60 flex items-center text-xs font-semibold text-[#509b6b] group-hover:translate-x-0.5 transition-transform">
-                Explore Reference <ArrowRight className="w-3.5 h-3.5 ml-1" />
-              </div>
+              <p className="text-[13px] text-[#b4bac6] leading-snug">{pkg.desc}</p>
             </Link>
           ))}
         </div>
-      </section>
 
-      {/* Feature Highlights */}
-      <section className="py-16 px-6 max-w-6xl mx-auto w-full border-t border-[#262b33]">
-        <h2 className="text-2xl font-bold text-center mb-12 text-[#f3f5f7]">
-          Why Engineers Choose Strafe.js
+        {/* Interactive Developer Tools */}
+        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+          Interactive Developer Tools
         </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-6 rounded-2xl border border-[#262b33] bg-[#15181d]">
-            <div className="p-3 rounded-xl bg-[#509b6b]/10 text-[#509b6b] w-fit mb-4">
-              <Cpu className="w-6 h-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <Link href="/docs/tools/permission-calculator" className="strafe-card block group">
+            <div className="flex items-center gap-2 font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] mb-1.5">
+              <Shield className="w-4 h-4 text-[#509b6b]" />
+              <span>Permission Calculator</span>
             </div>
-            <h3 className="font-bold text-base text-[#f3f5f7] mb-2">High-Resilience REST & WS</h3>
-            <p className="text-xs text-[#9ba5b4] leading-relaxed">
-              Automatic HTTP 429 Retry-After backoff, WebSocket Ping/Pong heartbeats, jittered exponential reconnects, and in-flight member fetch deduplication.
+            <p className="text-[13px] text-[#b4bac6] leading-snug">
+              Toggle all 28 official Strafe permission bits and generate bitmask code.
             </p>
-          </div>
-
-          <div className="p-6 rounded-2xl border border-[#262b33] bg-[#15181d]">
-            <div className="p-3 rounded-xl bg-[#509b6b]/10 text-[#509b6b] w-fit mb-4">
-              <Shield className="w-6 h-6" />
+          </Link>
+          <Link href="/docs/tools/command-builder" className="strafe-card block group">
+            <div className="flex items-center gap-2 font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] mb-1.5">
+              <Sparkles className="w-4 h-4 text-[#509b6b]" />
+              <span>Command Builder</span>
             </div>
-            <h3 className="font-bold text-base text-[#f3f5f7] mb-2">Equinox Permission Engine</h3>
-            <p className="text-xs text-[#9ba5b4] leading-relaxed">
-              Full 6-stage hierarchical permission calculation supporting Space Owners, Role masks, Administrator short-circuiting, Room overrides, and dependent cascades.
+            <p className="text-[13px] text-[#b4bac6] leading-snug">
+              Design typed command schemas visually and export ready-to-run TypeScript.
             </p>
-          </div>
-
-          <div className="p-6 rounded-2xl border border-[#262b33] bg-[#15181d]">
-            <div className="p-3 rounded-xl bg-[#509b6b]/10 text-[#509b6b] w-fit mb-4">
-              <Wrench className="w-6 h-6" />
+          </Link>
+          <Link href="/docs/tools/api-playground" className="strafe-card block group">
+            <div className="flex items-center gap-2 font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] mb-1.5">
+              <Radio className="w-4 h-4 text-[#509b6b]" />
+              <span>API Playground</span>
             </div>
-            <h3 className="font-bold text-base text-[#f3f5f7] mb-2">Typed Command Schemas</h3>
-            <p className="text-xs text-[#9ba5b4] leading-relaxed">
-              Declarative argument validation supporting strings, integers, numbers, booleans, user mentions, snowflakes, and file attachments with full TypeScript inference.
+            <p className="text-[13px] text-[#b4bac6] leading-snug">
+              Inspect Strafe REST endpoints and preview @strafe-js/rest calls.
             </p>
-          </div>
+          </Link>
         </div>
-      </section>
+      </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-[#262b33] text-center text-xs text-[#9ba5b4]">
-        Released under Apache-2.0 License • Strafe.js Ecosystem
+      <footer className="py-6 border-t border-[#2a2f39] text-center text-xs text-[#7f8797]">
+        Strafe.js v1.1.0 • Apache-2.0 License • Built for{' '}
+        <a
+          href="https://app.strafe.chat/docs/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[#6ab585] hover:underline"
+        >
+          Strafe Chat Developers
+        </a>
       </footer>
     </div>
   );

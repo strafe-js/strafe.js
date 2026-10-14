@@ -73,10 +73,12 @@ class Context {
         return this.client.rest.createMessage(this.roomId, body);
     }
     async typing() {
-        return this.client.rest.triggerTyping(this.roomId);
+        await this.client.rest.triggerTyping(this.roomId);
+        return null;
     }
     async react(emoji) {
-        return this.client.rest.addReaction(this.roomId, this.message.id, emoji);
+        await this.client.rest.addReaction(this.roomId, this.message.id, emoji);
+        return null;
     }
     hasPermissions(required) {
         const mask = (0, util_1.resolvePermission)(required);

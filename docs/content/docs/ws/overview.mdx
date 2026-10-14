@@ -1,9 +1,9 @@
 ---
 title: Gateway WebSocket SDK (@strafe-js/ws)
-description: Real-time WebSocket Gateway client with automatic heartbeating, exponential backoff, and event normalization.
+description: Real-time Stargate WebSocket Gateway client with automatic heartbeating, exponential backoff, and event normalization.
 ---
 
-`@strafe-js/ws` manages persistent WebSocket connections to the Strafe Gateway. It automatically sends periodic `Ping` heartbeats, reconnects with jittered exponential backoff on network drops, and converts `SNAKE_CASE` gateway events into idiomatic `camelCase` Node `EventEmitter` events.
+`@strafe-js/ws` manages persistent WebSocket connections to the Strafe Stargate Gateway (`wss://app.strafe.chat/gateway/events`). It automatically sends periodic `Ping` (`op: 6`) heartbeats, reconnects with jittered exponential backoff on network drops, supports both nested (`frame.d.t`) and flat (`frame.t`) `op: 3` event envelopes, and converts `SNAKE_CASE` gateway events into idiomatic `camelCase` Node `EventEmitter` events.
 
 ## Installation
 
@@ -17,7 +17,7 @@ npm install @strafe-js/ws @strafe-js/util
   title="GatewayOptions"
   properties={[
     { name: 'url', type: 'string', description: 'WebSocket URL of the Strafe Gateway (e.g. "wss://app.strafe.chat/gateway/events").' },
-    { name: 'token', type: 'string', description: 'Bot or Bearer token sent in the Authorization handshake header.' },
+    { name: 'token', type: 'string', description: 'Bot or Bearer token sent in the Authorization handshake header (or ?token= query fallback).' },
     { name: 'authScheme', type: "'Bot' | 'Bearer' | ''", optional: true, description: 'Authorization scheme prefix (default: "Bot").' },
     { name: 'heartbeatIntervalMs', type: 'number', optional: true, description: 'Interval between Ping frames in milliseconds (default: 45000).' },
     { name: 'reconnect', type: 'boolean', optional: true, description: 'Automatically reconnect when the socket closes unexpectedly (default: true).' },
@@ -32,13 +32,13 @@ npm install @strafe-js/ws @strafe-js/util
 | :--- | :--- | :--- | :--- |
 | `0` | `Heartbeat` | Client ↔ Server | Legacy heartbeat frame |
 | `1` | `Subscribe` | Client → Server | Subscribe to real-time events for a `space_id` |
-| `2` | `Send` | Client → Server | Send client action (e.g. `TYPING_START`) |
-| `3` | `Event` | Server → Client | Dispatched real-time event frame (`t`, `d`, `room_id`, `space_id`) |
-| `4` | `Ready` | Server → Client | Initial session handshake payload (`user`, `spaces`, `rooms`) |
+| `2` | `Send` | Client → Server | Send client action (e.g. `{ space_id: roomId, type: "typing" }`) |
+| `3` | `Event` | Server → Client | Dispatched real-time event envelope (`t`, `space_id`, `room_id`, `d`) |
+| `4` | `Ready` | Server → Client | Initial session handshake payload (`user`, `spaces`, `rooms`, `space_rooms`) |
 | `5` | `Unsubscribe` | Client → Server | Unsubscribe from a `space_id` |
 | `6` | `Ping` | Client → Server | Periodic heartbeat ping |
 | `7` | `Pong` | Server → Client | Heartbeat acknowledgement |
-| `8` | `Error` | Server → Client | Gateway-level error frame |
+| `8` | `Error` | Server → Client | Gateway-level error frame (`d.message`) |
 
 ## Standalone Gateway Example
 
@@ -63,27 +63,22 @@ gateway.on('messageCreate', (message) => {
   console.log(`[${message.room_id}] ${message.plaintext}`);
 });
 
+gateway.on('threadCreate', (thread) => {
+  console.log(`New thread created: ${thread.name} (${thread.id})`);
+});
+
 gateway.connect();
 ```
 
 ## Gateway Methods Reference
 
 <MethodCard
-  name="gateway.connect"
+  name="gateway.connect / gateway.disconnect"
   signature="() => void"
   returnType="void"
   isAsync={false}
-  description="Opens the WebSocket connection, starts the heartbeat timer, and attaches frame handlers."
+  description="Opens or cleanly closes the WebSocket connection and manages heartbeat timers."
   example={`gateway.connect();`}
-/>
-
-<MethodCard
-  name="gateway.disconnect"
-  signature="() => void"
-  returnType="void"
-  isAsync={false}
-  description="Disables automatic reconnection, clears timers, and cleanly closes the WebSocket (code 1000)."
-  example={`gateway.disconnect();`}
 />
 
 <MethodCard
@@ -103,23 +98,9 @@ gateway.connect();
   signature="(roomId: Snowflake) => void"
   returnType="void"
   isAsync={false}
-  description="Sends a TYPING_START Gateway frame (op: 2) for the specified room."
+  description="Sends a typing indicator frame (op: 2, d: { space_id: roomId, type: 'typing' }) for the specified room."
   parameters={[
-    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Target Room ID.' },
   ]}
   example={`gateway.sendTyping(roomId);`}
-/>
-
-<MethodCard
-  name="gateway.send"
-  signature="(op: number, d?: unknown, extra?: Partial<GatewayFrame>) => void"
-  returnType="void"
-  isAsync={false}
-  description="Serializes and transmits a raw GatewayFrame over the active WebSocket connection."
-  parameters={[
-    { name: 'op', type: 'number', required: true, description: 'GatewayOp numeric opcode.' },
-    { name: 'd', type: 'unknown', required: false, description: 'Frame data payload.' },
-    { name: 'extra', type: 'Partial<GatewayFrame>', required: false, description: 'Additional envelope fields (t, room_id, space_id).' },
-  ]}
-  example={`gateway.send(GatewayOp.Ping);`}
 />

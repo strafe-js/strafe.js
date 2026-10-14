@@ -2,54 +2,55 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Client = void 0;
 const node_events_1 = require("node:events");
+const util_1 = require("@strafe-js/util");
+const collection_1 = require("@strafe-js/collection");
 const rest_1 = require("@strafe-js/rest");
 const ws_1 = require("@strafe-js/ws");
-const collection_1 = require("@strafe-js/collection");
-const util_1 = require("@strafe-js/util");
 const CommandHandler_js_1 = require("./commands/CommandHandler.js");
 class Client extends node_events_1.EventEmitter {
-    options;
-    token = null;
-    user = null;
     rest;
-    gateway = null;
+    gateway;
+    commands;
+    user = null;
     spaces = new collection_1.Collection();
     rooms = new collection_1.Collection();
     spaceRooms = new collection_1.Collection();
     members = new collection_1.Collection();
-    commands;
+    opts;
     _fetchingMembers = new Map();
-    constructor(options) {
+    constructor(opts) {
         super();
-        if (!options.apiBase || !options.gatewayUrl) {
-            throw new util_1.StrafeError('apiBase and gatewayUrl are required');
-        }
-        this.options = options;
-        this.rest = new rest_1.REST({ apiBase: options.apiBase });
+        this.opts = opts;
+        this.rest = new rest_1.REST({
+            baseUrl: opts.apiBase,
+            token: opts.token,
+            authScheme: opts.authScheme,
+            ...opts.rest,
+        });
         this.commands = new CommandHandler_js_1.CommandHandler(this, {
-            prefix: options.prefix,
-            owners: options.owners,
-            ignoreBots: options.ignoreBots,
-            ignoreSelf: options.ignoreSelf,
+            prefix: opts.prefix,
+            owners: opts.owners,
+            ...opts.commands,
         });
     }
     async login(token) {
-        if (!token)
-            throw new util_1.StrafeError('token is required');
-        this.token = token;
-        this.rest.setToken(token, 'Bot');
+        const tok = token ?? this.opts.token;
+        if (!tok)
+            throw new Error('Bot token required to login');
+        this.opts.token = tok;
+        this.rest.setToken(tok);
         this.gateway = new ws_1.Gateway({
-            url: this.options.gatewayUrl,
-            token,
-            tokenType: 'Bot',
-            reconnectDelay: this.options.reconnectDelay,
+            url: this.opts.gatewayUrl,
+            token: tok,
+            authScheme: this.opts.authScheme ?? 'Bot',
+            heartbeatIntervalMs: this.opts.heartbeatIntervalMs,
+            ...this.opts.gateway,
         });
         this._wireGateway();
         this.commands.attach();
         this.gateway.connect();
         return this;
     }
-    /** Alias for login. */
     connect(token) {
         return this.login(token);
     }
@@ -65,9 +66,9 @@ class Client extends node_events_1.EventEmitter {
             this.members.set(spaceId, col);
         }
         for (const m of list) {
-            const id = (m.id ?? m.user_id);
-            if (id)
-                col.set(id, m);
+            if (!m.role_ids && m.roles)
+                m.role_ids = m.roles;
+            col.set(m.user_id, m);
         }
         return col;
     }
@@ -78,18 +79,16 @@ class Client extends node_events_1.EventEmitter {
             return existing;
         const promise = (async () => {
             try {
-                const member = await this.rest.getSpaceMember(spaceId, userId);
-                if (member) {
-                    let col = this.members.get(spaceId);
-                    if (!col) {
-                        col = new collection_1.Collection();
-                        this.members.set(spaceId, col);
-                    }
-                    const id = (member.id ?? member.user_id ?? userId);
-                    col.set(id, member);
-                    return member;
+                const m = await this.rest.getSpaceMember(spaceId, userId);
+                if (!m.role_ids && m.roles)
+                    m.role_ids = m.roles;
+                let col = this.members.get(spaceId);
+                if (!col) {
+                    col = new collection_1.Collection();
+                    this.members.set(spaceId, col);
                 }
-                return null;
+                col.set(m.user_id, m);
+                return m;
             }
             catch {
                 return null;
@@ -101,199 +100,247 @@ class Client extends node_events_1.EventEmitter {
         this._fetchingMembers.set(key, promise);
         return promise;
     }
-    /**
-     * Resolve effective permission mask for a user in a space/room.
-     * Follows exact equinox rules:
-     * 1. Space Owner / Administrator bit => ALL_PERMISSIONS
-     * 2. @everyone role base + user role bases
-     * 3. Room overrides: @everyone deny/allow
-     * 4. Room overrides: aggregated role denies, then aggregated role allows
-     * 5. Room overrides: user deny, then user allow
-     * 6. Dependent permission cascades (e.g. !ViewRoom clears room perms)
-     */
+    getMember(spaceId, userId) {
+        return this.members.get(spaceId)?.get(userId);
+    }
     resolveMemberPermissions(userId, spaceId, roomId) {
         if (!spaceId)
             return 0;
         const space = this.spaces.get(spaceId);
         if (!space)
             return 0;
+        // 1. Space Owner Check
         if (space.owner_id === userId)
             return util_1.ALL_PERMISSIONS;
-        const memberCol = this.members.get(spaceId);
-        const member = memberCol?.get(userId);
-        if (!member)
-            return 0;
-        const roles = space.roles ?? [];
-        const roleMap = new Map(roles.map((r) => [r.id, r]));
+        const member = this.getMember(spaceId, userId);
+        const rolesById = new Map((space.roles ?? []).map((r) => [r.id, r]));
+        // 2. Base Permissions (@everyone + Member Roles)
         let mask = 0;
-        const everyone = roleMap.get(space.everyone_role_id);
-        if (everyone)
-            mask |= everyone.permissions || 0;
-        const memberRoles = member.role_ids ?? member.roles ?? [];
-        for (const rid of memberRoles) {
-            const role = roleMap.get(rid);
-            if (role)
-                mask |= role.permissions || 0;
+        if (space.everyone_role_id) {
+            const ev = rolesById.get(space.everyone_role_id);
+            if (ev)
+                mask |= ev.permissions;
         }
-        if (mask & util_1.Permission.Administrator)
+        const memberRoleIds = member?.role_ids ?? member?.roles ?? [];
+        if (member) {
+            for (const rid of memberRoleIds) {
+                const role = rolesById.get(rid);
+                if (role)
+                    mask |= role.permissions;
+            }
+        }
+        // 3. Administrator Check
+        if ((mask & util_1.Permission.Administrator) === util_1.Permission.Administrator) {
             return util_1.ALL_PERMISSIONS;
-        const room = roomId ? this.rooms.get(roomId) : null;
-        if (room) {
-            const roleOverrides = room.permission_overrides ?? [];
-            // 1) @everyone override
-            const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
-            if (everyoneOv) {
-                mask = (mask & ~everyoneOv.deny) | everyoneOv.allow;
-            }
-            // 2) Aggregated member role overrides: all denies first, then all allows
-            let aggregatedDeny = 0;
-            let aggregatedAllow = 0;
-            for (const ov of roleOverrides) {
-                if (!ov.role_id || ov.role_id === space.everyone_role_id)
-                    continue;
-                if (memberRoles.includes(ov.role_id)) {
-                    aggregatedDeny |= ov.deny;
-                    aggregatedAllow |= ov.allow;
+        }
+        // 4. Room Permission Overrides
+        if (roomId) {
+            const room = this.rooms.get(roomId);
+            const roleOverrides = room?.permission_overrides ?? [];
+            const userOverrides = room?.user_overrides ?? [];
+            if (roleOverrides.length > 0) {
+                // Step 4a: @everyone room override
+                if (space.everyone_role_id) {
+                    const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
+                    if (everyoneOv) {
+                        mask &= ~everyoneOv.deny;
+                        mask |= everyoneOv.allow;
+                    }
+                }
+                // Step 4b: Aggregated Member Role overrides
+                if (member) {
+                    let aggregatedAllow = 0;
+                    let aggregatedDeny = 0;
+                    for (const rid of memberRoleIds) {
+                        const roleOv = roleOverrides.find((o) => o.role_id === rid);
+                        if (roleOv) {
+                            aggregatedDeny |= roleOv.deny;
+                            aggregatedAllow |= roleOv.allow;
+                        }
+                    }
+                    mask &= ~aggregatedDeny;
+                    mask |= aggregatedAllow;
+                }
+                // Step 4c: Individual User override (in permission_overrides or user_overrides)
+                const userOv = userOverrides.find((o) => o.user_id === userId) ??
+                    roleOverrides.find((o) => o.user_id === userId);
+                if (userOv) {
+                    mask &= ~userOv.deny;
+                    mask |= userOv.allow;
                 }
             }
-            mask = (mask & ~aggregatedDeny) | aggregatedAllow;
-            // 3) Individual user override
-            const userOverrides = room.user_overrides ?? [];
-            const userOv = userOverrides.find((o) => o.user_id === userId);
-            if (userOv) {
-                mask = (mask & ~userOv.deny) | userOv.allow;
-            }
-            // Dependent permission rules
-            if (!(mask & util_1.Permission.ViewRoom)) {
-                mask = 0;
-            }
-            else {
-                if (!(mask & util_1.Permission.SendMessages)) {
-                    mask &= ~util_1.Permission.AttachFiles;
-                    mask &= ~util_1.Permission.MentionEveryone;
+            else if (userOverrides.length > 0) {
+                const userOv = userOverrides.find((o) => o.user_id === userId);
+                if (userOv) {
+                    mask &= ~userOv.deny;
+                    mask |= userOv.allow;
                 }
             }
+        }
+        // 5. Implicit ViewRoom Denial: Without ViewRoom, user has 0 permissions in that room
+        if ((mask & util_1.Permission.ViewRoom) === 0) {
+            return 0;
+        }
+        // 6. Dependent Permissions: Without SendMessages, revoke dependent sending permissions
+        if ((mask & util_1.Permission.SendMessages) === 0) {
+            mask &= ~(util_1.Permission.AttachFiles | util_1.Permission.MentionEveryone);
         }
         return mask;
     }
-    _wireGateway() {
-        const gw = this.gateway;
-        gw.on('ready', (payload) => {
-            this.user = payload.user;
-            this.spaces.clear();
-            this.rooms.clear();
-            this.spaceRooms.clear();
-            for (const space of payload.spaces ?? []) {
-                this.spaces.set(space.id, space);
-            }
-            for (const room of payload.rooms ?? []) {
-                this.rooms.set(room.id, room);
-            }
-            const spaceRooms = (payload.space_rooms ?? {});
-            for (const spaceId of Object.keys(spaceRooms)) {
-                const roomList = spaceRooms[spaceId] ?? [];
-                const col = new collection_1.Collection();
-                for (const room of roomList) {
-                    col.set(room.id, room);
-                    this.rooms.set(room.id, room);
-                }
-                this.spaceRooms.set(spaceId, col);
-            }
-            this.emit('ready', this.user, payload);
-        });
-        gw.on('messageCreate', (msg, envelope) => {
-            this.emit('messageCreate', msg, envelope);
-        });
-        gw.on('messageUpdate', (msg, envelope) => {
-            this.emit('messageUpdate', msg, envelope);
-        });
-        gw.on('messageDelete', (data, envelope) => {
-            this.emit('messageDelete', data, envelope);
-        });
-        gw.on('messageReactionAdd', (data, envelope) => {
-            this.emit('messageReactionAdd', data, envelope);
-        });
-        gw.on('messageReactionRemove', (data, envelope) => {
-            this.emit('messageReactionRemove', data, envelope);
-        });
-        gw.on('spaceCreate', (space) => {
-            const s = space;
-            this.spaces.set(s.id, s);
-            this.emit('spaceCreate', s);
-        });
-        gw.on('spaceLeave', (data) => {
-            const d = data;
-            this.spaces.delete(d.space_id);
-            this.spaceRooms.delete(d.space_id);
-            this.members.delete(d.space_id);
-            this.emit('spaceLeave', d);
-        });
-        gw.on('spaceDelete', (data) => {
-            const d = data;
-            this.spaces.delete(d.space_id);
-            this.spaceRooms.delete(d.space_id);
-            this.members.delete(d.space_id);
-            this.emit('spaceDelete', d);
-        });
-        gw.on('spaceRoomCreate', (room) => {
-            const r = room;
-            this.rooms.set(r.id, r);
-            if (r.space_id) {
-                let col = this.spaceRooms.get(r.space_id);
-                if (!col) {
-                    col = new collection_1.Collection();
-                    this.spaceRooms.set(r.space_id, col);
-                }
-                col.set(r.id, r);
-            }
-            this.emit('spaceRoomCreate', r);
-        });
-        gw.on('spaceRoomDelete', (data) => {
-            const d = data;
-            this.rooms.delete(d.room_id);
-            this.spaceRooms.get(d.space_id)?.delete(d.room_id);
-            this.emit('spaceRoomDelete', d);
-        });
-        gw.on('spaceMemberAdd', (member) => {
-            const m = member;
-            const spaceId = m.space_id;
-            if (!spaceId)
-                return;
-            let col = this.members.get(spaceId);
+    _cacheRoom(r, fallbackSpaceId) {
+        const sid = r.space_id ?? fallbackSpaceId;
+        if (sid && !r.space_id)
+            r.space_id = sid;
+        this.rooms.set(r.id, r);
+        if (sid) {
+            let col = this.spaceRooms.get(sid);
             if (!col) {
                 col = new collection_1.Collection();
-                this.members.set(spaceId, col);
+                this.spaceRooms.set(sid, col);
             }
-            const id = (m.id ?? m.user_id);
-            if (id)
-                col.set(id, m);
-            this.emit('spaceMemberAdd', m);
-        });
-        gw.on('spaceMemberRemove', (data) => {
-            const d = data;
-            this.members.get(d.space_id)?.delete(d.user_id);
-            this.emit('spaceMemberRemove', d);
-        });
-        gw.on('spaceMemberUpdate', (data, envelope) => {
-            const d = data;
-            const spaceId = d.space_id || envelope?.space_id;
-            if (spaceId) {
-                const roleIds = d.role_ids ?? d.roles;
-                const existing = this.members.get(spaceId)?.get(d.user_id);
-                if (existing && roleIds) {
-                    existing.role_ids = roleIds;
+            col.set(r.id, r);
+        }
+    }
+    _wireGateway() {
+        this.gateway.on('ready', (payload) => {
+            this.user = payload.user;
+            for (const s of payload.spaces ?? []) {
+                this.spaces.set(s.id, s);
+                if (!this.spaceRooms.has(s.id)) {
+                    this.spaceRooms.set(s.id, new collection_1.Collection());
+                }
+                for (const r of s.rooms ?? []) {
+                    this._cacheRoom(r, s.id);
+                }
+                if (this.opts.autoSubscribeSpaces ?? true) {
+                    this.gateway.subscribe(s.id);
                 }
             }
-            this.emit('spaceMemberUpdate', d);
+            for (const r of payload.rooms ?? []) {
+                this._cacheRoom(r);
+            }
+            if (payload.space_rooms) {
+                for (const [spaceId, roomList] of Object.entries(payload.space_rooms)) {
+                    for (const r of roomList ?? []) {
+                        this._cacheRoom(r, spaceId);
+                    }
+                }
+            }
+            this.emit('ready', payload);
         });
-        gw.on('typingStart', (data) => this.emit('typingStart', data));
-        gw.on('sessionRevoked', (data) => {
-            this.emit('sessionRevoked', data);
-            this.destroy();
+        this.gateway.on('raw', (frame) => {
+            const rawD = frame.d;
+            const isNested = !frame.t &&
+                rawD !== null &&
+                typeof rawD === 'object' &&
+                typeof rawD.t === 'string';
+            const eventType = isNested ? rawD.t : frame.t;
+            if (!eventType)
+                return;
+            const name = eventType
+                .toLowerCase()
+                .replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+            // Keep caches in sync
+            const d = (isNested ? rawD.d : frame.d);
+            const envelopeSpaceId = (isNested ? rawD.space_id : frame.space_id);
+            if (name === 'spaceCreate' || name === 'spaceUpdate') {
+                const s = d;
+                if (s?.id) {
+                    const prev = this.spaces.get(s.id);
+                    this.spaces.set(s.id, { ...prev, ...s });
+                    if (name === 'spaceCreate' && (this.opts.autoSubscribeSpaces ?? true)) {
+                        this.gateway.subscribe(s.id);
+                    }
+                }
+            }
+            else if (name === 'spaceDelete' || name === 'spaceLeave') {
+                const id = (d?.id ?? d?.space_id ?? envelopeSpaceId);
+                if (id) {
+                    this.spaces.delete(id);
+                    const sr = this.spaceRooms.get(id);
+                    if (sr) {
+                        for (const rid of sr.keys())
+                            this.rooms.delete(rid);
+                        this.spaceRooms.delete(id);
+                    }
+                    this.members.delete(id);
+                }
+            }
+            else if (name === 'roomCreate' ||
+                name === 'roomUpdate' ||
+                name === 'spaceRoomCreate' ||
+                name === 'spaceRoomUpdate') {
+                const r = d;
+                if (r?.id) {
+                    const prev = this.rooms.get(r.id);
+                    const merged = { ...prev, ...r };
+                    this._cacheRoom(merged, envelopeSpaceId);
+                    if ((name === 'roomCreate' || name === 'spaceRoomCreate') &&
+                        (this.opts.autoSubscribeSpaces ?? true)) {
+                        this.gateway.subscribe(merged.id);
+                    }
+                }
+            }
+            else if (name === 'roomDelete' || name === 'spaceRoomDelete') {
+                const id = (d?.id ?? d?.room_id);
+                const sid = (d?.space_id ?? envelopeSpaceId);
+                if (id) {
+                    const existing = this.rooms.get(id);
+                    this.rooms.delete(id);
+                    const targetSid = sid ?? existing?.space_id;
+                    if (targetSid) {
+                        this.spaceRooms.get(targetSid)?.delete(id);
+                    }
+                }
+            }
+            else if (name === 'spaceMemberAdd' || name === 'spaceMemberUpdate') {
+                const m = d;
+                const sid = m?.space_id ?? envelopeSpaceId;
+                if (sid && m?.user_id) {
+                    if (!m.role_ids && m.roles)
+                        m.role_ids = m.roles;
+                    let col = this.members.get(sid);
+                    if (!col) {
+                        col = new collection_1.Collection();
+                        this.members.set(sid, col);
+                    }
+                    const prev = col.get(m.user_id);
+                    col.set(m.user_id, { ...prev, ...m });
+                }
+            }
+            else if (name === 'spaceMemberRemove') {
+                const m = d;
+                const sid = m?.space_id ?? envelopeSpaceId;
+                if (sid && m?.user_id) {
+                    this.members.get(sid)?.delete(m.user_id);
+                }
+            }
+            else if (name === 'spaceMembersChunk') {
+                const chunk = d;
+                const sid = chunk?.space_id ?? envelopeSpaceId;
+                if (sid && Array.isArray(chunk?.members)) {
+                    let col = this.members.get(sid);
+                    if (!col) {
+                        col = new collection_1.Collection();
+                        this.members.set(sid, col);
+                    }
+                    for (const m of chunk.members) {
+                        if (!m.role_ids && m.roles)
+                            m.role_ids = m.roles;
+                        col.set(m.user_id, m);
+                    }
+                }
+            }
+            this.emit(name, d, frame);
+            if (name === 'spaceRoomCreate')
+                this.emit('roomCreate', d);
+            else if (name === 'spaceRoomUpdate')
+                this.emit('roomUpdate', d);
+            else if (name === 'spaceRoomDelete')
+                this.emit('roomDelete', d);
         });
-        gw.on('error', (err) => this.emit('error', err));
-        gw.on('disconnect', (code) => this.emit('disconnect', code));
-        gw.on('debug', (msg) => this.emit('debug', msg));
+        this.gateway.on('error', (err) => this.emit('error', err));
+        this.gateway.on('close', (code, reason) => this.emit('close', code, reason));
     }
 }
 exports.Client = Client;

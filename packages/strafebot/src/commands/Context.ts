@@ -115,11 +115,13 @@ export class Context<Schema extends CommandArgumentsSchema = CommandArgumentsSch
   }
 
   async typing(): Promise<null> {
-    return this.client.rest.triggerTyping(this.roomId);
+    await this.client.rest.triggerTyping(this.roomId);
+    return null;
   }
 
   async react(emoji: string): Promise<null> {
-    return this.client.rest.addReaction(this.roomId, this.message.id, emoji);
+    await this.client.rest.addReaction(this.roomId, this.message.id, emoji);
+    return null;
   }
 
   hasPermissions(required: PermissionResolvable): boolean {

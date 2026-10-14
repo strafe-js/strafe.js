@@ -120,7 +120,7 @@ writeFileSync(
         'new-command': 'create-strafebot command',
       },
       dependencies: {
-        '@strafe-js/strafebot': '^1.0.0',
+        '@strafe-js/strafebot': '^1.1.0',
       },
       devDependencies: {
         typescript: '^5.6.0',

@@ -1,142 +1,156 @@
-import WebSocket from 'ws';
 import { EventEmitter } from 'node:events';
+import WebSocket from 'ws';
 import {
+  GatewayFrame,
   GatewayOp,
-  StrafeError,
-  type GatewayFrame,
-  type GatewayEventEnvelope,
-  type ReadyPayload,
-  type User,
-  type Snowflake,
+  ReadyPayload,
+  Snowflake,
+  Message,
+  Space,
+  Room,
+  SpaceMember,
 } from '@strafe-js/util';
 
 export interface GatewayOptions {
   url: string;
   token: string;
-  tokenType?: 'Bot' | 'Bearer';
+  authScheme?: 'Bot' | 'Bearer' | '';
+  heartbeatIntervalMs?: number;
+  reconnect?: boolean;
   reconnectDelay?: number;
   maxReconnectDelay?: number;
-  heartbeatInterval?: number;
 }
 
 export interface GatewayEvents {
-  ready: [ReadyPayload];
-  raw: [GatewayEventEnvelope];
-  messageCreate: [unknown, GatewayEventEnvelope];
-  messageUpdate: [unknown, GatewayEventEnvelope];
-  messageDelete: [unknown, GatewayEventEnvelope];
-  messageReactionAdd: [unknown, GatewayEventEnvelope];
-  messageReactionRemove: [unknown, GatewayEventEnvelope];
-  spaceCreate: [unknown];
-  spaceLeave: [unknown];
-  spaceDelete: [unknown];
-  spaceRoomCreate: [unknown];
-  spaceRoomDelete: [unknown];
-  spaceMemberAdd: [unknown];
-  spaceMemberRemove: [unknown];
-  spaceMemberUpdate: [unknown, GatewayEventEnvelope];
-  typingStart: [unknown];
-  sessionRevoked: [unknown];
-  error: [Error];
-  disconnect: [number];
-  debug: [string];
-  pong: [];
+  open: () => void;
+  ready: (payload: ReadyPayload) => void;
+  pong: () => void;
+  raw: (frame: GatewayFrame) => void;
+  close: (code: number, reason: string) => void;
+  error: (err: Error) => void;
+  messageCreate: (message: Message) => void;
+  messageUpdate: (message: Message) => void;
+  messageDelete: (data: { id?: Snowflake; message_id?: Snowflake; room_id: Snowflake; space_id?: Snowflake }) => void;
+  messageReactionAdd: (data: { room_id: Snowflake; message_id: Snowflake; user_id: Snowflake; emoji: string }) => void;
+  messageReactionRemove: (data: { room_id: Snowflake; message_id: Snowflake; user_id: Snowflake; emoji: string }) => void;
+  roomPinsUpdate: (data: { room_id: Snowflake; message_id: Snowflake; user_id: Snowflake; pinned: boolean; pinned_at?: string; last_pin_timestamp?: string | null }) => void;
+  typingStart: (data: { room_id: Snowflake; user_id: Snowflake; timestamp: number }) => void;
+  spaceCreate: (space: Space) => void;
+  spaceUpdate: (space: Space) => void;
+  spaceDelete: (data: { id?: Snowflake; space_id?: Snowflake }) => void;
+  spaceLeave: (data: { space_id: Snowflake }) => void;
+  roomCreate: (room: Room) => void;
+  roomUpdate: (room: Room) => void;
+  roomDelete: (data: { id?: Snowflake; room_id?: Snowflake; space_id?: Snowflake }) => void;
+  spaceRoomCreate: (room: Room) => void;
+  spaceRoomUpdate: (room: Room) => void;
+  spaceRoomDelete: (data: { space_id: Snowflake; room_id: Snowflake }) => void;
+  threadCreate: (thread: Room & { newly_created?: boolean; joined?: boolean }) => void;
+  threadUpdate: (thread: Room) => void;
+  threadDelete: (data: { space_id: Snowflake; room_id: Snowflake; parent_id?: Snowflake }) => void;
+  spaceMemberAdd: (member: SpaceMember & { space_id?: Snowflake }) => void;
+  spaceMemberUpdate: (member: Partial<SpaceMember> & { user_id: Snowflake; space_id?: Snowflake }) => void;
+  spaceMemberRemove: (data: { user_id?: Snowflake; space_id?: Snowflake }) => void;
+  spaceMembersChunk: (data: { space_id?: Snowflake; members?: SpaceMember[] }) => void;
+  spaceRoleCreate: (role: unknown) => void;
+  spaceRoleUpdate: (role: unknown) => void;
+  spaceRoleDelete: (data: { role_id: Snowflake; space_id?: Snowflake }) => void;
+  presenceUpdate: (data: { user_id: Snowflake; status?: string; presence?: { status: string } }) => void;
+  sessionRevoked: (data: { reason?: string }) => void;
+}
+
+export declare interface Gateway {
+  on<E extends keyof GatewayEvents>(event: E, listener: GatewayEvents[E]): this;
+  on(event: string, listener: (...args: any[]) => void): this;
+  once<E extends keyof GatewayEvents>(event: E, listener: GatewayEvents[E]): this;
+  once(event: string, listener: (...args: any[]) => void): this;
+  emit<E extends keyof GatewayEvents>(event: E, ...args: Parameters<GatewayEvents[E]>): boolean;
+  emit(event: string, ...args: any[]): boolean;
 }
 
 export class Gateway extends EventEmitter {
-  url: string;
-  token: string;
-  tokenType: 'Bot' | 'Bearer';
-  reconnectDelay: number;
-  maxReconnectDelay: number;
-  heartbeatIntervalMs: number;
-  ws: WebSocket | null = null;
-  sessionId: string | null = null;
-  user: User | null = null;
-
-  private _closed = false;
-  private _reconnectAttempts = 0;
-  private _reconnectTimer: NodeJS.Timeout | null = null;
-  private _heartbeatTimer: NodeJS.Timeout | null = null;
+  private url: string;
+  private token: string;
+  private authScheme: string;
+  private heartbeatIntervalMs: number;
+  private shouldReconnect: boolean;
+  private reconnectDelay: number;
+  private maxReconnectDelay: number;
+  private reconnectAttempts = 0;
+  private ws?: WebSocket;
+  private hbTimer?: NodeJS.Timeout;
+  private reconnectTimer?: NodeJS.Timeout;
 
   constructor(opts: GatewayOptions) {
     super();
     this.url = opts.url;
     this.token = opts.token;
-    this.tokenType = opts.tokenType ?? 'Bot';
-    this.reconnectDelay = opts.reconnectDelay ?? 1000;
-    this.maxReconnectDelay = opts.maxReconnectDelay ?? 30000;
-    this.heartbeatIntervalMs = opts.heartbeatInterval ?? 45000;
+    this.authScheme = opts.authScheme ?? 'Bot';
+    this.heartbeatIntervalMs = opts.heartbeatIntervalMs ?? 45_000;
+    this.shouldReconnect = opts.reconnect ?? true;
+    this.reconnectDelay = opts.reconnectDelay ?? 2_500;
+    this.maxReconnectDelay = opts.maxReconnectDelay ?? 60_000;
   }
 
   connect(): void {
-    this._closed = false;
     this._clearTimers();
-
     if (this.ws) {
-      try {
-        this.ws.removeAllListeners();
-        this.ws.close();
-      } catch {
-        /* ignore */
+      this.ws.removeAllListeners();
+      if (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      ) {
+        this.ws.terminate();
       }
-      this.ws = null;
+      this.ws = undefined;
     }
 
-    const headers = {
-      Authorization: `${this.tokenType} ${this.token}`,
-    };
-
-    try {
-      this.ws = new WebSocket(this.url, { headers });
-    } catch (err) {
-      this.emit('error', err instanceof Error ? err : new Error(String(err)));
-      this._scheduleReconnect();
-      return;
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['Authorization'] = this.authScheme
+        ? `${this.authScheme} ${this.token}`
+        : this.token;
     }
+    const ws = new WebSocket(this.url, { headers });
+    this.ws = ws;
 
-    this.ws.on('open', () => {
-      this._reconnectAttempts = 0;
-      this.emit('debug', 'gateway open');
+    ws.on('open', () => {
+      this.reconnectAttempts = 0;
+      this.emit('open');
       this._startHeartbeat();
     });
 
-    this.ws.on('message', (raw) => {
+    ws.on('message', (raw: WebSocket.RawData) => {
       let frame: GatewayFrame;
       try {
-        frame = JSON.parse(raw.toString()) as GatewayFrame;
-      } catch {
-        this.emit('error', new StrafeError('invalid gateway frame'));
+        frame = JSON.parse(raw.toString());
+      } catch (e) {
+        this.emit('error', e as Error);
         return;
       }
       this._handle(frame);
     });
 
-    this.ws.on('close', (code, reason) => {
-      this.emit('debug', `gateway close ${code} ${reason.toString()}`);
+    ws.on('close', (code, reason) => {
       this._stopHeartbeat();
-      this.ws = null;
-      if (!this._closed) {
-        this.emit('disconnect', code);
+      this.emit('close', code, reason.toString());
+      if (this.shouldReconnect) {
         this._scheduleReconnect();
       }
     });
 
-    this.ws.on('error', (err) => {
+    ws.on('error', (err) => {
       this.emit('error', err);
     });
   }
 
   disconnect(): void {
-    this._closed = true;
+    this.shouldReconnect = false;
     this._clearTimers();
     if (this.ws) {
-      try {
-        this.ws.close(1000);
-      } catch {
-        /* ignore */
-      }
-      this.ws = null;
+      this.ws.removeAllListeners();
+      this.ws.close(1000, 'client disconnect');
+      this.ws = undefined;
     }
   }
 
@@ -144,108 +158,119 @@ export class Gateway extends EventEmitter {
     this.send(GatewayOp.Ping);
   }
 
-  send(op: number, d?: unknown): void {
+  send(op: number, d?: unknown, extra?: Partial<GatewayFrame>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    try {
-      this.ws.send(JSON.stringify({ op, d }));
-    } catch (err) {
-      this.emit('error', err instanceof Error ? err : new Error(String(err)));
-    }
+    const payload = JSON.stringify({ op, d, ...extra });
+    this.ws.send(payload);
   }
 
-  subscribe(id: Snowflake): void {
-    this.send(GatewayOp.Subscribe, { space_id: id });
+  subscribe(spaceOrRoomId: Snowflake): void {
+    this.send(GatewayOp.Subscribe, { space_id: spaceOrRoomId });
   }
 
-  unsubscribe(id: Snowflake): void {
-    this.send(GatewayOp.Unsubscribe, { space_id: id });
+  unsubscribe(spaceOrRoomId: Snowflake): void {
+    this.send(GatewayOp.Unsubscribe, { space_id: spaceOrRoomId });
   }
 
   sendTyping(roomId: Snowflake): void {
-    this.send(GatewayOp.Send, { room_id: roomId, type: 'typing' });
+    this.send(GatewayOp.Send, { space_id: roomId, type: 'typing', room_id: roomId });
   }
 
   private _startHeartbeat(): void {
     this._stopHeartbeat();
-    if (this.heartbeatIntervalMs > 0) {
-      this._heartbeatTimer = setInterval(() => {
-        this.ping();
-      }, this.heartbeatIntervalMs);
-    }
+    this.hbTimer = setInterval(() => {
+      this.ping();
+    }, this.heartbeatIntervalMs);
+    this.hbTimer.unref?.();
   }
 
   private _stopHeartbeat(): void {
-    if (this._heartbeatTimer) {
-      clearInterval(this._heartbeatTimer);
-      this._heartbeatTimer = null;
+    if (this.hbTimer) {
+      clearInterval(this.hbTimer);
+      this.hbTimer = undefined;
     }
   }
 
   private _scheduleReconnect(): void {
-    if (this._closed || this._reconnectTimer) return;
-    this._reconnectAttempts++;
-    // Exponential backoff with jitter
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectAttempts++;
+    const exp = Math.pow(2, Math.min(this.reconnectAttempts - 1, 6));
+    const jitter = Math.floor(Math.random() * 1000);
     const delay = Math.min(
-      this.reconnectDelay * Math.pow(2, this._reconnectAttempts - 1) + Math.random() * 1000,
+      this.reconnectDelay * exp + jitter,
       this.maxReconnectDelay,
     );
-    this.emit('debug', `scheduling reconnect in ${Math.round(delay)}ms (attempt ${this._reconnectAttempts})`);
-    this._reconnectTimer = setTimeout(() => {
-      this._reconnectTimer = null;
-      if (!this._closed) {
-        this.connect();
-      }
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      if (this.shouldReconnect) this.connect();
     }, delay);
   }
 
   private _clearTimers(): void {
     this._stopHeartbeat();
-    if (this._reconnectTimer) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = null;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
     }
   }
 
   private _handle(frame: GatewayFrame): void {
     switch (frame.op) {
-      case GatewayOp.Ready: {
-        const d = frame.d as ReadyPayload;
-        this.user = d.user;
-        this.sessionId = d.session_id;
-        this.emit('ready', d);
+      case GatewayOp.Ready:
+        this.emit('ready', frame.d as ReadyPayload);
         break;
-      }
-      case GatewayOp.Event: {
-        const envelope = frame.d as GatewayEventEnvelope;
-        const t = envelope.t;
-        const payload = envelope.d as Record<string, unknown> | unknown;
-        if (payload && typeof payload === 'object' && payload !== null) {
-          const p = payload as Record<string, unknown>;
-          if (envelope.room_id && p.room_id == null) p.room_id = envelope.room_id;
-          if (envelope.space_id && p.space_id == null) p.space_id = envelope.space_id;
-        }
-        this.emit('raw', envelope);
-        this.emit(this._eventName(t), payload, envelope);
-        break;
-      }
-      case GatewayOp.Error: {
-        const err = frame.d as { code?: number; message?: string };
-        this.emit('error', new StrafeError(err?.message || 'gateway error', 0, err?.code ?? null));
-        break;
-      }
       case GatewayOp.Pong:
         this.emit('pong');
         break;
+      case GatewayOp.Error:
+        this.emit(
+          'error',
+          new Error(
+            typeof frame.d === 'object' && frame.d && 'message' in frame.d
+              ? String((frame.d as { message: unknown }).message)
+              : 'Gateway error',
+          ),
+        );
+        break;
+      case GatewayOp.Event: {
+        // Support both official nested envelope ({ op: 3, d: { t, space_id, room_id, d } })
+        // and flat envelope ({ op: 3, t, space_id, room_id, d })
+        const rawD = frame.d as Record<string, unknown> | undefined;
+        const isNestedEnvelope =
+          !frame.t &&
+          rawD !== null &&
+          typeof rawD === 'object' &&
+          typeof rawD.t === 'string';
+
+        const eventType = isNestedEnvelope ? (rawD.t as string) : frame.t;
+        const roomId = isNestedEnvelope
+          ? (rawD.room_id as Snowflake | undefined)
+          : frame.room_id;
+        const spaceId = isNestedEnvelope
+          ? (rawD.space_id as Snowflake | undefined)
+          : frame.space_id;
+        const innerPayload = isNestedEnvelope ? rawD.d : frame.d;
+
+        if (innerPayload && typeof innerPayload === 'object') {
+          const obj = innerPayload as Record<string, unknown>;
+          if (roomId && obj.room_id === undefined) obj.room_id = roomId;
+          if (spaceId && obj.space_id === undefined) obj.space_id = spaceId;
+        }
+        this.emit('raw', frame);
+        if (eventType) {
+          this.emit(this._eventName(eventType), innerPayload, frame);
+        }
+        break;
+      }
       default:
-        this.emit('debug', `unknown op ${frame.op}`);
+        this.emit('raw', frame);
     }
   }
 
   private _eventName(t: string): string {
     return t
       .toLowerCase()
-      .split('_')
-      .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
-      .join('');
+      .replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
   }
 }
