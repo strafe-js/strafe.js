@@ -1,0 +1,113 @@
+---
+title: "@strafe-js/util"
+description: Core TypeScript interfaces, Permission bitflags, BitField class, error types, and helpers.
+---
+
+`@strafe-js/util` is the foundational zero-dependency package of the Strafe.js ecosystem. It defines all shared TypeScript interfaces, `Permission` bitflags, `BitField`, `RoomType`, `GatewayOp`, `StrafeError`, and `RateLimitError`.
+
+## Installation
+
+```bash
+npm install @strafe-js/util
+```
+
+## `BitField` Class
+
+`BitField` wraps a 32-bit numeric permission mask and provides ergonomic methods for inspecting and mutating permissions.
+
+<MethodCard
+  name="new BitField"
+  signature="(bits?: PermissionResolvable)"
+  returnType="BitField"
+  isAsync={false}
+  description="Creates a new BitField instance from a permission name, numeric bitmask, or array of resolvables."
+  parameters={[
+    { name: 'bits', type: 'PermissionResolvable', required: false, default: '0', description: 'Initial permissions.' },
+  ]}
+  example={`const bits = new BitField(['ViewRoom', 'SendMessages']);`}
+/>
+
+<MethodCard
+  name="bitField.has"
+  signature="(perm: PermissionResolvable) => boolean"
+  returnType="boolean"
+  isAsync={false}
+  description="Returns true if all specified permission bits are set in the bitfield."
+  parameters={[
+    { name: 'perm', type: 'PermissionResolvable', required: true, description: 'Permission name, bitmask, or array to check.' },
+  ]}
+  example={`if (bits.has(['ViewRoom', 'SendMessages'])) {\n  // Allowed\n}`}
+/>
+
+<MethodCard
+  name="bitField.add / bitField.remove"
+  signature="(...perms: PermissionResolvable[]) => this"
+  returnType="BitField"
+  isAsync={false}
+  description="Mutates the BitField by adding (|=) or removing (&= ~) the specified permissions."
+  parameters={[
+    { name: '...perms', type: 'PermissionResolvable[]', required: true, description: 'Permissions to add or remove.' },
+  ]}
+  example={`bits.add('EmbedLinks', 'AttachFiles');\nbits.remove('AttachFiles');`}
+/>
+
+<MethodCard
+  name="bitField.toArray"
+  signature="() => PermissionName[]"
+  returnType="PermissionName[]"
+  isAsync={false}
+  description="Returns an array of all active PermissionName strings in this BitField."
+  example={`console.log(bits.toArray()); // ['ViewRoom', 'SendMessages', 'EmbedLinks']`}
+/>
+
+## Error Classes
+
+<PropertyTable
+  title="StrafeError & RateLimitError Properties"
+  properties={[
+    { name: 'message', type: 'string', description: 'Human-readable error description returned by the Strafe API.' },
+    { name: 'status', type: 'number', description: 'HTTP status code (e.g. 401, 403, 404, 429).' },
+    { name: 'code', type: 'string | undefined', optional: true, description: 'API-specific error code string if present.' },
+    { name: 'body', type: 'unknown', optional: true, description: 'Raw parsed JSON or text response body.' },
+    { name: 'retryAfter', type: 'number', description: '(RateLimitError only) Seconds to wait before retrying after HTTP 429.' },
+  ]}
+/>
+
+## Constants: `RoomType` & `GatewayOp`
+
+```ts
+import { RoomType, GatewayOp } from '@strafe-js/util';
+
+// RoomType values:
+// PM = 1, GroupPM = 2, Text = 3, Voice = 4, Section = 5, Thread = 6
+
+// GatewayOp values:
+// Heartbeat = 0, Subscribe = 1, Send = 2, Event = 3, Ready = 4,
+// Unsubscribe = 5, Ping = 6, Pong = 7, Error = 8
+```
+
+## Helper Functions
+
+<MethodCard
+  name="resolvePermission"
+  signature="(input: PermissionResolvable) => number"
+  returnType="number"
+  isAsync={false}
+  description="Converts a PermissionName, numeric bitmask, or nested array of PermissionResolvable values into a single number."
+  parameters={[
+    { name: 'input', type: 'PermissionResolvable', required: true, description: 'Input permission resolvable.' },
+  ]}
+  example={`const mask = resolvePermission(['ViewRoom', 'SendMessages']); // 1025`}
+/>
+
+<MethodCard
+  name="isSnowflake"
+  signature="(id: unknown) => id is Snowflake"
+  returnType="boolean"
+  isAsync={false}
+  description="Type guard that checks whether a value is a valid 16–20 digit numeric Snowflake string."
+  parameters={[
+    { name: 'id', type: 'unknown', required: true, description: 'Value to validate.' },
+  ]}
+  example={`isSnowflake('123456789012345678'); // true`}
+/>

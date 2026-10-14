@@ -1,69 +1,46 @@
 ---
-title: Ecosystem Packages
-description: Reference for @strafe-js/util, @strafe-js/collection, @strafe-js/builders, and @strafe-js/formatters.
+title: Ecosystem Overview
+description: Modular utility, builder, formatter, and data-structure packages that power Strafe.js.
 ---
 
-## `@strafe-js/builders`
+Beyond the main `@strafe-js/strafebot` client, `@strafe-js/rest`, and `@strafe-js/ws`, the Strafe.js monorepo provides 4 focused utility packages that can be used either alongside `strafebot` or standalone in any Node.js/TypeScript environment.
 
-Fluent builders for constructing API payloads and permission bitmasks.
+<Cards>
+  <Card
+    title="@strafe-js/builders"
+    href="/docs/packages/builders"
+    description="Fluent MessageBuilder and permission bitmask factories (message, permissions, permissionMask)."
+  />
+  <Card
+    title="@strafe-js/formatters"
+    href="/docs/packages/formatters"
+    description="Mentions (<@id>, <@&id>, <#id>), static/animated custom emojis, and Markdown escaping."
+  />
+  <Card
+    title="@strafe-js/collection"
+    href="/docs/packages/collection"
+    description="Zero-dependency Map<K, V> subclass with functional query methods (find, filter, map, first)."
+  />
+  <Card
+    title="@strafe-js/util"
+    href="/docs/packages/util"
+    description="Core TypeScript API models, 28 Permission bitflags, BitField class, StrafeError, and RateLimitError."
+  />
+</Cards>
 
-```ts
-import { message, permissions } from '@strafe-js/builders';
+## Package Dependency Matrix
 
-const payload = message()
-  .setContent('Hello from MessageBuilder!')
-  .setReply('112233445566778899')
-  .mentionEveryone(false)
-  .toJSON();
+| Package | Version | Internal Dependencies | External Dependencies | Re-exported by `@strafe-js/strafebot`? |
+| :--- | :--- | :--- | :--- | :--- |
+| `@strafe-js/util` | `1.0.5` | None | None | Yes |
+| `@strafe-js/collection` | `1.0.5` | None | None | Yes |
+| `@strafe-js/formatters` | `1.0.5` | `@strafe-js/util` | None | No (install or import directly) |
+| `@strafe-js/builders` | `1.0.5` | `@strafe-js/util` | None | No (install or import directly) |
+| `@strafe-js/rest` | `1.0.5` | `@strafe-js/util` | None | Yes |
+| `@strafe-js/ws` | `1.0.5` | `@strafe-js/util` | `ws` | Yes |
 
-const modMask = permissions(['KickMembers', 'BanMembers', 'ManageMessages']);
-```
+## Installing All Ecosystem Packages
 
-## `@strafe-js/formatters`
-
-Formatting utilities for mentions, custom emojis, and Markdown escaping:
-
-```ts
-import {
-  userMention,
-  roleMention,
-  roomMention,
-  customEmoji,
-  escapeMarkdown,
-} from '@strafe-js/formatters';
-
-userMention('123456789012345678'); // "<@123456789012345678>"
-roleMention('123456789012345678'); // "<@&123456789012345678>"
-roomMention('123456789012345678'); // "<#123456789012345678>"
-customEmoji('party', '998877665544332211', true); // "<a:party:998877665544332211>"
-escapeMarkdown('**bold_text**'); // "\\*\\*bold\\_text\\*\\*"
-```
-
-## `@strafe-js/collection`
-
-`Collection<K, V>` extends JavaScript's native `Map<K, V>` with array-like functional methods:
-
-```ts
-import { Collection } from '@strafe-js/collection';
-
-const cache = new Collection<string, { id: string; online: boolean }>();
-cache.set('1', { id: '1', online: true });
-cache.set('2', { id: '2', online: false });
-
-const firstOnline = cache.find((u) => u.online);
-const onlineCollection = cache.filter((u) => u.online);
-const allIds = cache.map((u) => u.id);
-```
-
-## `@strafe-js/util`
-
-Provides shared TypeScript models, `Permission` flags, `BitField`, `StrafeError`, `RateLimitError`, and `isSnowflake()`:
-
-```ts
-import { BitField, Permission, isSnowflake } from '@strafe-js/util';
-
-const bits = new BitField(Permission.ViewRoom | Permission.SendMessages);
-console.log(bits.has('SendMessages')); // true
-console.log(bits.toArray()); // ['ViewRoom', 'SendMessages']
-console.log(isSnowflake('123456789012345678')); // true
+```bash
+npm install @strafe-js/strafebot @strafe-js/builders @strafe-js/formatters @strafe-js/collection @strafe-js/util
 ```

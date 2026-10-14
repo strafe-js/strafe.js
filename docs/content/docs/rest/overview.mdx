@@ -5,6 +5,12 @@ description: Standalone Fetch-based HTTP client with automatic 429 rate-limit re
 
 `@strafe-js/rest` provides the `REST` class for interacting with the Strafe HTTP API. It is exposed as `client.rest` on `@strafe-js/strafebot` or can be instantiated standalone.
 
+## Installation
+
+```bash
+npm install @strafe-js/rest @strafe-js/util
+```
+
 ## Standalone Usage
 
 ```ts
@@ -21,11 +27,78 @@ const me = await rest.getMe();
 console.log(`Authenticated as ${me.username}`);
 ```
 
-## Automatic Rate-Limit Handling
+## Constructor Options (`RESTOptions`)
 
-When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()` automatically reads `retry_after` from the JSON response body (or the `Retry-After` HTTP header), sleeps for the required duration, and retries the request up to `retries` times (default `3`). If retries are exhausted, a `RateLimitError` is thrown.
+<PropertyTable
+  title="RESTOptions"
+  properties={[
+    { name: 'baseUrl', type: 'string', description: 'Base URL of the Strafe REST API (trailing slashes are stripped automatically).' },
+    { name: 'token', type: 'string', optional: true, description: 'Bot or Bearer token used in the Authorization header.' },
+    { name: 'authScheme', type: "'Bot' | 'Bearer'", optional: true, description: 'Authorization scheme prefix (default: "Bot").' },
+    { name: 'retries', type: 'number', optional: true, description: 'Number of automatic retries on HTTP 429 responses (default: 3).' },
+    { name: 'userAgent', type: 'string', optional: true, description: 'Custom User-Agent header (default: "strafebot-js/0.1").' },
+  ]}
+/>
 
-## Built-in Endpoint Methods
+## Automatic Rate-Limit Handling (`HTTP 429`)
+
+When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()` automatically inspects `retry_after` in the JSON body (or the `Retry-After` HTTP header), sleeps for the required duration, and retries the request up to `retries` times. If retries are exhausted, a `RateLimitError` is thrown.
+
+## Endpoint Methods Reference
+
+### Users & Spaces
+
+<MethodCard
+  name="rest.getMe"
+  signature="() => Promise<User>"
+  returnType="Promise<User>"
+  description="Fetches the currently authenticated bot User object (GET /users/@me)."
+  example={`const me = await rest.getMe();`}
+/>
+
+<MethodCard
+  name="rest.getMySpaces / rest.getSpaces"
+  signature="() => Promise<Space[]>"
+  returnType="Promise<Space[]>"
+  description="Lists all Spaces the authenticated user belongs to (GET /users/@me/spaces)."
+  example={`const spaces = await rest.getSpaces();`}
+/>
+
+<MethodCard
+  name="rest.getSpace"
+  signature="(spaceId: Snowflake) => Promise<Space>"
+  returnType="Promise<Space>"
+  description="Fetches a single Space by ID (GET /spaces/:spaceId)."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
+  ]}
+  example={`const space = await rest.getSpace(spaceId);`}
+/>
+
+<MethodCard
+  name="rest.getSpaceRooms"
+  signature="(spaceId: Snowflake) => Promise<Room[]>"
+  returnType="Promise<Room[]>"
+  description="Fetches all rooms belonging to a Space (GET /spaces/:spaceId/rooms)."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
+  ]}
+  example={`const rooms = await rest.getSpaceRooms(spaceId);`}
+/>
+
+<MethodCard
+  name="rest.getSpaceMembers / rest.getSpaceMember"
+  signature="(spaceId: Snowflake, userId?: Snowflake) => Promise<SpaceMember[] | SpaceMember>"
+  returnType="Promise<SpaceMember[] | SpaceMember>"
+  description="Fetches all members of a Space or a single member by User ID."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
+    { name: 'userId', type: 'Snowflake', required: false, description: 'User ID (for getSpaceMember).' },
+  ]}
+  example={`const allMembers = await rest.getSpaceMembers(spaceId);\nconst oneMember = await rest.getSpaceMember(spaceId, userId);`}
+/>
+
+### Messages & Reactions
 
 <MethodCard
   name="rest.createMessage"
@@ -53,6 +126,46 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
 />
 
 <MethodCard
+  name="rest.deleteMessage"
+  signature="(roomId: Snowflake, messageId: Snowflake) => Promise<void>"
+  returnType="Promise<void>"
+  description="Deletes a message in a room (DELETE /rooms/:roomId/messages/:messageId)."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
+    { name: 'messageId', type: 'Snowflake', required: true, description: 'Message ID to delete.' },
+  ]}
+  example={`await rest.deleteMessage(roomId, messageId);`}
+/>
+
+<MethodCard
+  name="rest.listMessages"
+  signature="(roomId: Snowflake, params?: { limit?: number; before?: Snowflake; after?: Snowflake }) => Promise<Message[]>"
+  returnType="Promise<Message[]>"
+  description="Fetches message history for a room with optional pagination parameters."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
+    { name: 'params', type: '{ limit?: number; before?: Snowflake; after?: Snowflake }', required: false, description: 'Pagination query parameters.' },
+  ]}
+  example={`const messages = await rest.listMessages(roomId, { limit: 25 });`}
+/>
+
+<MethodCard
+  name="rest.addReaction / rest.removeReaction"
+  signature="(roomId: Snowflake, messageId: Snowflake, emoji: string, userId?: Snowflake) => Promise<void>"
+  returnType="Promise<void>"
+  description="Adds or removes an emoji reaction on a message."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
+    { name: 'messageId', type: 'Snowflake', required: true, description: 'Message ID.' },
+    { name: 'emoji', type: 'string', required: true, description: 'Unicode emoji or custom emoji identifier.' },
+    { name: 'userId', type: 'Snowflake', required: false, default: "'@me'", description: '(removeReaction only) User ID whose reaction to remove.' },
+  ]}
+  example={`await rest.addReaction(roomId, messageId, '🔥');`}
+/>
+
+### Moderation, Invites & Attachments
+
+<MethodCard
   name="rest.uploadAttachment"
   signature="(file: Blob | Buffer, filename: string, uploadUrl?: string) => Promise<Attachment>"
   returnType="Promise<Attachment>"
@@ -66,14 +179,14 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
 />
 
 <MethodCard
-  name="rest.banMember"
+  name="rest.kickMember / rest.banMember"
   signature="(spaceId: Snowflake, userId: Snowflake, reason?: string) => Promise<void>"
   returnType="Promise<void>"
-  description="Bans a member from a Space."
+  description="Kicks (DELETE /spaces/:spaceId/members/:userId) or bans (PUT /spaces/:spaceId/bans/:userId) a member from a Space."
   parameters={[
     { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
-    { name: 'userId', type: 'Snowflake', required: true, description: 'User ID to ban.' },
-    { name: 'reason', type: 'string', required: false, description: 'Optional audit reason.' },
+    { name: 'userId', type: 'Snowflake', required: true, description: 'User ID to kick or ban.' },
+    { name: 'reason', type: 'string', required: false, description: '(banMember only) Optional audit reason.' },
   ]}
-  example={`await rest.banMember(spaceId, userId, 'Spamming');`}
+  example={`await rest.kickMember(spaceId, userId);\nawait rest.banMember(spaceId, userId, 'Spamming');`}
 />

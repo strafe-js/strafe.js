@@ -1,4 +1,4 @@
 {
   "title": "Command Framework",
-  "pages": ["overview"]
+  "pages": ["overview", "arguments"]
 }

@@ -35,13 +35,13 @@ const PACKAGES = [
   {
     name: '@strafe-js/builders',
     desc: 'Fluent MessageBuilder and permission bitmask factories for clean payload construction.',
-    href: '/docs/packages/overview',
+    href: '/docs/packages/builders',
     badge: 'Builders',
   },
   {
     name: '@strafe-js/collection',
     desc: 'Extended Map<K, V> data structure with functional query helpers (find, filter, map, first).',
-    href: '/docs/packages/overview',
+    href: '/docs/packages/collection',
     badge: 'Data Structure',
   },
   {
