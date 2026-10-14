@@ -1,0 +1,79 @@
+---
+title: REST API SDK (@strafe-js/rest)
+description: Standalone Fetch-based HTTP client with automatic 429 rate-limit retries and typed endpoints.
+---
+
+`@strafe-js/rest` provides the `REST` class for interacting with the Strafe HTTP API. It is exposed as `client.rest` on `@strafe-js/strafebot` or can be instantiated standalone.
+
+## Standalone Usage
+
+```ts
+import { REST } from '@strafe-js/rest';
+
+const rest = new REST({
+  baseUrl: 'https://app.strafe.chat/api',
+  token: process.env.BOT_TOKEN,
+  authScheme: 'Bot',
+  retries: 3,
+});
+
+const me = await rest.getMe();
+console.log(`Authenticated as ${me.username}`);
+```
+
+## Automatic Rate-Limit Handling
+
+When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()` automatically reads `retry_after` from the JSON response body (or the `Retry-After` HTTP header), sleeps for the required duration, and retries the request up to `retries` times (default `3`). If retries are exhausted, a `RateLimitError` is thrown.
+
+## Built-in Endpoint Methods
+
+<MethodCard
+  name="rest.createMessage"
+  signature="(roomId: Snowflake, body: CreateMessageBody | string) => Promise<Message>"
+  returnType="Promise<Message>"
+  description="Sends a new message (or MessageBuilder JSON payload) to a room."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Target Room ID.' },
+    { name: 'body', type: 'CreateMessageBody | string', required: true, description: 'Plaintext string or structured message payload.' },
+  ]}
+  example={`await rest.createMessage(roomId, {\n  plaintext: 'Hello from @strafe-js/rest!',\n});`}
+/>
+
+<MethodCard
+  name="rest.editMessage"
+  signature="(roomId: Snowflake, messageId: Snowflake, body: EditMessageBody | string) => Promise<Message>"
+  returnType="Promise<Message>"
+  description="Edits an existing message in a room."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
+    { name: 'messageId', type: 'Snowflake', required: true, description: 'Message ID to edit.' },
+    { name: 'body', type: 'EditMessageBody | string', required: true, description: 'Updated message content.' },
+  ]}
+  example={`await rest.editMessage(roomId, messageId, 'Updated content');`}
+/>
+
+<MethodCard
+  name="rest.uploadAttachment"
+  signature="(file: Blob | Buffer, filename: string, uploadUrl?: string) => Promise<Attachment>"
+  returnType="Promise<Attachment>"
+  description="Uploads a file via multipart/form-data and returns an Attachment object."
+  parameters={[
+    { name: 'file', type: 'Blob | Buffer', required: true, description: 'Binary file content.' },
+    { name: 'filename', type: 'string', required: true, description: 'Filename for the uploaded attachment.' },
+    { name: 'uploadUrl', type: 'string', required: false, default: "'/attachments'", description: 'Custom upload endpoint path.' },
+  ]}
+  example={`const attachment = await rest.uploadAttachment(Buffer.from('hello'), 'hello.txt');\nawait rest.createMessage(roomId, { plaintext: 'File attached!', attachments: [attachment.id] });`}
+/>
+
+<MethodCard
+  name="rest.banMember"
+  signature="(spaceId: Snowflake, userId: Snowflake, reason?: string) => Promise<void>"
+  returnType="Promise<void>"
+  description="Bans a member from a Space."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
+    { name: 'userId', type: 'Snowflake', required: true, description: 'User ID to ban.' },
+    { name: 'reason', type: 'string', required: false, description: 'Optional audit reason.' },
+  ]}
+  example={`await rest.banMember(spaceId, userId, 'Spamming');`}
+/>

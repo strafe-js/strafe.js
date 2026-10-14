@@ -1,0 +1,72 @@
+---
+title: Gateway WebSocket SDK (@strafe-js/ws)
+description: Real-time WebSocket Gateway client with automatic heartbeating, exponential backoff, and event normalization.
+---
+
+`@strafe-js/ws` manages persistent WebSocket connections to the Strafe Gateway. It automatically sends periodic `Ping` heartbeats, reconnects with jittered exponential backoff on network drops, and converts `SNAKE_CASE` gateway events into idiomatic `camelCase` Node `EventEmitter` events.
+
+## Gateway Opcodes (`GatewayOp`)
+
+| Opcode | Name | Direction | Description |
+| :--- | :--- | :--- | :--- |
+| `0` | `Heartbeat` | Client ↔ Server | Legacy heartbeat frame |
+| `1` | `Subscribe` | Client → Server | Subscribe to real-time events for a `space_id` |
+| `2` | `Send` | Client → Server | Send client action (e.g. `TYPING_START`) |
+| `3` | `Event` | Server → Client | Dispatched real-time event frame (`t`, `d`, `room_id`, `space_id`) |
+| `4` | `Ready` | Server → Client | Initial session handshake payload (`user`, `spaces`, `rooms`) |
+| `5` | `Unsubscribe` | Client → Server | Unsubscribe from a `space_id` |
+| `6` | `Ping` | Client → Server | Periodic heartbeat ping |
+| `7` | `Pong` | Server → Client | Heartbeat acknowledgement |
+| `8` | `Error` | Server → Client | Gateway-level error frame |
+
+## Standalone Gateway Example
+
+```ts
+import { Gateway } from '@strafe-js/ws';
+
+const gateway = new Gateway({
+  url: 'wss://app.strafe.chat/gateway/events',
+  token: process.env.BOT_TOKEN!,
+  heartbeatIntervalMs: 45_000,
+  reconnect: true,
+});
+
+gateway.on('ready', (payload) => {
+  console.log(`Connected as ${payload.user.username}`);
+  for (const space of payload.spaces) {
+    gateway.subscribe(space.id);
+  }
+});
+
+gateway.on('messageCreate', (message) => {
+  console.log(`[${message.room_id}] ${message.plaintext}`);
+});
+
+gateway.connect();
+```
+
+## Gateway Methods
+
+<MethodCard
+  name="gateway.subscribe"
+  signature="(spaceId: Snowflake) => void"
+  returnType="void"
+  isAsync={false}
+  description="Subscribes the active Gateway session to events from a specific Space."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Space ID to subscribe to.' },
+  ]}
+  example={`gateway.subscribe('987654321098765432');`}
+/>
+
+<MethodCard
+  name="gateway.sendTyping"
+  signature="(roomId: Snowflake) => void"
+  returnType="void"
+  isAsync={false}
+  description="Sends a TYPING_START Gateway frame for the specified room."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID.' },
+  ]}
+  example={`gateway.sendTyping(roomId);`}
+/>

@@ -1,7 +1,23 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
-@import 'fumadocs-ui/dist/style.css';
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@source '../../content/**/*.mdx';
+@source '../**/*.{ts,tsx}';
+
+@theme {
+  --color-strafe-bg: #101114;
+  --color-strafe-card: #17191c;
+  --color-strafe-border: #2f3237;
+  --color-strafe-green: #509b6b;
+  --color-strafe-green-hover: #45875d;
+  --color-strafe-green-light: #6db888;
+  --color-strafe-50: #f0fdf4;
+  --color-strafe-100: #dcfce7;
+  --color-strafe-500: #509b6b;
+  --color-strafe-600: #45875d;
+  --color-strafe-700: #386f4c;
+}
 
 :root {
   --fd-background: #f4f6f8;
@@ -40,37 +56,54 @@
 }
 
 .dark {
-  --fd-background: #101114;
+  --fd-background: #0d0f12;
   --fd-foreground: #f3f5f7;
-  --fd-card: #17191c;
+  --fd-card: #15181d;
   --fd-card-foreground: #f3f5f7;
-  --fd-popover: #191b1f;
+  --fd-popover: #171a20;
   --fd-popover-foreground: #f3f5f7;
   --fd-primary: #509b6b;
   --fd-primary-foreground: #f5f9f7;
-  --fd-secondary: #26282c;
+  --fd-secondary: #1e2229;
   --fd-secondary-foreground: #edf0f2;
-  --fd-muted: #26282c;
-  --fd-muted-foreground: #aeb6c2;
-  --fd-accent: #2e2e2e;
+  --fd-muted: #1b1f26;
+  --fd-muted-foreground: #9ba5b4;
+  --fd-accent: #232830;
   --fd-accent-foreground: #f2f2f2;
-  --fd-border: #2f3237;
+  --fd-border: #262b33;
   --fd-ring: #57a875;
 
-  --color-fd-background: #101114;
+  --color-fd-background: #0d0f12;
   --color-fd-foreground: #f3f5f7;
-  --color-fd-card: #17191c;
+  --color-fd-card: #15181d;
   --color-fd-card-foreground: #f3f5f7;
-  --color-fd-popover: #191b1f;
+  --color-fd-popover: #171a20;
   --color-fd-popover-foreground: #f3f5f7;
   --color-fd-primary: #509b6b;
   --color-fd-primary-foreground: #f5f9f7;
-  --color-fd-secondary: #26282c;
+  --color-fd-secondary: #1e2229;
   --color-fd-secondary-foreground: #edf0f2;
-  --color-fd-muted: #26282c;
-  --color-fd-muted-foreground: #aeb6c2;
-  --color-fd-accent: #2e2e2e;
+  --color-fd-muted: #1b1f26;
+  --color-fd-muted-foreground: #9ba5b4;
+  --color-fd-accent: #232830;
   --color-fd-accent-foreground: #f2f2f2;
-  --color-fd-border: #2f3237;
+  --color-fd-border: #262b33;
   --color-fd-ring: #57a875;
+}
+
+.dark #nd-sidebar {
+  --color-fd-muted: #14171c;
+  --color-fd-secondary: #1d2229;
+  --color-fd-muted-foreground: #9ba5b4;
+  background-color: #101317;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-fd-background);
+  color: var(--color-fd-foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }

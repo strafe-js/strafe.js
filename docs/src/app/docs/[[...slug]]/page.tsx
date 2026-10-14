@@ -1,6 +1,23 @@
 import { source } from '@/lib/source';
 import { DocsPage, DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
+import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { notFound } from 'next/navigation';
+import { ApiPlayground } from '@/components/ApiPlayground';
+import { Badge } from '@/components/Badge';
+import { CommandBuilder } from '@/components/CommandBuilder';
+import { MethodCard } from '@/components/MethodCard';
+import { PermissionCalculator } from '@/components/PermissionCalculator';
+import { PropertyTable } from '@/components/PropertyTable';
+
+const mdxComponents = {
+  ...defaultMdxComponents,
+  ApiPlayground,
+  Badge,
+  CommandBuilder,
+  MethodCard,
+  PermissionCalculator,
+  PropertyTable,
+};
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -17,7 +34,7 @@ export default async function Page(props: {
       <DocsTitle>{data.title}</DocsTitle>
       <DocsDescription>{data.description}</DocsDescription>
       <DocsBody>
-        <MDX />
+        <MDX components={mdxComponents} />
       </DocsBody>
     </DocsPage>
   );

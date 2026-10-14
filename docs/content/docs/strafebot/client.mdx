@@ -1,0 +1,171 @@
+---
+title: Client Reference
+description: Complete reference for the StrafeBot Client class, state caches, methods, and Gateway events.
+---
+
+The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`client.rest`), Gateway WebSocket (`client.gateway`), in-memory `Collection` caches, Equinox permission resolution, and `CommandHandler` (`client.commands`).
+
+## Constructor Options (`ClientOptions`)
+
+<PropertyTable
+  title="ClientOptions"
+  properties={[
+    {
+      name: 'apiBase',
+      type: 'string',
+      description: 'Base URL for the Strafe REST API (e.g. "https://app.strafe.chat/api").',
+      example: "apiBase: 'https://app.strafe.chat/api'",
+    },
+    {
+      name: 'gatewayUrl',
+      type: 'string',
+      description: 'WebSocket URL for the Strafe Gateway (e.g. "wss://app.strafe.chat/gateway/events").',
+      example: "gatewayUrl: 'wss://app.strafe.chat/gateway/events'",
+    },
+    {
+      name: 'token',
+      type: 'string',
+      optional: true,
+      description: 'Bot token. Can also be passed directly to client.login(token).',
+    },
+    {
+      name: 'authScheme',
+      type: "'Bot' | 'Bearer'",
+      optional: true,
+      description: 'Authorization header prefix. Defaults to "Bot".',
+    },
+    {
+      name: 'prefix',
+      type: 'string | string[]',
+      optional: true,
+      description: 'Command prefix or array of prefixes (e.g. "!" or ["!", "?"]).',
+      example: "prefix: ['!', 's!']",
+    },
+    {
+      name: 'owners',
+      type: 'Snowflake[]',
+      optional: true,
+      description: 'Array of bot owner user IDs allowed to run botOwnerOnly commands.',
+    },
+    {
+      name: 'autoSubscribeSpaces',
+      type: 'boolean',
+      optional: true,
+      description: 'Automatically subscribe to all spaces received in the READY payload (default: true).',
+    },
+  ]}
+/>
+
+## Client Properties & Caches
+
+<PropertyTable
+  title="Client Instance Properties"
+  properties={[
+    {
+      name: 'rest',
+      type: 'REST',
+      readonly: true,
+      description: 'Underlying @strafe-js/rest HTTP client instance.',
+    },
+    {
+      name: 'gateway',
+      type: 'Gateway',
+      readonly: true,
+      description: 'Underlying @strafe-js/ws WebSocket Gateway instance.',
+    },
+    {
+      name: 'commands',
+      type: 'CommandHandler',
+      readonly: true,
+      description: 'Command registry and execution pipeline.',
+    },
+    {
+      name: 'user',
+      type: 'User | null',
+      description: 'Authenticated bot user object populated upon receiving READY.',
+    },
+    {
+      name: 'spaces',
+      type: 'Collection<Snowflake, Space>',
+      readonly: true,
+      description: 'Cache of all Spaces the bot belongs to, kept updated via Gateway events.',
+    },
+    {
+      name: 'rooms',
+      type: 'Collection<Snowflake, Room>',
+      readonly: true,
+      description: 'Cache of all Rooms indexed by room ID.',
+    },
+    {
+      name: 'spaceRooms',
+      type: 'Collection<Snowflake, Collection<Snowflake, Room>>',
+      readonly: true,
+      description: 'Nested cache mapping each Space ID to its Collection of Rooms.',
+    },
+    {
+      name: 'members',
+      type: 'Collection<Snowflake, Collection<Snowflake, SpaceMember>>',
+      readonly: true,
+      description: 'Nested cache mapping each Space ID to its cached SpaceMember objects.',
+    },
+  ]}
+/>
+
+## Client Methods
+
+<MethodCard
+  name="client.login"
+  signature="(token?: string) => Promise<this>"
+  returnType="Promise<Client>"
+  description="Authenticates with the Strafe Gateway, attaches the CommandHandler, and starts receiving real-time events."
+  parameters={[
+    { name: 'token', type: 'string', required: false, description: 'Bot token if not already provided in ClientOptions.' },
+  ]}
+  example={`await client.login(process.env.BOT_TOKEN!);`}
+/>
+
+<MethodCard
+  name="client.fetchMembers"
+  signature="(spaceId: Snowflake) => Promise<Collection<Snowflake, SpaceMember>>"
+  returnType="Promise<Collection<Snowflake, SpaceMember>>"
+  description="Fetches all members of a Space via REST and populates client.members."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
+  ]}
+  example={`const members = await client.fetchMembers('987654321098765432');\nconsole.log(\`Cached \${members.size} members\`);`}
+/>
+
+<MethodCard
+  name="client.fetchMember"
+  signature="(spaceId: Snowflake, userId: Snowflake) => Promise<SpaceMember | null>"
+  returnType="Promise<SpaceMember | null>"
+  description="Fetches a single SpaceMember with automatic in-flight request deduplication."
+  parameters={[
+    { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
+    { name: 'userId', type: 'Snowflake', required: true, description: 'Target User ID.' },
+  ]}
+  example={`const member = await client.fetchMember(spaceId, userId);`}
+/>
+
+<MethodCard
+  name="client.resolveMemberPermissions"
+  signature="(userId: Snowflake, spaceId?: Snowflake, roomId?: Snowflake) => BitField"
+  returnType="BitField"
+  isAsync={false}
+  description="Computes effective permissions for a member using the 6-stage Equinox permission cascade."
+  parameters={[
+    { name: 'userId', type: 'Snowflake', required: true, description: 'User ID to evaluate.' },
+    { name: 'spaceId', type: 'Snowflake', required: false, description: 'Space ID.' },
+    { name: 'roomId', type: 'Snowflake', required: false, description: 'Optional Room ID for room override evaluation.' },
+  ]}
+  example={`const perms = client.resolveMemberPermissions(userId, spaceId, roomId);\nif (perms.has('ManageMessages')) {\n  // Allowed\n}`}
+/>
+
+<MethodCard
+  name="client.destroy"
+  signature="() => void"
+  returnType="void"
+  isAsync={false}
+  description="Cleanly closes the Gateway WebSocket connection and removes all event listeners."
+  example={`client.destroy();`}
+/>

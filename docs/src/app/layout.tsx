@@ -10,11 +10,26 @@ export const metadata = {
   description: 'Complete TypeScript & JavaScript SDK suite for the Strafe Chat REST API and WebSocket Gateway.',
 };
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.replace(/\/$/, '') || '';
+
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased selection:bg-sky-500/20 selection:text-sky-500">
-        <RootProvider>{children}</RootProvider>
+      <body className="flex flex-col min-h-screen bg-fd-background text-fd-foreground antialiased selection:bg-[#509b6b]/25 selection:text-[#6db888]">
+        <RootProvider
+          theme={{
+            defaultTheme: 'dark',
+            enableSystem: true,
+          }}
+          search={{
+            options: {
+              type: 'static',
+              api: `${basePath}/api/search`,
+            },
+          }}
+        >
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

@@ -1,0 +1,82 @@
+---
+title: Getting Started
+description: Step-by-step guide to scaffolding, configuring, and running your first Strafe Chat bot.
+---
+
+## Prerequisites
+
+- **Node.js 18+** (Node.js 20 or 22 LTS recommended)
+- A **Strafe Bot Token** obtained from the Strafe Developer Portal
+
+## Option 1: Using the CLI Scaffolder (Recommended)
+
+The fastest way to bootstrap a new bot is with `create-strafebot`:
+
+```bash
+npx create-strafebot my-strafe-bot
+```
+
+The interactive wizard will prompt you for:
+1. **Project directory** (e.g. `my-strafe-bot`)
+2. **Bot token** (written to `.env`)
+3. **Command prefix** (default: `!`)
+4. **Owner User IDs** (comma-separated Snowflake IDs)
+5. **Starter template** (`Full Command Bot` or `Minimal Event Bot`)
+
+Once generated, start your bot in watch mode:
+
+```bash
+cd my-strafe-bot
+npm run dev
+```
+
+## Option 2: Manual Setup
+
+Install `@strafe-js/strafebot` and TypeScript development tools:
+
+```bash
+npm install @strafe-js/strafebot dotenv
+npm install -D typescript tsx @types/node
+```
+
+Create a `.env` file in your project root:
+
+```ini
+BOT_TOKEN=your_bot_token_here
+STRAFE_API=https://app.strafe.chat/api
+STRAFE_GATEWAY=wss://app.strafe.chat/gateway/events
+PREFIX=!
+OWNERS=123456789012345678
+```
+
+Create `src/index.ts`:
+
+```ts
+import 'dotenv/config';
+import { Client, command } from '@strafe-js/strafebot';
+import { userMention } from '@strafe-js/formatters';
+
+const client = new Client({
+  apiBase: process.env.STRAFE_API || 'https://app.strafe.chat/api',
+  gatewayUrl: process.env.STRAFE_GATEWAY || 'wss://app.strafe.chat/gateway/events',
+  prefix: process.env.PREFIX || '!',
+  owners: (process.env.OWNERS || '').split(',').filter(Boolean),
+});
+
+client.on('ready', (info) => {
+  console.log(`Ready as ${info.user.username} (${info.user.id})`);
+});
+
+client.commands.register(
+  command({
+    name: 'hello',
+    aliases: ['hi'],
+    description: 'Greet a user',
+    async run(ctx) {
+      await ctx.reply(`Hello ${userMention(ctx.authorId)}!`);
+    },
+  })
+);
+
+await client.login(process.env.BOT_TOKEN!);
+```

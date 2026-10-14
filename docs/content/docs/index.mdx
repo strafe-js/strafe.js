@@ -1,8 +1,72 @@
 ---
-title: Introduction
-description: Welcome to the Strafe.js documentation
+title: Introduction to Strafe.js
+description: Complete TypeScript & JavaScript SDK suite for the Strafe Chat REST API and WebSocket Gateway.
 ---
 
-# Introduction
+Welcome to the official **Strafe.js** documentation. Strafe.js is a modular, strictly-typed TypeScript monorepo designed for building resilient bots and real-time integrations on **Strafe Chat** (`https://app.strafe.chat`).
 
-Welcome to the **Strafe.js** documentation.
+<Cards>
+  <Card title="Quickstart Guide" href="/docs/guides/getting-started" description="Create and launch your first Strafe Chat bot in under 2 minutes." />
+  <Card title="StrafeBot Client" href="/docs/strafebot/client" description="Explore state caching, event listeners, and member resolution." />
+  <Card title="Command Framework" href="/docs/commands/overview" description="Build commands with typed argument schemas, cooldowns, and guards." />
+  <Card title="Permission Calculator" href="/docs/tools/permission-calculator" description="Interactive bitmask calculator for all 28 Strafe permissions." />
+</Cards>
+
+## Ecosystem Architecture
+
+Strafe.js is organized as a layered monorepo so you can install the all-in-one `@strafe-js/strafebot` framework or consume low-level packages individually:
+
+| Package | Description | Runtime Dependencies |
+| :--- | :--- | :--- |
+| `@strafe-js/strafebot` | High-level Bot `Client`, state caches, Equinox permission engine, and `CommandHandler` | `@strafe-js/*` |
+| `@strafe-js/rest` | HTTP REST client with automatic `429 Retry-After` backoff and `FormData` uploads | `@strafe-js/util` |
+| `@strafe-js/ws` | Persistent WebSocket Gateway client with heartbeating and exponential jitter backoff | `@strafe-js/util`, `ws` |
+| `@strafe-js/builders` | Fluent `MessageBuilder` and permission bitmask factories | `@strafe-js/util` |
+| `@strafe-js/formatters` | Mention (`<@id>`, `<@&id>`, `<#id>`), custom emoji, and Markdown escaping helpers | `@strafe-js/util` |
+| `@strafe-js/collection` | Extended `Map<K, V>` subclass with functional query methods (`find`, `filter`, `map`) | None |
+| `@strafe-js/util` | Core TypeScript interfaces, `Permission` flags, `BitField`, and error classes | None |
+| `create-strafebot` | Interactive CLI tool to scaffold new bot projects and generate command files | Node.js built-ins |
+
+## Quick Installation
+
+Scaffold a complete TypeScript bot project interactively:
+
+```bash
+npm create strafebot@latest my-bot
+cd my-bot
+npm run dev
+```
+
+Or install `@strafe-js/strafebot` into an existing Node.js (`>= 18`) project:
+
+```bash
+npm install @strafe-js/strafebot
+```
+
+## Minimal Example
+
+```ts
+import { Client, command } from '@strafe-js/strafebot';
+
+const client = new Client({
+  apiBase: 'https://app.strafe.chat/api',
+  gatewayUrl: 'wss://app.strafe.chat/gateway/events',
+  prefix: '!',
+});
+
+client.on('ready', (data) => {
+  console.log(`Logged in as ${data.user.username} (${data.spaces.length} spaces)`);
+});
+
+client.commands.register(
+  command({
+    name: 'ping',
+    description: 'Check bot responsiveness',
+    async run(ctx) {
+      await ctx.reply('Pong! 🏓');
+    },
+  })
+);
+
+await client.login(process.env.BOT_TOKEN!);
+```

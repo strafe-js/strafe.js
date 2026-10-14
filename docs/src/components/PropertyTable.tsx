@@ -27,31 +27,31 @@ export function PropertyTable({ title = 'Properties Overview', properties }: Pro
   };
 
   return (
-    <div className="my-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 overflow-hidden shadow-sm">
+    <div className="my-6 rounded-xl border border-[#262b33] bg-[#15181d] overflow-hidden shadow-sm">
       {title && (
-        <div className="px-4 py-3 bg-zinc-50 dark:bg-zinc-900/90 border-b border-zinc-200 dark:border-zinc-800 font-semibold text-sm text-zinc-700 dark:text-zinc-200 flex items-center justify-between">
+        <div className="px-4 py-3 bg-[#101317] border-b border-[#262b33] font-semibold text-sm text-[#f3f5f7] flex items-center justify-between">
           <span>{title}</span>
-          <span className="text-xs font-normal text-zinc-400">{properties.length} properties</span>
+          <span className="text-xs font-normal text-[#9ba5b4]">{properties.length} properties</span>
         </div>
       )}
 
-      <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
+      <div className="divide-y divide-[#262b33]/70 text-xs">
         {properties.map((prop) => {
           const isExp = !!expanded[prop.name];
 
           return (
-            <div key={prop.name} className="transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40">
+            <div key={prop.name} className="transition-colors hover:bg-[#101317]/60">
               <div
                 className="p-3.5 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none"
                 onClick={() => toggle(prop.name)}
               >
                 <div className="flex items-center gap-2.5 font-mono">
-                  <button className="text-zinc-400">
+                  <button className="text-[#9ba5b4]">
                     {isExp ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                   </button>
-                  <span className="font-bold text-sky-600 dark:text-sky-400 text-sm">{prop.name}</span>
-                  <span className="text-zinc-400 font-normal">:</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">{prop.type}</span>
+                  <span className="font-bold text-[#6db888] text-sm">{prop.name}</span>
+                  <span className="text-[#9ba5b4] font-normal">:</span>
+                  <span className="text-amber-400 font-medium">{prop.type}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -60,16 +60,17 @@ export function PropertyTable({ title = 'Properties Overview', properties }: Pro
                 </div>
               </div>
 
-              <div className="px-3.5 pb-2 text-zinc-600 dark:text-zinc-300">
+              <div className="px-3.5 pb-2.5 text-[#d4dbe3]">
                 {prop.description}
               </div>
 
-              {isExp && (
-                <div className="mx-3.5 mb-3.5 p-3 rounded-lg bg-zinc-100/70 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
+              {isExp && (prop.example || prop.details) && (
+                <div className="mx-3.5 mb-3.5 p-3 rounded-lg bg-[#0d0f12] border border-[#262b33] space-y-2">
+                  {prop.details && <p className="text-xs text-[#9ba5b4]">{prop.details}</p>}
                   {prop.example && (
                     <div>
-                      <span className="font-semibold text-zinc-500 text-[11px] block uppercase mb-1">Example</span>
-                      <pre className="p-2.5 rounded-md bg-zinc-900 text-sky-300 font-mono text-[11px] overflow-x-auto">
+                      <span className="font-semibold text-[#6db888] text-[11px] block uppercase mb-1">Example</span>
+                      <pre className="p-2.5 rounded-md bg-[#15181d] text-[#6db888] font-mono text-[11px] overflow-x-auto">
                         <code>{prop.example}</code>
                       </pre>
                     </div>
