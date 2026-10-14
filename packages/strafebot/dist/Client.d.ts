@@ -1,44 +1,51 @@
 import { EventEmitter } from 'node:events';
-import { REST } from '@strafe-js/rest';
-import { Gateway } from '@strafe-js/ws';
+import { Room, Snowflake, Space, SpaceMember, User } from '@strafe-js/util';
 import { Collection } from '@strafe-js/collection';
-import { type Snowflake, type User, type Space, type Room, type SpaceMember } from '@strafe-js/util';
-import { CommandHandler, type CommandHandlerOptions } from './commands/CommandHandler.js';
-export interface ClientOptions extends CommandHandlerOptions {
+import { REST, RESTOptions } from '@strafe-js/rest';
+import { Gateway, GatewayOptions, GatewayEvents } from '@strafe-js/ws';
+import { CommandHandler, CommandHandlerOptions, CommandEvents } from './commands/CommandHandler.js';
+export interface ClientOptions {
     apiBase: string;
     gatewayUrl: string;
-    reconnectDelay?: number;
+    token?: string;
+    authScheme?: 'Bot' | 'Bearer';
+    prefix?: string | string[];
+    owners?: Snowflake[];
+    autoSubscribeSpaces?: boolean;
+    heartbeatIntervalMs?: number;
+    rest?: Partial<RESTOptions>;
+    gateway?: Partial<GatewayOptions>;
+    commands?: Partial<CommandHandlerOptions>;
+}
+export type ClientEvents = GatewayEvents & CommandEvents;
+export declare interface Client {
+    on<E extends keyof ClientEvents>(event: E, listener: ClientEvents[E]): this;
+    on(event: string, listener: (...args: any[]) => void): this;
+    once<E extends keyof ClientEvents>(event: E, listener: ClientEvents[E]): this;
+    once(event: string, listener: (...args: any[]) => void): this;
+    emit<E extends keyof ClientEvents>(event: E, ...args: Parameters<ClientEvents[E]>): boolean;
+    emit(event: string, ...args: any[]): boolean;
 }
 export declare class Client extends EventEmitter {
-    readonly options: ClientOptions;
-    token: string | null;
-    user: User | null;
     readonly rest: REST;
-    gateway: Gateway | null;
+    gateway: Gateway;
+    readonly commands: CommandHandler;
+    user: User | null;
     readonly spaces: Collection<string, Space>;
     readonly rooms: Collection<string, Room>;
     readonly spaceRooms: Collection<string, Collection<string, Room>>;
     readonly members: Collection<string, Collection<string, SpaceMember>>;
-    readonly commands: CommandHandler;
+    private opts;
     private _fetchingMembers;
-    constructor(options: ClientOptions);
-    login(token: string): Promise<this>;
-    /** Alias for login. */
-    connect(token: string): Promise<this>;
+    constructor(opts: ClientOptions);
+    login(token?: string): Promise<this>;
+    connect(token?: string): Promise<this>;
     destroy(): void;
     fetchMembers(spaceId: Snowflake): Promise<Collection<Snowflake, SpaceMember>>;
     fetchMember(spaceId: Snowflake, userId: Snowflake): Promise<SpaceMember | null>;
-    /**
-     * Resolve effective permission mask for a user in a space/room.
-     * Follows exact equinox rules:
-     * 1. Space Owner / Administrator bit => ALL_PERMISSIONS
-     * 2. @everyone role base + user role bases
-     * 3. Room overrides: @everyone deny/allow
-     * 4. Room overrides: aggregated role denies, then aggregated role allows
-     * 5. Room overrides: user deny, then user allow
-     * 6. Dependent permission cascades (e.g. !ViewRoom clears room perms)
-     */
-    resolveMemberPermissions(userId: Snowflake, spaceId: Snowflake | null | undefined, roomId?: Snowflake): number;
+    getMember(spaceId: Snowflake, userId: Snowflake): SpaceMember | undefined;
+    resolveMemberPermissions(userId: Snowflake, spaceId?: Snowflake | null, roomId?: Snowflake | null): number;
+    private _cacheRoom;
     private _wireGateway;
 }
 //# sourceMappingURL=Client.d.ts.map

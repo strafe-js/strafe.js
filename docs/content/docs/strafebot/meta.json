@@ -1,3 +1,4 @@
 {
-  "title": "StrafeBot Client"
+  "title": "StrafeBot Client",
+  "pages": ["client", "events"]
 }

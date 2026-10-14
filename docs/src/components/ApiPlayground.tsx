@@ -75,10 +75,95 @@ export function ApiPlayground() {
       <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#2f3237]">
         <div className="p-6 space-y-4 text-xs">
           <h4 className="font-bold text-[#509b6b] uppercase tracking-wider text-[11px]">{activeTab === 'rest' ? 'Method Parameters' : 'Gateway Connection Payload'}</h4>
-          {activeTab === 'rest' && (
+          {activeTab === 'rest' ? (
             <div className="space-y-3">
-              {(method === 'createMessage' || method === 'listMessages' || method === 'addReaction') && (<div><label className="block font-semibold mb-1 text-[#f3f5f7]">Room ID</label><input type="text" value={roomId} onChange={(e) => setRoomId(e.target.value)} className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs" /></div>)}
-              {method === 'createMessage' && (<div><label className="block font-semibold mb-1 text-[#f3f5f7]">Message Plaintext</label><input type="text" value={plaintext} onChange={(e) => setPlaintext(e.target.value)} className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] text-xs" /></div>)}
+              {(method === 'createMessage' || method === 'listMessages' || method === 'addReaction') && (
+                <div>
+                  <label className="block font-semibold mb-1 text-[#f3f5f7]">Room ID</label>
+                  <input
+                    type="text"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs focus:border-[#509b6b] outline-none"
+                  />
+                </div>
+              )}
+              {method === 'createMessage' && (
+                <div>
+                  <label className="block font-semibold mb-1 text-[#f3f5f7]">Message Plaintext</label>
+                  <input
+                    type="text"
+                    value={plaintext}
+                    onChange={(e) => setPlaintext(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] text-xs focus:border-[#509b6b] outline-none"
+                  />
+                </div>
+              )}
+              {method === 'kickMember' && (
+                <>
+                  <div>
+                    <label className="block font-semibold mb-1 text-[#f3f5f7]">Space ID</label>
+                    <input
+                      type="text"
+                      value={spaceId}
+                      onChange={(e) => setSpaceId(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs focus:border-[#509b6b] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-[#f3f5f7]">Target User ID</label>
+                    <input
+                      type="text"
+                      value={userId}
+                      onChange={(e) => setUserId(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs focus:border-[#509b6b] outline-none"
+                    />
+                  </div>
+                </>
+              )}
+              {method === 'addReaction' && (
+                <>
+                  <div>
+                    <label className="block font-semibold mb-1 text-[#f3f5f7]">Message ID</label>
+                    <input
+                      type="text"
+                      value={messageId}
+                      onChange={(e) => setMessageId(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs focus:border-[#509b6b] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-[#f3f5f7]">Reaction Emoji</label>
+                    <input
+                      type="text"
+                      value={emoji}
+                      onChange={(e) => setEmoji(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] text-xs focus:border-[#509b6b] outline-none"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block font-semibold mb-1 text-[#f3f5f7]">Simulated Space ID</label>
+                <input
+                  type="text"
+                  value={spaceId}
+                  onChange={(e) => setSpaceId(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs focus:border-[#509b6b] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-[#f3f5f7]">Simulated Room ID</label>
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded border border-[#2f3237] bg-[#101114] text-[#f3f5f7] font-mono text-xs focus:border-[#509b6b] outline-none"
+                />
+              </div>
             </div>
           )}
           <button onClick={executeRequest} disabled={loading} className="w-full py-2 px-4 rounded-xl bg-[#509b6b] hover:bg-[#45875d] text-white font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm">

@@ -4,197 +4,186 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Gateway = void 0;
-const ws_1 = __importDefault(require("ws"));
 const node_events_1 = require("node:events");
+const ws_1 = __importDefault(require("ws"));
 const util_1 = require("@strafe-js/util");
 class Gateway extends node_events_1.EventEmitter {
     url;
     token;
-    tokenType;
+    authScheme;
+    heartbeatIntervalMs;
+    shouldReconnect;
     reconnectDelay;
     maxReconnectDelay;
-    heartbeatIntervalMs;
-    ws = null;
-    sessionId = null;
-    user = null;
-    _closed = false;
-    _reconnectAttempts = 0;
-    _reconnectTimer = null;
-    _heartbeatTimer = null;
+    reconnectAttempts = 0;
+    ws;
+    hbTimer;
+    reconnectTimer;
     constructor(opts) {
         super();
         this.url = opts.url;
         this.token = opts.token;
-        this.tokenType = opts.tokenType ?? 'Bot';
-        this.reconnectDelay = opts.reconnectDelay ?? 1000;
-        this.maxReconnectDelay = opts.maxReconnectDelay ?? 30000;
-        this.heartbeatIntervalMs = opts.heartbeatInterval ?? 45000;
+        this.authScheme = opts.authScheme ?? 'Bot';
+        this.heartbeatIntervalMs = opts.heartbeatIntervalMs ?? 45_000;
+        this.shouldReconnect = opts.reconnect ?? true;
+        this.reconnectDelay = opts.reconnectDelay ?? 2_500;
+        this.maxReconnectDelay = opts.maxReconnectDelay ?? 60_000;
     }
     connect() {
-        this._closed = false;
         this._clearTimers();
         if (this.ws) {
-            try {
-                this.ws.removeAllListeners();
-                this.ws.close();
+            this.ws.removeAllListeners();
+            if (this.ws.readyState === ws_1.default.OPEN ||
+                this.ws.readyState === ws_1.default.CONNECTING) {
+                this.ws.terminate();
             }
-            catch {
-                /* ignore */
-            }
-            this.ws = null;
+            this.ws = undefined;
         }
-        const headers = {
-            Authorization: `${this.tokenType} ${this.token}`,
-        };
-        try {
-            this.ws = new ws_1.default(this.url, { headers });
+        const headers = {};
+        if (this.token) {
+            headers['Authorization'] = this.authScheme
+                ? `${this.authScheme} ${this.token}`
+                : this.token;
         }
-        catch (err) {
-            this.emit('error', err instanceof Error ? err : new Error(String(err)));
-            this._scheduleReconnect();
-            return;
-        }
-        this.ws.on('open', () => {
-            this._reconnectAttempts = 0;
-            this.emit('debug', 'gateway open');
+        const ws = new ws_1.default(this.url, { headers });
+        this.ws = ws;
+        ws.on('open', () => {
+            this.reconnectAttempts = 0;
+            this.emit('open');
             this._startHeartbeat();
         });
-        this.ws.on('message', (raw) => {
+        ws.on('message', (raw) => {
             let frame;
             try {
                 frame = JSON.parse(raw.toString());
             }
-            catch {
-                this.emit('error', new util_1.StrafeError('invalid gateway frame'));
+            catch (e) {
+                this.emit('error', e);
                 return;
             }
             this._handle(frame);
         });
-        this.ws.on('close', (code, reason) => {
-            this.emit('debug', `gateway close ${code} ${reason.toString()}`);
+        ws.on('close', (code, reason) => {
             this._stopHeartbeat();
-            this.ws = null;
-            if (!this._closed) {
-                this.emit('disconnect', code);
+            this.emit('close', code, reason.toString());
+            if (this.shouldReconnect) {
                 this._scheduleReconnect();
             }
         });
-        this.ws.on('error', (err) => {
+        ws.on('error', (err) => {
             this.emit('error', err);
         });
     }
     disconnect() {
-        this._closed = true;
+        this.shouldReconnect = false;
         this._clearTimers();
         if (this.ws) {
-            try {
-                this.ws.close(1000);
-            }
-            catch {
-                /* ignore */
-            }
-            this.ws = null;
+            this.ws.removeAllListeners();
+            this.ws.close(1000, 'client disconnect');
+            this.ws = undefined;
         }
     }
     ping() {
         this.send(util_1.GatewayOp.Ping);
     }
-    send(op, d) {
+    send(op, d, extra) {
         if (!this.ws || this.ws.readyState !== ws_1.default.OPEN)
             return;
-        try {
-            this.ws.send(JSON.stringify({ op, d }));
-        }
-        catch (err) {
-            this.emit('error', err instanceof Error ? err : new Error(String(err)));
-        }
+        const payload = JSON.stringify({ op, d, ...extra });
+        this.ws.send(payload);
     }
-    subscribe(id) {
-        this.send(util_1.GatewayOp.Subscribe, { space_id: id });
+    subscribe(spaceOrRoomId) {
+        this.send(util_1.GatewayOp.Subscribe, { space_id: spaceOrRoomId });
     }
-    unsubscribe(id) {
-        this.send(util_1.GatewayOp.Unsubscribe, { space_id: id });
+    unsubscribe(spaceOrRoomId) {
+        this.send(util_1.GatewayOp.Unsubscribe, { space_id: spaceOrRoomId });
     }
     sendTyping(roomId) {
-        this.send(util_1.GatewayOp.Send, { room_id: roomId, type: 'typing' });
+        this.send(util_1.GatewayOp.Send, { space_id: roomId, type: 'typing', room_id: roomId });
     }
     _startHeartbeat() {
         this._stopHeartbeat();
-        if (this.heartbeatIntervalMs > 0) {
-            this._heartbeatTimer = setInterval(() => {
-                this.ping();
-            }, this.heartbeatIntervalMs);
-        }
+        this.hbTimer = setInterval(() => {
+            this.ping();
+        }, this.heartbeatIntervalMs);
+        this.hbTimer.unref?.();
     }
     _stopHeartbeat() {
-        if (this._heartbeatTimer) {
-            clearInterval(this._heartbeatTimer);
-            this._heartbeatTimer = null;
+        if (this.hbTimer) {
+            clearInterval(this.hbTimer);
+            this.hbTimer = undefined;
         }
     }
     _scheduleReconnect() {
-        if (this._closed || this._reconnectTimer)
-            return;
-        this._reconnectAttempts++;
-        // Exponential backoff with jitter
-        const delay = Math.min(this.reconnectDelay * Math.pow(2, this._reconnectAttempts - 1) + Math.random() * 1000, this.maxReconnectDelay);
-        this.emit('debug', `scheduling reconnect in ${Math.round(delay)}ms (attempt ${this._reconnectAttempts})`);
-        this._reconnectTimer = setTimeout(() => {
-            this._reconnectTimer = null;
-            if (!this._closed) {
+        if (this.reconnectTimer)
+            clearTimeout(this.reconnectTimer);
+        this.reconnectAttempts++;
+        const exp = Math.pow(2, Math.min(this.reconnectAttempts - 1, 6));
+        const jitter = Math.floor(Math.random() * 1000);
+        const delay = Math.min(this.reconnectDelay * exp + jitter, this.maxReconnectDelay);
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = undefined;
+            if (this.shouldReconnect)
                 this.connect();
-            }
         }, delay);
     }
     _clearTimers() {
         this._stopHeartbeat();
-        if (this._reconnectTimer) {
-            clearTimeout(this._reconnectTimer);
-            this._reconnectTimer = null;
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = undefined;
         }
     }
     _handle(frame) {
         switch (frame.op) {
-            case util_1.GatewayOp.Ready: {
-                const d = frame.d;
-                this.user = d.user;
-                this.sessionId = d.session_id;
-                this.emit('ready', d);
+            case util_1.GatewayOp.Ready:
+                this.emit('ready', frame.d);
                 break;
-            }
-            case util_1.GatewayOp.Event: {
-                const envelope = frame.d;
-                const t = envelope.t;
-                const payload = envelope.d;
-                if (payload && typeof payload === 'object' && payload !== null) {
-                    const p = payload;
-                    if (envelope.room_id && p.room_id == null)
-                        p.room_id = envelope.room_id;
-                    if (envelope.space_id && p.space_id == null)
-                        p.space_id = envelope.space_id;
-                }
-                this.emit('raw', envelope);
-                this.emit(this._eventName(t), payload, envelope);
-                break;
-            }
-            case util_1.GatewayOp.Error: {
-                const err = frame.d;
-                this.emit('error', new util_1.StrafeError(err?.message || 'gateway error', 0, err?.code ?? null));
-                break;
-            }
             case util_1.GatewayOp.Pong:
                 this.emit('pong');
                 break;
+            case util_1.GatewayOp.Error:
+                this.emit('error', new Error(typeof frame.d === 'object' && frame.d && 'message' in frame.d
+                    ? String(frame.d.message)
+                    : 'Gateway error'));
+                break;
+            case util_1.GatewayOp.Event: {
+                // Support both official nested envelope ({ op: 3, d: { t, space_id, room_id, d } })
+                // and flat envelope ({ op: 3, t, space_id, room_id, d })
+                const rawD = frame.d;
+                const isNestedEnvelope = !frame.t &&
+                    rawD !== null &&
+                    typeof rawD === 'object' &&
+                    typeof rawD.t === 'string';
+                const eventType = isNestedEnvelope ? rawD.t : frame.t;
+                const roomId = isNestedEnvelope
+                    ? rawD.room_id
+                    : frame.room_id;
+                const spaceId = isNestedEnvelope
+                    ? rawD.space_id
+                    : frame.space_id;
+                const innerPayload = isNestedEnvelope ? rawD.d : frame.d;
+                if (innerPayload && typeof innerPayload === 'object') {
+                    const obj = innerPayload;
+                    if (roomId && obj.room_id === undefined)
+                        obj.room_id = roomId;
+                    if (spaceId && obj.space_id === undefined)
+                        obj.space_id = spaceId;
+                }
+                this.emit('raw', frame);
+                if (eventType) {
+                    this.emit(this._eventName(eventType), innerPayload, frame);
+                }
+                break;
+            }
             default:
-                this.emit('debug', `unknown op ${frame.op}`);
+                this.emit('raw', frame);
         }
     }
     _eventName(t) {
         return t
             .toLowerCase()
-            .split('_')
-            .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
-            .join('');
+            .replace(/_([a-z])/g, (_, c) => c.toUpperCase());
     }
 }
 exports.Gateway = Gateway;

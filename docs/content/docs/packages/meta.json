@@ -1,3 +1,4 @@
 {
-  "title": "Ecosystem Packages"
+  "title": "Ecosystem Packages",
+  "pages": ["overview", "builders", "formatters", "collection", "util"]
 }

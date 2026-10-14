@@ -1,0 +1,74 @@
+---
+title: Command Framework
+description: Declarative commands, typed argument schemas, permission guards, cooldowns, and execution context.
+---
+
+`@strafe-js/strafebot` includes a first-class command framework powered by `CommandHandler`, `Command`, `Context`, and `CommandArgument`.
+
+## Defining a Command
+
+Use the `command()` helper to define commands with full TypeScript inference for parsed arguments:
+
+```ts
+import { command } from '@strafe-js/strafebot';
+
+export const rollCommand = command({
+  name: 'roll',
+  aliases: ['dice'],
+  description: 'Roll a dice with custom sides',
+  cooldown: 3000,
+  arguments: {
+    sides: {
+      type: 'integer',
+      min: 2,
+      max: 1000,
+      default: 6,
+      description: 'Number of sides on the die',
+    },
+  },
+  async run(ctx) {
+    const sides = ctx.arguments.get('sides'); // inferred as number
+    const result = Math.floor(Math.random() * sides) + 1;
+    await ctx.reply(`🎲 You rolled **${result}** (1–${sides})`);
+  },
+});
+```
+
+## Supported Argument Schema Types
+
+| Type | Parsed TypeScript Type | Validation & Features |
+| :--- | :--- | :--- |
+| `'string'` | `string` | Supports `min` / `max` length, `choices`, and `rest: true` (captures remaining tokens) |
+| `'integer'` | `number` | Rejects decimals; supports `min` / `max` numeric bounds and `choices` |
+| `'number'` | `number` | Floating-point or integer numbers; supports `min` / `max` bounds and `choices` |
+| `'boolean'` | `boolean` | Accepts `true/false`, `yes/no`, `1/0`, `on/off` |
+| `'user'` | `Snowflake` | Accepts raw 16–20 digit Snowflake IDs or `<@id>` / `<@!id>` user mentions |
+| `'snowflake'` | `Snowflake` | Validates 16–20 digit Snowflake IDs |
+| `'attachment'` | `Attachment` | Consumes uploaded message attachments from `message.attachments` |
+
+## Command Guard Events
+
+`CommandHandler` emits lifecycle and guard rejection events on `Client`:
+
+- `commandPermissionDenied`: `(ctx, command)` — Caller lacks required `permissions`
+- `commandBotPermissionDenied`: `(ctx, command, missingBitField)` — Bot lacks required `botPermissions`
+- `commandCooldown`: `(ctx, command, remainingMs)` — User is on cooldown
+- `commandInvalidArguments`: `(ctx, command, error)` — Schema or `minArgs`/`maxArgs` validation failed
+- `commandError`: `(error, ctx, command)` — Unhandled error thrown inside `command.run(ctx)`
+
+## Context (`ctx`) Helpers
+
+<PropertyTable
+  title="Context Properties & Methods"
+  properties={[
+    { name: 'ctx.arguments', type: 'ParsedArguments<Schema>', readonly: true, description: 'Type-safe map of validated arguments (.get(name), .raw).' },
+    { name: 'ctx.authorId', type: 'Snowflake', readonly: true, description: 'ID of the user who sent the message.' },
+    { name: 'ctx.roomId', type: 'Snowflake', readonly: true, description: 'ID of the room where the command was invoked.' },
+    { name: 'ctx.spaceId', type: 'Snowflake | undefined', readonly: true, description: 'ID of the space (undefined in DMs).' },
+    { name: 'ctx.member', type: 'SpaceMember | undefined', readonly: true, description: 'Cached SpaceMember of the command author.' },
+    { name: 'ctx.reply(content, extra?)', type: 'Promise<Message>', description: 'Replies directly to the triggering message.' },
+    { name: 'ctx.send(content, extra?)', type: 'Promise<Message>', description: 'Sends a message in the current room without a reply reference.' },
+    { name: 'ctx.react(emoji)', type: 'Promise<void>', description: 'Adds an emoji reaction to the triggering message.' },
+    { name: 'ctx.typing()', type: 'Promise<void>', description: 'Triggers the typing indicator in the current room.' },
+  ]}
+/>

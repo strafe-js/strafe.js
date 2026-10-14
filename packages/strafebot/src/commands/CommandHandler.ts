@@ -22,6 +22,15 @@ export interface CommandHandlerOptions {
   ignoreSelf?: boolean;
 }
 
+export interface CommandEvents {
+  commandError: (err: unknown, ctx: Context<any>) => void;
+  commandArgumentError: (
+    err: ArgumentValidationError,
+    msg: Message,
+    command: Command<any>,
+  ) => void;
+}
+
 export class CommandHandler {
   readonly client: Client;
   readonly commands = new Map<string, Command<any>>();

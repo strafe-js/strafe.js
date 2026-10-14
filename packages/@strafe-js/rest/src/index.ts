@@ -1,99 +1,125 @@
 import {
-  StrafeError,
+  Attachment,
+  Message,
   RateLimitError,
+  Role,
+  Room,
+  RoomTypeValue,
+  Snowflake,
+  Space,
+  SpaceMember,
+  StrafeError,
+  ThreadMetadata,
+  User,
   sleep,
-  type Snowflake,
-  type User,
-  type Space,
-  type Room,
-  type Message,
-  type SpaceMember,
-  type CreateMessageBody,
-  type Attachment,
 } from '@strafe-js/util';
 
 export interface RESTOptions {
-  apiBase: string;
+  baseUrl: string;
   token?: string;
-  tokenType?: 'Bot' | 'Bearer';
+  authScheme?: 'Bot' | 'Bearer';
   retries?: number;
+  userAgent?: string;
 }
 
 export interface RequestOptions {
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  path: string;
   body?: unknown;
-  query?: Record<string, string | number | undefined | null>;
+  query?: Record<string, string | number | boolean | undefined>;
   headers?: Record<string, string>;
-  raw?: boolean;
+}
+
+export interface CreateMessageBody {
+  plaintext?: string;
+  reply_to_id?: Snowflake;
+  mentions?: Snowflake[];
+  mention_roles?: Snowflake[];
+  mention_everyone?: boolean;
+  attachments?: Snowflake[];
+}
+
+export interface EditMessageBody {
+  plaintext: string;
+}
+
+export interface Invite {
+  code: string;
+  space_id?: Snowflake;
+  inviter_id?: Snowflake;
+  max_uses?: number;
+  current_uses?: number;
+  expires_at?: string;
+  created_at?: string;
+}
+
+export interface AuditLogEntry {
+  id: Snowflake;
+  action_type: string;
+  user_id: Snowflake;
+  target_id?: Snowflake;
+  changes?: unknown;
+  reason?: string;
+  created_at: string;
 }
 
 export class REST {
-  apiBase: string;
-  token: string | null;
-  tokenType: 'Bot' | 'Bearer';
-  retries: number;
+  private baseUrl: string;
+  private token?: string;
+  private authScheme: 'Bot' | 'Bearer';
+  private retries: number;
+  private userAgent: string;
 
   constructor(opts: RESTOptions) {
-    this.apiBase = opts.apiBase.replace(/\/$/, '');
-    this.token = opts.token ?? null;
-    this.tokenType = opts.tokenType ?? 'Bot';
+    this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
+    this.token = opts.token;
+    this.authScheme = opts.authScheme ?? 'Bot';
     this.retries = opts.retries ?? 3;
+    this.userAgent = opts.userAgent ?? 'strafebot-js/1.1';
   }
 
-  setToken(token: string, type: 'Bot' | 'Bearer' = 'Bot'): void {
+  setToken(token: string): this {
     this.token = token;
-    this.tokenType = type;
+    return this;
   }
 
-  async request<T = unknown>(
-    method: string,
-    path: string,
-    opts: RequestOptions = {},
-  ): Promise<T> {
-    const url = new URL(`${this.apiBase}${path.startsWith('/') ? path : `/${path}`}`);
+  async request<T = unknown>(opts: RequestOptions): Promise<T> {
+    const cleanBase = this.baseUrl.replace(/\/+$/, '');
+    const cleanPath = opts.path.startsWith('/') ? opts.path : `/${opts.path}`;
+    const url = new URL(`${cleanBase}${cleanPath}`);
+
     if (opts.query) {
       for (const [k, v] of Object.entries(opts.query)) {
-        if (v != null) url.searchParams.set(k, String(v));
+        if (v !== undefined) url.searchParams.set(k, String(v));
       }
     }
 
-    const headers: Record<string, string> = { ...(opts.headers ?? {}) };
-    if (this.token) headers['Authorization'] = `${this.tokenType} ${this.token}`;
+    const headers: Record<string, string> = {
+      'User-Agent': this.userAgent,
+      Accept: 'application/json',
+      ...(opts.headers ?? {}),
+    };
+    if (this.token) headers['Authorization'] = `${this.authScheme} ${this.token}`;
 
-    let payload: BodyInit | undefined;
-    if (opts.body !== undefined && opts.body !== null) {
-      if (typeof FormData !== 'undefined' && opts.body instanceof FormData) {
-        payload = opts.body;
+    const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+    let body: BodyInit | undefined;
+
+    if (opts.body !== undefined) {
+      if (isFormData) {
+        body = opts.body as FormData;
       } else {
         headers['Content-Type'] = 'application/json';
-        payload = JSON.stringify(opts.body);
+        body = JSON.stringify(opts.body);
       }
     }
 
-    let attempt = 0;
-    while (true) {
-      const res = await fetch(url, { method, headers, body: payload });
+    for (let attempt = 0; attempt <= this.retries; attempt++) {
+      const res = await fetch(url, { method: opts.method, headers, body });
 
-      if (res.status === 429) {
-        const retryAfterHeader = Number(res.headers.get('Retry-After') || 1);
-        let bodyJson: { error?: string; retry_after?: number } | null = null;
-        try {
-          bodyJson = (await res.json()) as { error?: string; retry_after?: number };
-        } catch {
-          /* ignore */
-        }
-        const wait = bodyJson?.retry_after ?? retryAfterHeader;
-        if (attempt >= this.retries) {
-          throw new RateLimitError(bodyJson?.error || 'rate limited', wait, res.status);
-        }
-        await sleep(wait * 1000);
-        attempt++;
-        continue;
-      }
-
-      if (res.status === 204) return null as T;
+      if (res.status === 204) return undefined as T;
 
       const text = await res.text();
-      let data: unknown = null;
+      let data: unknown = undefined;
       if (text) {
         try {
           data = JSON.parse(text);
@@ -102,131 +128,411 @@ export class REST {
         }
       }
 
+      if (res.status === 429) {
+        const retryHeader = Number(res.headers.get('retry-after'));
+        const retryBody =
+          typeof data === 'object' && data && 'retry_after' in data
+            ? Number((data as { retry_after: unknown }).retry_after)
+            : NaN;
+        const waitSec = !Number.isNaN(retryBody)
+          ? retryBody
+          : !Number.isNaN(retryHeader)
+          ? retryHeader
+          : 1;
+        if (attempt < this.retries) {
+          await sleep(waitSec * 1000);
+          continue;
+        }
+        throw new RateLimitError(waitSec, data);
+      }
+
       if (!res.ok) {
         const msg =
-          data && typeof data === 'object' && data !== null && 'error' in data
-            ? String((data as { error: string }).error)
-            : `HTTP ${res.status}`;
+          typeof data === 'object' && data && 'error' in data
+            ? String((data as { error: unknown }).error)
+            : `HTTP ${res.status} ${res.statusText}`;
         const code =
-          data && typeof data === 'object' && data !== null && 'code' in data
-            ? (data as { code: string | number }).code
-            : null;
+          typeof data === 'object' && data && 'code' in data
+            ? String((data as { code: unknown }).code)
+            : undefined;
         throw new StrafeError(msg, res.status, code, data);
       }
 
       return data as T;
     }
+
+    throw new StrafeError('Exhausted retries', 500);
   }
 
-  get<T = unknown>(path: string, opts?: RequestOptions): Promise<T> {
-    return this.request<T>('GET', path, opts);
+  get<T = unknown>(path: string, query?: RequestOptions['query']): Promise<T> {
+    return this.request<T>({ method: 'GET', path, query });
   }
-  post<T = unknown>(path: string, opts?: RequestOptions): Promise<T> {
-    return this.request<T>('POST', path, opts);
+  post<T = unknown>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>({ method: 'POST', path, body });
   }
-  patch<T = unknown>(path: string, opts?: RequestOptions): Promise<T> {
-    return this.request<T>('PATCH', path, opts);
+  patch<T = unknown>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>({ method: 'PATCH', path, body });
   }
-  put<T = unknown>(path: string, opts?: RequestOptions): Promise<T> {
-    return this.request<T>('PUT', path, opts);
+  put<T = unknown>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>({ method: 'PUT', path, body });
   }
-  delete<T = unknown>(path: string, opts?: RequestOptions): Promise<T> {
-    return this.request<T>('DELETE', path, opts);
+  delete<T = unknown>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>({ method: 'DELETE', path, body });
   }
 
+  // ---- Users ----
   getMe(): Promise<User> {
     return this.get<User>('/users/@me');
   }
-
+  updateProfile(body: {
+    display_name?: string;
+    bio?: string;
+    about_me?: string;
+    pronouns?: string;
+    birthday_opt_in?: boolean;
+    accent_color?: string;
+    presence?: { status: 'online' | 'idle' | 'dnd' | 'invisible'; custom_status?: string };
+  }): Promise<User> {
+    return this.patch<User>('/users/@me', body);
+  }
   getMySpaces(): Promise<Space[]> {
     return this.get<Space[]>('/users/@me/spaces');
   }
-
   getSpaces(): Promise<Space[]> {
     return this.get<Space[]>('/spaces');
   }
 
-  getSpace(id: Snowflake): Promise<Space> {
-    return this.get<Space>(`/spaces/${id}`);
+  // ---- Spaces & Rooms ----
+  getSpace(spaceId: Snowflake): Promise<Space> {
+    return this.get<Space>(`/spaces/${spaceId}`);
   }
-
+  editSpace(
+    spaceId: Snowflake,
+    body: {
+      name?: string;
+      description?: string;
+      system_room_id?: Snowflake | '';
+      system_room_flags?: number;
+      default_message_notifications?: 0 | 1;
+      afk_room_id?: Snowflake | '';
+      afk_timeout?: 60 | 300 | 900 | 1800 | 3600;
+      widget_enabled?: boolean;
+      widget_room_id?: Snowflake | '';
+      birthday_channel_id?: Snowflake | '';
+      birthday_message?: string;
+    },
+  ): Promise<Space> {
+    return this.patch<Space>(`/spaces/${spaceId}`, body);
+  }
+  leaveSpace(spaceId: Snowflake): Promise<void> {
+    return this.post<void>(`/spaces/${spaceId}/leave`);
+  }
+  getAuditLog(
+    spaceId: Snowflake,
+    params?: { limit?: number; before?: Snowflake; action?: string },
+  ): Promise<{ entries: AuditLogEntry[]; users: Record<Snowflake, User> }> {
+    return this.get(`/spaces/${spaceId}/audit-log`, params);
+  }
   getSpaceRooms(spaceId: Snowflake): Promise<Room[]> {
     return this.get<Room[]>(`/spaces/${spaceId}/rooms`);
   }
+  createRoom(
+    spaceId: Snowflake,
+    body: {
+      name: string;
+      type: RoomTypeValue;
+      parent_id?: Snowflake;
+      e2ee_enabled?: boolean;
+      user_limit?: number;
+      bitrate?: number;
+    },
+  ): Promise<Room> {
+    return this.post<Room>(`/spaces/${spaceId}/rooms`, body);
+  }
+  editRoom(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+    body: {
+      name?: string;
+      topic?: string;
+      slowmode_seconds?: number;
+      e2ee_enabled?: boolean;
+      user_limit?: number;
+      bitrate?: number;
+      position?: number;
+    },
+  ): Promise<Room> {
+    return this.patch<Room>(`/spaces/${spaceId}/rooms/${roomId}`, body);
+  }
+  deleteRoom(spaceId: Snowflake, roomId: Snowflake): Promise<void> {
+    return this.delete<void>(`/spaces/${spaceId}/rooms/${roomId}`);
+  }
+  getRoom(roomId: Snowflake): Promise<Room> {
+    return this.get<Room>(`/rooms/${roomId}`);
+  }
+  getPMRooms(): Promise<Room[]> {
+    return this.get<Room[]>('/rooms');
+  }
+  openPM(body: { recipient_id?: Snowflake; recipient_handle?: string; name?: string; recipient_ids?: Snowflake[] }): Promise<Room> {
+    return this.post<Room>('/rooms', body);
+  }
+  ackRoom(roomId: Snowflake, messageId: Snowflake): Promise<void> {
+    return this.post<void>(`/rooms/${roomId}/ack`, { message_id: messageId });
+  }
 
+  // ---- Members, Roles & Bans ----
   getSpaceMembers(spaceId: Snowflake): Promise<SpaceMember[]> {
     return this.get<SpaceMember[]>(`/spaces/${spaceId}/members`);
   }
-
   getSpaceMember(spaceId: Snowflake, userId: Snowflake): Promise<SpaceMember> {
     return this.get<SpaceMember>(`/spaces/${spaceId}/members/${userId}`);
   }
-
-  createMessage(roomId: Snowflake, body: CreateMessageBody): Promise<Message> {
-    return this.post<Message>(`/rooms/${roomId}/messages`, { body });
+  setMemberRoles(spaceId: Snowflake, userId: Snowflake, roleIds: Snowflake[]): Promise<void> {
+    return this.put<void>(`/spaces/${spaceId}/members/${userId}/roles`, { role_ids: roleIds });
+  }
+  kickMember(spaceId: Snowflake, userId: Snowflake): Promise<void> {
+    return this.delete<void>(`/spaces/${spaceId}/members/${userId}`);
+  }
+  banMember(spaceId: Snowflake, userId: Snowflake, reason?: string): Promise<void> {
+    return this.post<void>(
+      `/spaces/${spaceId}/bans/${userId}`,
+      reason ? { reason } : {},
+    );
+  }
+  unbanMember(spaceId: Snowflake, userId: Snowflake): Promise<void> {
+    return this.delete<void>(`/spaces/${spaceId}/bans/${userId}`);
+  }
+  getSpaceBans(spaceId: Snowflake): Promise<{ bans: { user_id: Snowflake; reason?: string; banned_by: Snowflake; created_at: string }[]; users: Record<Snowflake, User> }> {
+    return this.get(`/spaces/${spaceId}/bans`);
+  }
+  getSpaceRoles(spaceId: Snowflake): Promise<Role[]> {
+    return this.get<Role[]>(`/spaces/${spaceId}/roles`);
+  }
+  createRole(
+    spaceId: Snowflake,
+    body: { name: string; permissions?: number; color?: number; hoist?: boolean; mentionable?: boolean },
+  ): Promise<Role> {
+    return this.post<Role>(`/spaces/${spaceId}/roles`, body);
+  }
+  editRole(
+    spaceId: Snowflake,
+    roleId: Snowflake,
+    body: { name?: string; permissions?: number; color?: number; hoist?: boolean; mentionable?: boolean; position?: number },
+  ): Promise<Role> {
+    return this.patch<Role>(`/spaces/${spaceId}/roles/${roleId}`, body);
+  }
+  deleteRole(spaceId: Snowflake, roleId: Snowflake): Promise<void> {
+    return this.delete<void>(`/spaces/${spaceId}/roles/${roleId}`);
   }
 
-  editMessage(roomId: Snowflake, messageId: Snowflake, body: { plaintext: string }): Promise<Message> {
-    return this.patch<Message>(`/rooms/${roomId}/messages/${messageId}`, { body });
+  // ---- Messages, Pins & Reactions ----
+  createMessage(
+    roomId: Snowflake,
+    body: CreateMessageBody | string,
+  ): Promise<Message> {
+    const payload: CreateMessageBody =
+      typeof body === 'string' ? { plaintext: body } : body;
+    return this.post<Message>(`/rooms/${roomId}/messages`, payload);
   }
-
-  deleteMessage(roomId: Snowflake, messageId: Snowflake): Promise<null> {
-    return this.delete<null>(`/rooms/${roomId}/messages/${messageId}`);
+  editMessage(
+    roomId: Snowflake,
+    messageId: Snowflake,
+    body: EditMessageBody | string,
+  ): Promise<Message> {
+    const payload: EditMessageBody =
+      typeof body === 'string' ? { plaintext: body } : body;
+    return this.patch<Message>(
+      `/rooms/${roomId}/messages/${messageId}`,
+      payload,
+    );
   }
-
+  deleteMessage(roomId: Snowflake, messageId: Snowflake): Promise<void> {
+    return this.delete<void>(`/rooms/${roomId}/messages/${messageId}`);
+  }
   listMessages(
     roomId: Snowflake,
-    params: { before?: Snowflake; after?: Snowflake; around?: Snowflake; limit?: number } = {},
+    params?: { limit?: number; before?: Snowflake; after?: Snowflake },
   ): Promise<Message[]> {
-    return this.get<Message[]>(`/rooms/${roomId}/messages`, { query: params });
+    return this.get<Message[]>(`/rooms/${roomId}/messages`, params);
   }
-
   getMessage(roomId: Snowflake, messageId: Snowflake): Promise<Message> {
     return this.get<Message>(`/rooms/${roomId}/messages/${messageId}`);
   }
-
-  triggerTyping(roomId: Snowflake): Promise<null> {
-    return this.post<null>(`/rooms/${roomId}/typing`);
+  searchRoomMessages(
+    roomId: Snowflake,
+    params: { q?: string; has?: 'link' | 'file' | 'image' | 'video' | 'audio'; limit?: number },
+  ): Promise<Message[]> {
+    return this.get<Message[]>(`/rooms/${roomId}/messages/search`, params);
+  }
+  searchSpaceMessages(
+    spaceId: Snowflake,
+    params: { q?: string; has?: 'link' | 'file' | 'image' | 'video' | 'audio'; limit?: number },
+  ): Promise<Message[]> {
+    return this.get<Message[]>(`/spaces/${spaceId}/messages/search`, params);
+  }
+  triggerTyping(roomId: Snowflake): Promise<void> {
+    return this.post<void>(`/rooms/${roomId}/typing`);
+  }
+  addReaction(
+    roomId: Snowflake,
+    messageId: Snowflake,
+    emoji: string,
+  ): Promise<void> {
+    const enc = encodeURIComponent(emoji);
+    return this.put<void>(
+      `/rooms/${roomId}/messages/${messageId}/reactions/${enc}`,
+    );
+  }
+  removeReaction(
+    roomId: Snowflake,
+    messageId: Snowflake,
+    emoji: string,
+    userId?: Snowflake,
+  ): Promise<void> {
+    const enc = encodeURIComponent(emoji);
+    const suffix = userId && userId !== '@me' ? `/${userId}` : '';
+    return this.delete<void>(
+      `/rooms/${roomId}/messages/${messageId}/reactions/${enc}${suffix}`,
+    );
+  }
+  getReactions(
+    roomId: Snowflake,
+    messageId: Snowflake,
+    emoji: string,
+  ): Promise<User[]> {
+    const enc = encodeURIComponent(emoji);
+    return this.get<User[]>(
+      `/rooms/${roomId}/messages/${messageId}/reactions/${enc}`,
+    );
+  }
+  pinMessage(roomId: Snowflake, messageId: Snowflake): Promise<void> {
+    return this.put<void>(`/rooms/${roomId}/messages/${messageId}/pin`);
+  }
+  unpinMessage(roomId: Snowflake, messageId: Snowflake): Promise<void> {
+    return this.delete<void>(`/rooms/${roomId}/messages/${messageId}/pin`);
+  }
+  getPinnedMessages(
+    roomId: Snowflake,
+  ): Promise<{ items: { pinned_at: string; pinned_by: Snowflake; message: Message }[]; has_more: boolean }> {
+    return this.get(`/rooms/${roomId}/pins`);
   }
 
-  addReaction(roomId: Snowflake, messageId: Snowflake, emoji: string): Promise<null> {
-    return this.put<null>(`/rooms/${roomId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`);
+  // ---- Threads ----
+  createThreadFromMessage(
+    roomId: Snowflake,
+    messageId: Snowflake,
+    body: { name: string; auto_archive_minutes?: 60 | 1440 | 4320 | 10080 },
+  ): Promise<Room> {
+    return this.post<Room>(`/rooms/${roomId}/messages/${messageId}/threads`, body);
+  }
+  createThread(
+    roomId: Snowflake,
+    body: { name: string; auto_archive_minutes?: 60 | 1440 | 4320 | 10080; private?: boolean; invitable?: boolean },
+  ): Promise<Room> {
+    return this.post<Room>(`/rooms/${roomId}/threads`, body);
+  }
+  getThread(threadId: Snowflake): Promise<Room & { thread: ThreadMetadata }> {
+    return this.get(`/rooms/${threadId}/thread`);
+  }
+  editThread(
+    threadId: Snowflake,
+    body: {
+      name?: string;
+      archived?: boolean;
+      locked?: boolean;
+      invitable?: boolean;
+      auto_archive_minutes?: 60 | 1440 | 4320 | 10080;
+      slowmode_seconds?: number;
+    },
+  ): Promise<Room> {
+    return this.patch<Room>(`/rooms/${threadId}/thread`, body);
+  }
+  deleteThread(threadId: Snowflake): Promise<void> {
+    return this.delete<void>(`/rooms/${threadId}/thread`);
+  }
+  getThreadMembers(threadId: Snowflake): Promise<{ user_id: Snowflake; joined_at: string; user?: User }[]> {
+    return this.get(`/rooms/${threadId}/thread-members`);
+  }
+  joinThread(threadId: Snowflake): Promise<void> {
+    return this.put<void>(`/rooms/${threadId}/thread-members/@me`);
+  }
+  leaveThread(threadId: Snowflake): Promise<void> {
+    return this.delete<void>(`/rooms/${threadId}/thread-members/@me`);
+  }
+  addThreadMember(threadId: Snowflake, userId: Snowflake): Promise<void> {
+    return this.put<void>(`/rooms/${threadId}/thread-members/${userId}`);
+  }
+  removeThreadMember(threadId: Snowflake, userId: Snowflake): Promise<void> {
+    return this.delete<void>(`/rooms/${threadId}/thread-members/${userId}`);
+  }
+  getActiveThreads(spaceId: Snowflake): Promise<{ threads: Room[] }> {
+    return this.get(`/spaces/${spaceId}/threads/active`);
+  }
+  getArchivedThreads(
+    roomId: Snowflake,
+    params?: { before?: string; limit?: number },
+  ): Promise<{ threads: Room[]; has_more: boolean }> {
+    return this.get(`/rooms/${roomId}/threads/archived`, params);
   }
 
-  removeReaction(roomId: Snowflake, messageId: Snowflake, emoji: string): Promise<null> {
-    return this.delete<null>(`/rooms/${roomId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`);
-  }
-
+  // ---- Invites & Attachments ----
   createInvite(
     spaceId: Snowflake,
-    opts: { max_age_seconds?: number; max_uses?: number } = {},
-  ): Promise<{ code: string; space_id: Snowflake; inviter_id: Snowflake }> {
-    return this.post(`/spaces/${spaceId}/invites`, { body: opts });
+    opts?: { max_uses?: number; max_age_seconds?: number; max_age?: number; room_id?: Snowflake },
+  ): Promise<Invite> {
+    const payload: Record<string, unknown> = {};
+    if (opts?.max_uses !== undefined) payload.max_uses = opts.max_uses;
+    if (opts?.max_age_seconds !== undefined) payload.max_age_seconds = opts.max_age_seconds;
+    else if (opts?.max_age !== undefined) payload.max_age_seconds = opts.max_age;
+    if (opts?.room_id !== undefined) payload.room_id = opts.room_id;
+    return this.post<Invite>(`/spaces/${spaceId}/invites`, payload);
   }
-
-  kickMember(spaceId: Snowflake, userId: Snowflake): Promise<null> {
-    return this.delete<null>(`/spaces/${spaceId}/members/${userId}`);
+  getSpaceInvites(spaceId: Snowflake): Promise<Invite[]> {
+    return this.get<Invite[]>(`/spaces/${spaceId}/invites`);
   }
-
-  banMember(spaceId: Snowflake, userId: Snowflake, reason?: string): Promise<null> {
-    return this.post<null>(`/spaces/${spaceId}/bans/${userId}`, {
-      body: reason ? { reason } : {},
-    });
+  deleteInvite(spaceId: Snowflake, code: string): Promise<void> {
+    return this.delete<void>(`/spaces/${spaceId}/invites/${code}`);
+  }
+  getInvite(code: string): Promise<{ space: Partial<Space>; inviter_display_name?: string }> {
+    return this.get(`/spaces/invites/${code}`);
   }
 
   async uploadAttachment(
-    roomId: Snowflake,
-    file: Blob | Buffer,
-    opts: { filename?: string; width?: number; height?: number } = {},
+    roomIdOrFile: Snowflake | Blob | Buffer,
+    fileOrFilename: Blob | Buffer | string,
+    filenameOrOpts?: string | { width?: number; height?: number },
+    opts?: { width?: number; height?: number },
   ): Promise<Attachment> {
     const form = new FormData();
+    let path: string;
+    let file: Blob | Buffer;
+    let filename: string;
+    let dimensions: { width?: number; height?: number } | undefined;
+
+    if (typeof roomIdOrFile === 'string') {
+      // Official signature: uploadAttachment(roomId, file, filename, { width?, height? })
+      path = `/rooms/${roomIdOrFile}/attachments`;
+      file = fileOrFilename as Blob | Buffer;
+      filename = typeof filenameOrOpts === 'string' ? filenameOrOpts : 'attachment';
+      dimensions = opts;
+    } else {
+      // Backwards-compatible signature: uploadAttachment(file, filename, uploadUrl?)
+      file = roomIdOrFile;
+      filename = fileOrFilename as string;
+      path = typeof filenameOrOpts === 'string' ? filenameOrOpts : '/attachments';
+    }
+
     const blob =
       file instanceof Blob
         ? file
-        : new Blob([file as BlobPart]);
-    form.append('file', blob, opts.filename ?? 'upload');
-    if (opts.width != null) form.append('width', String(opts.width));
-    if (opts.height != null) form.append('height', String(opts.height));
-    return this.post<Attachment>(`/rooms/${roomId}/attachments`, { body: form });
+        : new Blob([new Uint8Array(file as Buffer)]);
+    form.append('file', blob, filename);
+    if (dimensions?.width !== undefined) form.append('width', String(dimensions.width));
+    if (dimensions?.height !== undefined) form.append('height', String(dimensions.height));
+    return this.request<Attachment>({
+      method: 'POST',
+      path,
+      body: form,
+    });
   }
 }

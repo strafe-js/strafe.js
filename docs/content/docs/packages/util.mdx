@@ -1,0 +1,146 @@
+---
+title: "@strafe-js/util"
+description: Core TypeScript interfaces, 28-bit Strafe Permission bitflags, BitField class, error types, and helpers.
+---
+
+`@strafe-js/util` is the foundational zero-dependency package of the Strafe.js ecosystem. It defines all shared TypeScript interfaces, the official 28-bit `Permission` bitflags, `BitField`, `RoomType`, `GatewayOp`, `StrafeError`, and `RateLimitError`.
+
+## Installation
+
+```bash
+npm install @strafe-js/util
+```
+
+## `BitField` Class
+
+`BitField` wraps a 32-bit numeric permission mask and provides ergonomic methods for inspecting and mutating permissions.
+
+<MethodCard
+  name="new BitField"
+  signature="(bits?: PermissionResolvable)"
+  returnType="BitField"
+  isAsync={false}
+  description="Creates a new BitField instance from a permission name, numeric bitmask, or array of resolvables."
+  parameters={[
+    { name: 'bits', type: 'PermissionResolvable', required: false, default: '0', description: 'Initial permissions.' },
+  ]}
+  example={`const bits = new BitField(['ViewRoom', 'SendMessages']);`}
+/>
+
+<MethodCard
+  name="bitField.has"
+  signature="(perm: PermissionResolvable) => boolean"
+  returnType="boolean"
+  isAsync={false}
+  description="Returns true if all specified permission bits are set in the bitfield."
+  parameters={[
+    { name: 'perm', type: 'PermissionResolvable', required: true, description: 'Permission name, bitmask, or array to check.' },
+  ]}
+  example={`if (bits.has(['ViewRoom', 'SendMessages'])) {\n  // Allowed\n}`}
+/>
+
+<MethodCard
+  name="bitField.add / bitField.remove"
+  signature="(...perms: PermissionResolvable[]) => this"
+  returnType="BitField"
+  isAsync={false}
+  description="Mutates the BitField by adding (|=) or removing (&= ~) the specified permissions."
+  parameters={[
+    { name: '...perms', type: 'PermissionResolvable[]', required: true, description: 'Permissions to add or remove.' },
+  ]}
+  example={`bits.add('AddReactions', 'AttachFiles');\nbits.remove('AttachFiles');`}
+/>
+
+<MethodCard
+  name="bitField.toArray"
+  signature="() => PermissionName[]"
+  returnType="PermissionName[]"
+  isAsync={false}
+  description="Returns an array of all active canonical PermissionName strings in this BitField."
+  example={`console.log(bits.toArray()); // ['ViewRoom', 'SendMessages', 'AddReactions']`}
+/>
+
+## Official 28-Bit Permission Table (`Permission`)
+
+| Bit | Constant | Value | Category |
+| :--- | :--- | :--- | :--- |
+| `1 << 0` | `ViewRoom` | `1` | General |
+| `1 << 1` | `SendMessages` | `2` | Text |
+| `1 << 2` | `ReadMessageHistory` | `4` | Text |
+| `1 << 3` | `AddReactions` | `8` | Text |
+| `1 << 4` | `UseExternalEmojis` | `16` | Text |
+| `1 << 5` | `MentionEveryone` | `32` | Text |
+| `1 << 6` | `ManageMessages` | `64` | Moderation |
+| `1 << 7` | `ManageRoles` | `128` | Moderation |
+| `1 << 8` | `ManageRooms` | `256` | Moderation |
+| `1 << 9` | `KickMembers` | `512` | Moderation |
+| `1 << 10` | `BanMembers` | `1024` | Moderation |
+| `1 << 11` | `Administrator` | `2048` | Moderation |
+| `1 << 12` | `ManageSpace` | `4096` | Moderation |
+| `1 << 13` | `CreateInvite` | `8192` | General |
+| `1 << 14` | `ManageEmojis` | `16384` | Moderation |
+| `1 << 15` | `Connect` | `32768` | Voice |
+| `1 << 16` | `Speak` | `65536` | Voice |
+| `1 << 17` | `Video` | `131072` | Voice |
+| `1 << 18` | `MuteMembers` | `262144` | Voice |
+| `1 << 19` | `DeafenMembers` | `524288` | Voice |
+| `1 << 20` | `MoveMembers` | `1048576` | Voice |
+| `1 << 21` | `UseVoiceActivity` | `2097152` | Voice |
+| `1 << 22` | `PrioritySpeaker` | `4194304` | Voice |
+| `1 << 23` | `AttachFiles` | `8388608` | Text |
+| `1 << 24` | `CreatePublicThreads` | `16777216` | Threads |
+| `1 << 25` | `CreatePrivateThreads` | `33554432` | Threads |
+| `1 << 26` | `SendMessagesInThreads` | `67108864` | Threads |
+| `1 << 27` | `ManageThreads` | `134217728` | Threads |
+
+## Error Classes
+
+<PropertyTable
+  title="StrafeError & RateLimitError Properties"
+  properties={[
+    { name: 'message', type: 'string', description: 'Human-readable error description returned by the Strafe API.' },
+    { name: 'status', type: 'number', description: 'HTTP status code (e.g. 401, 403, 404, 429).' },
+    { name: 'code', type: 'string | undefined', optional: true, description: 'API-specific error code string if present.' },
+    { name: 'body', type: 'unknown', optional: true, description: 'Raw parsed JSON or text response body.' },
+    { name: 'retryAfter', type: 'number', description: '(RateLimitError only) Seconds to wait before retrying after HTTP 429.' },
+  ]}
+/>
+
+## Constants: `RoomType` & `GatewayOp`
+
+```ts
+import { RoomType, GatewayOp } from '@strafe-js/util';
+
+// RoomType values:
+// PM = 1, GroupPM = 2, Text = 3, Voice = 4, Section = 5, Thread = 6
+
+// GatewayOp values:
+// Heartbeat = 0, Subscribe = 1, Send = 2, Event = 3, Ready = 4,
+// Unsubscribe = 5, Ping = 6, Pong = 7, Error = 8
+```
+
+## Helper Functions
+
+<MethodCard
+  name="resolvePermission"
+  signature="(input: PermissionResolvable) => number"
+  returnType="number"
+  isAsync={false}
+  description="Converts a PermissionName, numeric bitmask, or nested array of PermissionResolvable values into a single number."
+  parameters={[
+    { name: 'input', type: 'PermissionResolvable', required: true, description: 'Input permission resolvable.' },
+  ]}
+  example={`const mask = resolvePermission(['ViewRoom', 'SendMessages']); // 3`}
+/>
+
+<MethodCard
+  name="isSnowflake"
+  signature="(id: unknown) => id is Snowflake"
+  returnType="boolean"
+  isAsync={false}
+  description="Type guard that checks whether a value is a valid 16–20 digit numeric Snowflake string."
+  parameters={[
+    { name: 'id', type: 'unknown', required: true, description: 'Value to validate.' },
+  ]}
+  example={`isSnowflake('123456789012345678'); // true`}
+/>

@@ -1,11 +1,17 @@
-import { type Snowflake } from '@strafe-js/util';
+import { type Message, type Snowflake } from '@strafe-js/util';
 import type { Client } from '../Client.js';
 import { Command, type CommandOptions } from './Command.js';
+import { Context } from './Context.js';
+import { ArgumentValidationError } from './CommandArgument.js';
 export interface CommandHandlerOptions {
     prefix?: string | string[];
     owners?: Snowflake[];
     ignoreBots?: boolean;
     ignoreSelf?: boolean;
+}
+export interface CommandEvents {
+    commandError: (err: unknown, ctx: Context<any>) => void;
+    commandArgumentError: (err: ArgumentValidationError, msg: Message, command: Command<any>) => void;
 }
 export declare class CommandHandler {
     readonly client: Client;

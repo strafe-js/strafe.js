@@ -1,3 +1,4 @@
 {
-  "title": "Gateway WebSocket SDK"
+  "title": "Gateway WebSocket SDK",
+  "pages": ["overview"]
 }

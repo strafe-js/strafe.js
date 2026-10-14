@@ -1,0 +1,95 @@
+---
+title: "@strafe-js/formatters"
+description: String formatting utilities for user/role/room mentions, custom emojis, and Markdown escaping.
+---
+
+`@strafe-js/formatters` provides pure helper functions for formatting mentions, custom emojis, and escaping user-supplied Markdown characters in Strafe Chat messages.
+
+## Installation
+
+```bash
+npm install @strafe-js/formatters @strafe-js/util
+```
+
+## Quick Example
+
+```ts
+import {
+  userMention,
+  roleMention,
+  roomMention,
+  customEmoji,
+  escapeMarkdown,
+} from '@strafe-js/formatters';
+
+const msg = [
+  `Welcome ${userMention('123456789012345678')}!`,
+  `Check out ${roomMention('234567890123456789')} and ping ${roleMention('345678901234567890')}.`,
+  `Reaction: ${customEmoji('party', '456789012345678901', true)}`,
+  `Escaped nickname: ${escapeMarkdown('**Admin_User**')}`,
+].join('\n');
+```
+
+## Functions Reference
+
+<MethodCard
+  name="userMention"
+  signature="(id: Snowflake) => string"
+  returnType="string"
+  isAsync={false}
+  description="Formats a User Snowflake ID into a Strafe user mention (<@id>)."
+  parameters={[
+    { name: 'id', type: 'Snowflake', required: true, description: 'Target User ID.' },
+  ]}
+  example={`userMention('123456789012345678'); // "<@123456789012345678>"`}
+/>
+
+<MethodCard
+  name="roleMention"
+  signature="(id: Snowflake) => string"
+  returnType="string"
+  isAsync={false}
+  description="Formats a Role Snowflake ID into a Strafe role mention (<@&id>)."
+  parameters={[
+    { name: 'id', type: 'Snowflake', required: true, description: 'Target Role ID.' },
+  ]}
+  example={`roleMention('234567890123456789'); // "<@&234567890123456789>"`}
+/>
+
+<MethodCard
+  name="roomMention"
+  signature="(id: Snowflake) => string"
+  returnType="string"
+  isAsync={false}
+  description="Formats a Room Snowflake ID into a Strafe room mention (<#id>)."
+  parameters={[
+    { name: 'id', type: 'Snowflake', required: true, description: 'Target Room ID.' },
+  ]}
+  example={`roomMention('345678901234567890'); // "<#345678901234567890>"`}
+/>
+
+<MethodCard
+  name="customEmoji"
+  signature="(name: string, id: Snowflake, animated?: boolean) => string"
+  returnType="string"
+  isAsync={false}
+  description="Formats a static (<:name:id>) or animated (<a:name:id>) custom Strafe emoji tag."
+  parameters={[
+    { name: 'name', type: 'string', required: true, description: 'Emoji name.' },
+    { name: 'id', type: 'Snowflake', required: true, description: 'Emoji Snowflake ID.' },
+    { name: 'animated', type: 'boolean', required: false, default: 'false', description: 'Whether the emoji is animated.' },
+  ]}
+  example={`customEmoji('wave', '456789012345678901');       // "<:wave:456789012345678901>"\ncustomEmoji('party', '456789012345678901', true); // "<a:party:456789012345678901>"`}
+/>
+
+<MethodCard
+  name="escapeMarkdown"
+  signature="(text: string) => string"
+  returnType="string"
+  isAsync={false}
+  description="Escapes special Markdown formatting characters (*, _, `, ~, |, \\) to prevent unintended formatting."
+  parameters={[
+    { name: 'text', type: 'string', required: true, description: 'Raw input string to escape.' },
+  ]}
+  example={`escapeMarkdown('**bold_and_italic**'); // "\\\\*\\\\*bold\\\\_and\\\\_italic\\\\*\\\\*"`}
+/>

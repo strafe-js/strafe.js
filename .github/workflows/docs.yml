@@ -29,15 +29,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: npm
 
-      - name: Install Dependencies
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build Monorepo Packages
+      - name: Build packages
         run: npm run build
 
-      - name: Build Static Documentation Site
+      - name: Build Fumadocs Static Site
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: npm run docs:build
 
       - name: Upload Pages Artifact

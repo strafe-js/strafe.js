@@ -5,6 +5,7 @@ export default {
     './src/**/*.{ts,tsx}',
     './content/**/*.mdx',
     './node_modules/fumadocs-ui/dist/**/*.js',
+    '../node_modules/fumadocs-ui/dist/**/*.js',
   ],
   theme: {
     extend: {

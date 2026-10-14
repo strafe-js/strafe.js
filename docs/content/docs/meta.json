@@ -1,4 +1,15 @@
 {
   "title": "Documentation",
-  "root": true
+  "root": true,
+  "pages": [
+    "index",
+    "guides",
+    "strafebot",
+    "commands",
+    "rest",
+    "ws",
+    "packages",
+    "cli",
+    "tools"
+  ]
 }

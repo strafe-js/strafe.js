@@ -1,6 +1,7 @@
-/** Snowflake ids are always strings. */
 export type Snowflake = string;
-/** Full permission table from https://app.strafe.chat/docs/permissions/ */
+/**
+ * Strafe permission bitflags matching https://app.strafe.chat/docs/permissions/#the-bits
+ */
 export declare const Permission: {
     readonly ViewRoom: number;
     readonly SendMessages: number;
@@ -16,6 +17,7 @@ export declare const Permission: {
     readonly Administrator: number;
     readonly ManageSpace: number;
     readonly CreateInvite: number;
+    readonly CreateInvites: number;
     readonly ManageEmojis: number;
     readonly Connect: number;
     readonly Speak: number;
@@ -30,9 +32,12 @@ export declare const Permission: {
     readonly CreatePrivateThreads: number;
     readonly SendMessagesInThreads: number;
     readonly ManageThreads: number;
+    readonly ChangeNickname: number;
+    readonly ManageNicknames: number;
+    readonly SendVoiceMessages: number;
 };
 export type PermissionName = keyof typeof Permission;
-export type PermissionResolvable = PermissionName | number | PermissionResolvable[];
+export type PermissionResolvable = number | PermissionName | PermissionResolvable[];
 export declare const ALL_PERMISSIONS: number;
 export declare const RoomType: {
     readonly PM: 1;
@@ -56,56 +61,58 @@ export declare const GatewayOp: {
 };
 export type GatewayOpValue = (typeof GatewayOp)[keyof typeof GatewayOp];
 export declare class StrafeError extends Error {
-    readonly status: number;
-    readonly code: string | number | null;
-    readonly body: unknown;
-    constructor(message: string, status?: number, code?: string | number | null, body?: unknown);
+    status: number;
+    code?: string;
+    body?: unknown;
+    constructor(message: string, status: number, code?: string, body?: unknown);
 }
 export declare class RateLimitError extends StrafeError {
-    readonly retryAfter: number;
-    constructor(message: string, retryAfter: number, status?: number);
+    retryAfter: number;
+    constructor(retryAfter: number, body?: unknown);
 }
 export declare class BitField {
-    bitfield: number;
+    bits: number;
     constructor(bits?: PermissionResolvable);
-    has(bit: PermissionResolvable): boolean;
-    add(...bits: PermissionResolvable[]): this;
-    remove(...bits: PermissionResolvable[]): this;
+    get bitfield(): number;
+    has(perm: PermissionResolvable): boolean;
+    add(...perms: PermissionResolvable[]): this;
+    remove(...perms: PermissionResolvable[]): this;
     toArray(): PermissionName[];
     toJSON(): number;
     valueOf(): number;
 }
-export declare function resolvePermission(bit: PermissionResolvable): number;
+export declare function resolvePermission(input: PermissionResolvable): number;
 export declare function isSnowflake(id: unknown): id is Snowflake;
-export declare function sleep(ms: number): Promise<void>;
-export interface Presence {
-    status: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
-    custom_status?: string;
-}
+export declare const sleep: (ms: number) => Promise<void>;
 export interface User {
     id: Snowflake;
-    username: string;
-    discriminator?: string;
-    display_name?: string;
     email?: string;
-    bio?: string;
-    about_me?: string;
-    pronouns?: string;
+    username: string;
+    display_name?: string;
     avatar?: string;
     banner?: string;
     accent_color?: string;
-    public_flags?: number;
+    bio?: string;
+    about_me?: string;
+    pronouns?: string;
+    birthday?: string;
+    birthday_opt_in?: boolean;
+    is_birthday?: boolean;
     bot?: boolean;
-    presence?: Presence;
+    public_flags?: number;
+    presence?: {
+        status: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline' | string;
+        custom_status?: string;
+    };
 }
 export interface Role {
     id: Snowflake;
     name: string;
     permissions: number;
     position: number;
-    color: number;
-    hoist: boolean;
-    mentionable: boolean;
+    color?: number;
+    hoist?: boolean;
+    mentionable?: boolean;
     bot_id?: Snowflake;
     created_at?: string;
     updated_at?: string;
@@ -116,19 +123,36 @@ export interface PermissionOverride {
     allow: number;
     deny: number;
 }
+export interface ThreadMetadata {
+    archived: boolean;
+    archived_at?: string;
+    locked: boolean;
+    private: boolean;
+    invitable?: boolean;
+    auto_archive_minutes: number;
+    owner_id: Snowflake;
+    starter_message_id?: Snowflake;
+    last_active_at?: string;
+    message_count?: number;
+    member_count?: number;
+    joined?: boolean;
+}
 export interface Room {
     id: Snowflake;
-    type: RoomTypeValue;
+    space_id?: Snowflake;
+    parent_id?: Snowflake;
     name?: string;
+    type: RoomTypeValue;
     topic?: string;
     position?: number;
-    parent_id?: Snowflake | null;
-    space_id?: Snowflake;
     e2ee_enabled?: boolean;
     slowmode_seconds?: number;
+    user_limit?: number;
+    bitrate?: number;
     recipients?: Snowflake[];
     permission_overrides?: PermissionOverride[];
     user_overrides?: PermissionOverride[];
+    thread?: ThreadMetadata;
     created_at?: string;
 }
 export interface Space {
@@ -139,24 +163,40 @@ export interface Space {
     icon?: string;
     banner?: string;
     owner_id: Snowflake;
-    everyone_role_id: Snowflake;
+    everyone_role_id?: Snowflake;
     system_room_id?: Snowflake;
-    roles: Role[];
+    system_room_flags?: number;
+    default_message_notifications?: number;
+    afk_room_id?: Snowflake | null;
+    afk_timeout?: number;
+    widget_enabled?: boolean;
+    widget_room_id?: Snowflake;
+    birthday_channel_id?: Snowflake;
+    birthday_message?: string;
+    features?: string[];
+    roles?: Role[];
+    rooms?: Room[];
     created_at?: string;
     updated_at?: string;
 }
 export interface Attachment {
     id: Snowflake;
-    filename?: string;
-    url?: string;
+    filename: string;
+    size: number;
     content_type?: string;
-    size?: number;
+    url: string;
     width?: number;
     height?: number;
+}
+export interface MessageReaction {
+    emoji: string;
+    count: number;
+    me: boolean;
 }
 export interface Message {
     id: Snowflake;
     room_id: Snowflake;
+    space_id?: Snowflake;
     sender_id: Snowflake;
     sender_device_id?: string;
     plaintext?: string;
@@ -166,54 +206,68 @@ export interface Message {
     mention_roles?: Snowflake[];
     mention_everyone?: boolean;
     attachments?: Attachment[];
+    reactions?: MessageReaction[];
+    pinned?: boolean;
+    pinned_at?: string;
+    pinned_by?: Snowflake;
+    thread_id?: Snowflake;
     system_type?: string;
-    created_at?: string;
+    system_payload?: Record<string, unknown>;
+    created_at: string;
     updated_at?: string;
-    space_id?: Snowflake;
+    deleted_at?: string;
     bot?: boolean;
+    author?: User;
 }
 export interface SpaceMember {
-    id?: Snowflake;
-    user_id?: Snowflake;
+    user_id: Snowflake;
     space_id?: Snowflake;
-    role_ids?: Snowflake[];
+    user?: User;
+    nickname?: string;
+    role_ids: Snowflake[];
     roles?: Snowflake[];
     joined_at?: string;
     bot?: boolean;
-    presence?: Presence;
-    username?: string;
-    display_name?: string;
-    avatar?: string;
     public_flags?: number;
+    presence?: {
+        status: string;
+        custom_status?: string;
+    };
+}
+export interface ReadyPayload {
+    user: User;
+    session_id?: string;
+    spaces: Space[];
+    rooms?: Room[];
+    space_rooms?: Record<Snowflake, Room[]>;
+    relationships?: unknown[];
+    voice_states?: unknown[];
+    calls?: unknown[];
 }
 export interface CreateMessageBody {
     plaintext?: string;
-    ciphertext?: string;
     reply_to_id?: Snowflake;
     mentions?: Snowflake[];
     mention_roles?: Snowflake[];
     mention_everyone?: boolean;
     attachments?: Snowflake[];
 }
-export interface ReadyPayload {
-    user: User;
-    session_id: string;
-    rooms: Room[];
-    relationships: unknown[];
-    spaces: Space[];
-    space_rooms: Record<Snowflake, Room[]>;
-    voice_states?: unknown[];
-    calls?: unknown[];
+export interface EditMessageBody {
+    plaintext: string;
 }
-export interface GatewayEventEnvelope {
+export interface GatewayEventEnvelope<T = unknown> {
     t: string;
     room_id?: Snowflake;
     space_id?: Snowflake;
     user_id?: Snowflake;
-    d: unknown;
+    d: T;
 }
-export interface GatewayFrame {
-    op: number;
-    d?: unknown;
+export interface GatewayFrame<T = unknown> {
+    op: GatewayOpValue;
+    t?: string;
+    d?: T;
+    room_id?: Snowflake;
+    space_id?: Snowflake;
+    user_id?: Snowflake;
 }
 //# sourceMappingURL=index.d.ts.map

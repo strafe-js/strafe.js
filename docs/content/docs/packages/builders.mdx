@@ -1,0 +1,145 @@
+---
+title: "@strafe-js/builders"
+description: Fluent MessageBuilder and permission bitmask factories for constructing Strafe API payloads.
+---
+
+`@strafe-js/builders` provides chainable builders for constructing `CreateMessageBody` payloads and calculating bitwise permission masks.
+
+## Installation
+
+```bash
+npm install @strafe-js/builders @strafe-js/util
+```
+
+## Quick Example
+
+```ts
+import { message, permissions, permissionMask } from '@strafe-js/builders';
+
+// 1. Build a message payload fluently
+const payload = message()
+  .setContent('Welcome to the server! Please read the rules.')
+  .setReply('112233445566778899')
+  .setMentions(['223344556677889900'])
+  .setRoleMentions(['334455667788990011'])
+  .mentionEveryone(false)
+  .setAttachments(['445566778899001122'])
+  .toJSON();
+
+await client.rest.createMessage(roomId, payload);
+
+// 2. Compute permission bitmasks
+const modMask = permissions(['KickMembers', 'BanMembers', 'ManageMessages']);
+const combinedMask = permissionMask('ViewRoom', 'SendMessages', modMask);
+```
+
+## `MessageBuilder` Reference
+
+Instantiate with `message()` or `new MessageBuilder()`.
+
+<MethodCard
+  name="builder.setContent"
+  signature="(text: string) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Sets the plaintext content of the message."
+  parameters={[
+    { name: 'text', type: 'string', required: true, description: 'Message text content.' },
+  ]}
+  example={`const body = message().setContent('Hello world!').toJSON();`}
+/>
+
+<MethodCard
+  name="builder.setReply"
+  signature="(messageId: Snowflake) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Sets reply_to_id so the message replies to an existing message."
+  parameters={[
+    { name: 'messageId', type: 'Snowflake', required: true, description: 'ID of the message being replied to.' },
+  ]}
+  example={`const body = message().setContent('Replying!').setReply(msg.id).toJSON();`}
+/>
+
+<MethodCard
+  name="builder.setMentions"
+  signature="(userIds: Snowflake[]) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Explicitly specifies which User IDs should be notified by this message."
+  parameters={[
+    { name: 'userIds', type: 'Snowflake[]', required: true, description: 'Array of user Snowflake IDs.' },
+  ]}
+  example={`const body = message().setContent('Hey <@123>!').setMentions(['123']).toJSON();`}
+/>
+
+<MethodCard
+  name="builder.setRoleMentions"
+  signature="(roleIds: Snowflake[]) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Explicitly specifies which Role IDs should be notified by this message."
+  parameters={[
+    { name: 'roleIds', type: 'Snowflake[]', required: true, description: 'Array of role Snowflake IDs.' },
+  ]}
+  example={`const body = message().setContent('Alert <@&456>!').setRoleMentions(['456']).toJSON();`}
+/>
+
+<MethodCard
+  name="builder.mentionEveryone"
+  signature="(allowed?: boolean) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Enables or disables @everyone mentions in the message payload."
+  parameters={[
+    { name: 'allowed', type: 'boolean', required: false, default: 'true', description: 'Whether @everyone is allowed.' },
+  ]}
+  example={`const body = message().setContent('@everyone update').mentionEveryone(true).toJSON();`}
+/>
+
+<MethodCard
+  name="builder.setAttachments"
+  signature="(ids: Snowflake[]) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Attaches previously uploaded attachment IDs (from rest.uploadAttachment) to the message."
+  parameters={[
+    { name: 'ids', type: 'Snowflake[]', required: true, description: 'Array of uploaded Attachment IDs.' },
+  ]}
+  example={`const uploaded = await client.rest.uploadAttachment(buf, 'report.txt');\nconst body = message().setContent('Report attached').setAttachments([uploaded.id]).toJSON();`}
+/>
+
+<MethodCard
+  name="builder.toJSON"
+  signature="() => CreateMessageBody"
+  returnType="CreateMessageBody"
+  isAsync={false}
+  description="Returns a shallow copy of the constructed CreateMessageBody payload ready for REST calls."
+  example={`const payload = message().setContent('Ready').toJSON();`}
+/>
+
+## Permission Mask Functions
+
+<MethodCard
+  name="permissions"
+  signature="(list: PermissionName[]) => number"
+  returnType="number"
+  isAsync={false}
+  description="Resolves an array of PermissionName strings into a numeric bitmask."
+  parameters={[
+    { name: 'list', type: 'PermissionName[]', required: true, description: 'Array of permission names.' },
+  ]}
+  example={`const mask = permissions(['ViewRoom', 'SendMessages', 'EmbedLinks']);`}
+/>
+
+<MethodCard
+  name="permissionMask"
+  signature="(...items: PermissionResolvable[]) => number"
+  returnType="number"
+  isAsync={false}
+  description="Variadic helper that resolves any combination of PermissionName strings, numeric masks, or nested arrays into a single bitmask."
+  parameters={[
+    { name: '...items', type: 'PermissionResolvable[]', required: true, description: 'Permission names, numbers, or arrays.' },
+  ]}
+  example={`const mask = permissionMask('ViewRoom', 'SendMessages', ['AttachFiles', 'AddReactions']);`}
+/>

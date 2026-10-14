@@ -1,0 +1,66 @@
+---
+title: Client & Gateway Events
+description: Complete catalog of events emitted by Client and CommandHandler with payload types and cache behavior.
+---
+
+`Client` extends Node's `EventEmitter` and forwards normalized Gateway events as well as `CommandHandler` lifecycle events.
+
+## Connection & Lifecycle Events
+
+| Event Name | Listener Signature | Description |
+| :--- | :--- | :--- |
+| `'ready'` | `(payload: ReadyPayload) => void` | Emitted once `GatewayOp.Ready` (`op: 4`) is received, caches (`spaces`, `rooms`, `spaceRooms`) are populated, and initial space subscriptions are sent. |
+| `'raw'` | `(frame: GatewayFrame) => void` | Emitted for every `GatewayOp.Event` (`op: 3`) frame received from the Gateway. |
+| `'error'` | `(err: Error) => void` | Emitted when a WebSocket transport error or `GatewayOp.Error` (`op: 8`) occurs. |
+| `'close'` | `(code: number, reason: string) => void` | Emitted when the Gateway WebSocket connection closes. |
+
+## Space, Room & Member Events
+
+`Client` automatically updates `client.spaces`, `client.rooms`, `client.spaceRooms`, and `client.members` before emitting these events to your listeners:
+
+| Event Name | Gateway Type (`t`) | Payload Type | Automatic Cache Update |
+| :--- | :--- | :--- | :--- |
+| `'spaceCreate'` | `SPACE_CREATE` | `Space` | Adds/updates `client.spaces` and subscribes if `autoSubscribeSpaces` is enabled |
+| `'spaceUpdate'` | `SPACE_UPDATE` | `Space` | Merges updated fields into `client.spaces` |
+| `'spaceDelete'` | `SPACE_DELETE` | `{ id: Snowflake }` | Removes space from `client.spaces`, `client.spaceRooms`, and `client.members` |
+| `'roomCreate'` | `ROOM_CREATE` | `Room` | Adds room to `client.rooms` and `client.spaceRooms` |
+| `'roomUpdate'` | `ROOM_UPDATE` | `Room` | Merges updated room fields into `client.rooms` and `client.spaceRooms` |
+| `'roomDelete'` | `ROOM_DELETE` | `{ id?: Snowflake; room_id?: Snowflake; space_id?: Snowflake }` | Removes room from `client.rooms` and `client.spaceRooms` |
+| `'spaceMemberAdd'` | `SPACE_MEMBER_ADD` | `SpaceMember & { space_id?: Snowflake }` | Caches member in `client.members.get(spaceId)` |
+| `'spaceMemberUpdate'` | `SPACE_MEMBER_UPDATE` | `SpaceMember & { space_id?: Snowflake }` | Merges updated member fields (such as `role_ids` or `nickname`) |
+| `'spaceMemberRemove'` | `SPACE_MEMBER_REMOVE` | `{ user_id?: Snowflake; space_id?: Snowflake }` | Removes member from `client.members.get(spaceId)` |
+| `'spaceMembersChunk'` | `SPACE_MEMBERS_CHUNK` | `{ space_id?: Snowflake; members?: SpaceMember[] }` | Bulk-inserts members into `client.members.get(spaceId)` |
+
+## Message Events
+
+| Event Name | Gateway Type (`t`) | Payload Type | Description |
+| :--- | :--- | :--- | :--- |
+| `'messageCreate'` | `MESSAGE_CREATE` | `Message` | Emitted when a new message is posted in a subscribed room or DM. Also triggers `client.commands`. |
+| `'messageUpdate'` | `MESSAGE_UPDATE` | `Message` | Emitted when a message is edited. |
+| `'messageDelete'` | `MESSAGE_DELETE` | `{ id: Snowflake; room_id: Snowflake; space_id?: Snowflake }` | Emitted when a message is deleted. |
+
+## Command Framework Events
+
+| Event Name | Listener Signature | Description |
+| :--- | :--- | :--- |
+| `'commandPermissionDenied'` | `(ctx: Context, command: Command) => void` | Caller lacks required `permissions` / `permissionMask`. |
+| `'commandBotPermissionDenied'` | `(ctx: Context, command: Command, missing: BitField) => void` | Bot lacks required `botPermissions` / `botPermissionMask`. |
+| `'commandCooldown'` | `(ctx: Context, command: Command, remainingMs: number) => void` | Caller triggered the command while still on per-user cooldown. |
+| `'commandInvalidArguments'` | `(ctx: Context, command: Command, error: ArgumentValidationError \| Error) => void` | Argument schema validation or `minArgs`/`maxArgs` check failed. |
+| `'commandError'` | `(error: unknown, ctx: Context, command: Command) => void` | Unhandled error thrown inside `command.run(ctx)` when no custom `command.onError` handler is defined. |
+
+## Example: Listening to Multiple Events
+
+```ts
+client.on('ready', (payload) => {
+  console.log(`Connected as ${payload.user.username} in ${payload.spaces.length} spaces`);
+});
+
+client.on('spaceMemberAdd', (member) => {
+  console.log(`User ${member.user_id} joined space ${member.space_id}`);
+});
+
+client.on('commandInvalidArguments', async (ctx, cmd, err) => {
+  await ctx.reply(`❌ **${cmd.name}**: ${err.message}`);
+});
+```

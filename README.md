@@ -1,37 +1,45 @@
 <div align="center">
 	<br />
+	<h1>⚡ Strafe.js</h1>
 	<p>
-		<strong>@strafe-js/strafebot</strong>
+		<strong>Complete TypeScript & Node.js SDK Suite for the Strafe Chat REST API and Gateway</strong>
 	</p>
-	<br />
 	<p>
 		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/v/@strafe-js/strafebot.svg?maxAge=3600" alt="npm version" /></a>
 		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/dt/@strafe-js/strafebot.svg?maxAge=3600" alt="npm downloads" /></a>
 		<a href="https://github.com/strafe-js/strafe.js/commits/main"><img src="https://img.shields.io/github/last-commit/strafe-js/strafe.js?logo=github&logoColor=ffffff" alt="Last commit" /></a>
 		<a href="https://github.com/strafe-js/strafe.js/blob/main/LICENSE"><img src="https://img.shields.io/github/license/strafe-js/strafe.js" alt="License" /></a>
-		<a href="https://app.strafe.chat/docs/"><img src="https://img.shields.io/badge/docs-Strafe_API-0ea5e9" alt="Strafe docs" /></a>
+		<a href="https://app.strafe.chat/docs/"><img src="https://img.shields.io/badge/docs-Strafe_API-509b6b" alt="Strafe docs" /></a>
 	</p>
 </div>
 
+---
+
 ## About
 
-This repository contains multiple packages with separate releases. The main library is [`@strafe-js/strafebot`](https://github.com/strafe-js/strafe.js/tree/main/packages/strafebot) — a TypeScript / Node.js module for the [Strafe Chat](https://strafe.chat) REST API and Gateway.
+**Strafe.js** is a modular TypeScript monorepo for building bots, moderation tools, and real-time integrations on [Strafe Chat](https://app.strafe.chat). The flagship library is [`@strafe-js/strafebot`](./packages/strafebot), backed by standalone packages for REST, WebSocket Gateway, payload builders, formatters, collections, and project scaffolding.
 
-- Object-oriented client
-- Gateway + REST in one place
-- Command framework with permission checks
-- Typed against the live [Strafe developer docs](https://app.strafe.chat/docs/)
+- **All-in-One Bot Client**: Unified Gateway WebSocket + REST client with automatic state caching (`spaces`, `rooms`, `spaceRooms`, `members`).
+- **Equinox Permission Engine**: Full 6-stage hierarchical permission calculation (Space Owner, Role masks, Administrator short-circuit, Room overrides, and dependent permission cascades).
+- **Typed Command Framework**: Declarative argument schemas (`string`, `integer`, `number`, `boolean`, `user`, `snowflake`, `attachment`), quote-aware tokenization, per-user cooldowns, and permission guards.
+- **Resilient Transport**: Automatic HTTP `429 Retry-After` backoff and WebSocket `Ping`/`Pong` heartbeats with jittered exponential reconnects.
 
-## Packages
+---
 
-- [`@strafe-js/strafebot`](https://github.com/strafe-js/strafe.js/tree/main/packages/strafebot) — main client (gateway, REST, commands)
-- [`create-strafebot`](https://github.com/strafe-js/strafe.js/tree/main/packages/create-strafe-bot) — CLI to scaffold a bot project
-- [`@strafe-js/rest`](https://github.com/strafe-js/strafe.js/tree/main/packages/@strafe-js/rest) — REST API client
-- [`@strafe-js/ws`](https://github.com/strafe-js/strafe.js/tree/main/packages/@strafe-js/ws) — Gateway WebSocket client
-- [`@strafe-js/builders`](https://github.com/strafe-js/strafe.js/tree/main/packages/@strafe-js/builders) — message and permission payload builders
-- [`@strafe-js/collection`](https://github.com/strafe-js/strafe.js/tree/main/packages/@strafe-js/collection) — map-backed collection helper
-- [`@strafe-js/formatters`](https://github.com/strafe-js/strafe.js/tree/main/packages/@strafe-js/formatters) — mentions, emoji, markdown helpers
-- [`@strafe-js/util`](https://github.com/strafe-js/strafe.js/tree/main/packages/@strafe-js/util) — types, permission bits, errors
+## Monorepo Packages
+
+| Package | Directory | Description | Install |
+| :--- | :--- | :--- | :--- |
+| **`@strafe-js/strafebot`** | [`packages/strafebot`](./packages/strafebot) | High-level Bot `Client`, state caches, Equinox permission engine, and `CommandHandler` | `npm i @strafe-js/strafebot` |
+| **`create-strafebot`** | [`packages/create-strafe-bot`](./packages/create-strafe-bot) | Interactive CLI to scaffold new bot projects and generate command modules | `npm create strafebot@latest` |
+| **`@strafe-js/rest`** | [`packages/@strafe-js/rest`](./packages/@strafe-js/rest) | Fetch-based HTTP REST API client with automatic `429` retries & multipart uploads | `npm i @strafe-js/rest` |
+| **`@strafe-js/ws`** | [`packages/@strafe-js/ws`](./packages/@strafe-js/ws) | Persistent WebSocket Gateway client with heartbeating & exponential backoff | `npm i @strafe-js/ws` |
+| **`@strafe-js/builders`** | [`packages/@strafe-js/builders`](./packages/@strafe-js/builders) | Fluent `MessageBuilder` and permission bitmask factories (`message`, `permissions`) | `npm i @strafe-js/builders` |
+| **`@strafe-js/formatters`** | [`packages/@strafe-js/formatters`](./packages/@strafe-js/formatters) | Mentions (`<@id>`, `<@&id>`, `<#id>`), custom emoji, and Markdown escaping helpers | `npm i @strafe-js/formatters` |
+| **`@strafe-js/collection`** | [`packages/@strafe-js/collection`](./packages/@strafe-js/collection) | Extended `Map<K, V>` subclass with functional query methods (`find`, `filter`, `map`) | `npm i @strafe-js/collection` |
+| **`@strafe-js/util`** | [`packages/@strafe-js/util`](./packages/@strafe-js/util) | Shared API types, `Permission` flags, `BitField`, `StrafeError`, and `RateLimitError` | `npm i @strafe-js/util` |
+
+---
 
 ## Installation
 
@@ -44,74 +52,82 @@ pnpm add @strafe-js/strafebot
 bun add @strafe-js/strafebot
 ```
 
-Scaffold a project:
+Or scaffold a complete TypeScript bot project interactively:
 
 ```sh
+npm create strafebot@latest my-bot
+# or
 npx create-strafebot my-bot
 ```
 
-## Example usage
+---
 
-These examples use [ES modules](https://nodejs.org/api/esm.html#enabling).
+## How to Use Each Package
+
+### 1. `@strafe-js/strafebot` — Main Bot Client & Command Framework
 
 ```ts
 import { Client, command } from '@strafe-js/strafebot';
+import { userMention } from '@strafe-js/formatters';
 
 const client = new Client({
-  apiBase: process.env.STRAFE_API!,      // https://app.strafe.chat/api
-  gatewayUrl: process.env.STRAFE_GATEWAY!, // wss://app.strafe.chat/gateway/events
-  prefix: '!',
-  owners: ['YOUR_USER_ID'],
+  apiBase: process.env.STRAFE_API || 'https://app.strafe.chat/api',
+  gatewayUrl: process.env.STRAFE_GATEWAY || 'wss://app.strafe.chat/gateway/events',
+  prefix: ['!', 's!'],
+  owners: ['123456789012345678'],
 });
 
-client.commands.register(
+client.commands.registerAll([
   command({
     name: 'ping',
+    aliases: ['p'],
     description: 'Replies with pong',
     async run(ctx) {
-      await ctx.reply('pong');
+      await ctx.reply('Pong! 🏓');
     },
   }),
-);
 
-client.commands.register(
   command({
-    name: 'kick',
-    usage: '<user_id>',
-    permissions: ['KickMembers'],
+    name: 'ban',
+    description: 'Ban a user with typed schema validation',
     guildOnly: true,
-    minArgs: 1,
+    permissions: ['BanMembers'],
+    botPermissions: ['BanMembers'],
+    arguments: {
+      target: { type: 'user', required: true, description: 'User ID or @mention' },
+      reason: { type: 'string', rest: true, default: 'No reason provided' },
+    },
     async run(ctx) {
-      await client.rest.kickMember(ctx.space!.id, ctx.args[0]!);
-      await ctx.reply(`kicked ${ctx.args[0]}`);
+      const targetId = ctx.arguments.get('target');
+      const reason = ctx.arguments.get('reason');
+      await ctx.client.rest.banMember(ctx.spaceId!, targetId, reason);
+      await ctx.reply(`🔨 Banned ${userMention(targetId)} — Reason: ${reason}`);
     },
   }),
-);
+]);
 
-client.on('ready', async (user) => {
-  console.log(`Logged in as ${user.username}!`);
-  for (const id of client.spaces.keys()) {
-    await client.fetchMembers(id);
+client.on('ready', async (info) => {
+  console.log(`Logged in as ${info.user.username} (${info.spaces.length} spaces)!`);
+  for (const spaceId of client.spaces.keys()) {
+    await client.fetchMembers(spaceId);
   }
 });
 
 await client.login(process.env.BOT_TOKEN!);
 ```
 
-`client.connect(token)` is an alias of `client.login(token)`.
-
-### Without the command framework
+#### Raw Event Handling (Without the Command Framework)
 
 ```ts
 import { Client } from '@strafe-js/strafebot';
 
 const client = new Client({
-  apiBase: process.env.STRAFE_API!,
-  gatewayUrl: process.env.STRAFE_GATEWAY!,
+  apiBase: 'https://app.strafe.chat/api',
+  gatewayUrl: 'wss://app.strafe.chat/gateway/events',
 });
 
-client.on('ready', (user) => {
-  console.log(`Logged in as ${user.username}!`);
+client.on('ready', (info) => {
+  console.log(`Logged in as ${info.user.username}!`);
 });
 
 client.on('messageCreate', async (msg) => {
@@ -127,25 +143,163 @@ client.on('messageCreate', async (msg) => {
 await client.login(process.env.BOT_TOKEN!);
 ```
 
-## Links
+---
 
-- [Strafe developer documentation](https://app.strafe.chat/docs/)
-- [Bots guide](https://app.strafe.chat/docs/bots/)
-- [Gateway](https://app.strafe.chat/docs/gateway/)
-- [REST API](https://app.strafe.chat/docs/rest/)
-- [Permissions](https://app.strafe.chat/docs/permissions/)
-- [GitHub](https://github.com/strafe-js/strafe.js)
-- [npm](https://www.npmjs.com/package/@strafe-js/strafebot)
+### 2. `create-strafebot` — Project & Command Scaffolder CLI
 
+```sh
+# 1. Scaffold a new bot project interactively
+npx create-strafebot my-bot
 
+# 2. Generate new command files inside an existing project (src/commands/<name>.ts)
+npx create-strafebot command userinfo
+npx create-strafebot command warn --mod     # Includes KickMembers + ManageMessages guards
+npx create-strafebot command purge --admin  # Includes Administrator + BanMembers guards
+```
+
+---
+
+### 3. `@strafe-js/rest` — Standalone HTTP REST Client
+
+```ts
+import { REST } from '@strafe-js/rest';
+
+const rest = new REST({
+  baseUrl: 'https://app.strafe.chat/api',
+  token: process.env.BOT_TOKEN,
+  authScheme: 'Bot',
+  retries: 3, // Automatic HTTP 429 Retry-After backoff
+});
+
+const me = await rest.getMe();
+await rest.createMessage('112233445566778899', {
+  plaintext: `Hello from ${me.username}!`,
+});
+```
+
+---
+
+### 4. `@strafe-js/ws` — Standalone Gateway WebSocket Client
+
+```ts
+import { Gateway } from '@strafe-js/ws';
+
+const gateway = new Gateway({
+  url: 'wss://app.strafe.chat/gateway/events',
+  token: process.env.BOT_TOKEN!,
+  heartbeatIntervalMs: 45_000,
+  reconnect: true,
+});
+
+gateway.on('ready', (payload) => {
+  for (const space of payload.spaces) {
+    gateway.subscribe(space.id);
+  }
+});
+
+gateway.on('messageCreate', (msg) => {
+  console.log(`[${msg.room_id}] ${msg.plaintext}`);
+});
+
+gateway.connect();
+```
+
+---
+
+### 5. `@strafe-js/builders` — Fluent Payload & Permission Builders
+
+```ts
+import { message, permissions, permissionMask } from '@strafe-js/builders';
+
+const payload = message()
+  .setContent('Important announcement!')
+  .setReply('998877665544332211')
+  .mentionEveryone(false)
+  .toJSON();
+
+const modBits = permissions(['KickMembers', 'BanMembers', 'ManageMessages']);
+const combinedMask = permissionMask('ViewRoom', 'SendMessages', modBits);
+```
+
+---
+
+### 6. `@strafe-js/formatters` — Mentions, Emoji & Markdown Escaping
+
+```ts
+import {
+  userMention,
+  roleMention,
+  roomMention,
+  customEmoji,
+  escapeMarkdown,
+} from '@strafe-js/formatters';
+
+userMention('123456789012345678'); // "<@123456789012345678>"
+roleMention('123456789012345678'); // "<@&123456789012345678>"
+roomMention('123456789012345678'); // "<#123456789012345678>"
+customEmoji('wave', '998877665544332211', true); // "<a:wave:998877665544332211>"
+escapeMarkdown('**unsafe_input**'); // "\\*\\*unsafe\\_input\\*\\*"
+```
+
+---
+
+### 7. `@strafe-js/collection` — Extended `Map<K, V>` Data Structure
+
+```ts
+import { Collection } from '@strafe-js/collection';
+
+const users = new Collection<string, { id: string; bot: boolean }>();
+users.set('1', { id: '1', bot: false });
+users.set('2', { id: '2', bot: true });
+
+const firstHuman = users.find((u) => !u.bot);
+const botsOnly = users.filter((u) => u.bot);
+const allIds = users.map((u) => u.id);
+```
+
+---
+
+### 8. `@strafe-js/util` — BitField, Permissions, Errors & Types
+
+```ts
+import { BitField, Permission, isSnowflake } from '@strafe-js/util';
+
+const perms = new BitField(Permission.ViewRoom | Permission.SendMessages);
+perms.add('EmbedLinks', 'AttachFiles');
+
+console.log(perms.has('EmbedLinks')); // true
+console.log(perms.toArray()); // ['ViewRoom', 'SendMessages', 'EmbedLinks', 'AttachFiles']
+console.log(isSnowflake('123456789012345678')); // true
+```
+
+---
+
+## Development & Building the Monorepo
+
+```sh
+# Install dependencies across all workspaces
+npm install
+
+# Build all packages in dependency order
+npm run build
+
+# Run the unit test suite (commands + Equinox permission engine)
+npm test
+
+# Start the interactive Fumadocs documentation site locally (http://localhost:3000)
+npm run docs:dev
+
+# Build the static documentation export (docs/out)
+npm run docs:build
+```
+
+---
 
 ## GitHub Packages
 
 On push to `main` (and on version tags `v*`), workflows publish to the GitHub npm registry.
 
-Install from GitHub Packages:
-
-```sh
+```ini
 # .npmrc
 @strafe-js:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
@@ -155,16 +309,14 @@ Install from GitHub Packages:
 npm install @strafe-js/strafebot
 ```
 
-> Packages are scoped as `@strafe-js/*` so they match the GitHub user that owns this repository and can publish to GitHub Packages.
+---
 
-## Contributing
+## Links
 
-Open an issue or pull request on [GitHub](https://github.com/strafe-js/strafe.js). Check existing issues first.
-
-## Help
-
-Stuck on the API surface or gateway behaviour? Use the official [Strafe docs](https://app.strafe.chat/docs/) and the examples under [`examples/`](https://github.com/strafe-js/strafe.js/tree/main/examples).
+- [Strafe Developer Documentation](https://app.strafe.chat/docs/)
+- [GitHub Repository](https://github.com/strafe-js/strafe.js)
+- [npm Organization (`@strafe-js`)](https://www.npmjs.com/package/@strafe-js/strafebot)
 
 ## License
 
-[Apache-2.0](https://github.com/strafe-js/strafe.js/blob/main/LICENSE)
+[Apache-2.0](./LICENSE)
