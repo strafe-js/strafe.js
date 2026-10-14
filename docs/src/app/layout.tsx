@@ -82,7 +82,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         <RootProvider
           theme={{
             defaultTheme: 'dark',
-            enableSystem: true,
+            forcedTheme: 'dark',
+            enableSystem: false,
           }}
           search={{
             options: {
