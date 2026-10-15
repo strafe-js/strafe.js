@@ -13,3 +13,5 @@ out/
 **/out/
 dist/
 **/dist/
+.trae/
+
