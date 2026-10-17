@@ -9,7 +9,7 @@ on:
       - '.github/workflows/publish-on-main.yml'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -47,6 +49,19 @@ jobs:
             (cd "$dir" && npx tsc -p tsconfig.json)
           done
 
+      - name: Create GitHub Release if new version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Creating GitHub Release $TAG"
+            gh release create "$TAG" --title "Strafe.js $TAG" --generate-notes || true
+          else
+            echo "Release $TAG already exists"
+          fi
+
       - name: Configure npm for GitHub Packages
         run: |
           echo "@strafe-js:registry=https://npm.pkg.github.com" > .npmrc
@@ -55,14 +70,14 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish packages (skip existing versions)
+      - name: Publish packages to GitHub Packages (skip existing versions)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
           publish_one() {
             local dir="$1"
-            echo "::group::publish $dir"
+            echo "::group::publish $dir (GitHub Packages)"
             (cd "$dir" && npm publish --access public)
             local code=$?
             if [ $code -ne 0 ]; then
@@ -78,3 +93,30 @@ jobs:
           publish_one packages/@strafe-js/ws
           publish_one packages/strafebot
           publish_one packages/create-strafe-bot
+
+      - name: Publish packages to npmjs.org (when NPM_TOKEN is configured)
+        if: ${{ env.NPM_TOKEN != '' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set +e
+          echo "@strafe-js:registry=https://registry.npmjs.org" > .npmrc
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+          publish_npm() {
+            local dir="$1"
+            echo "::group::publish $dir (npmjs.org)"
+            (cd "$dir" && npm publish --registry https://registry.npmjs.org --access public)
+            local code=$?
+            if [ $code -ne 0 ]; then
+              echo "npmjs publish skipped or failed for $dir (exit $code)"
+            fi
+            echo "::endgroup::"
+          }
+          publish_npm packages/@strafe-js/util
+          publish_npm packages/@strafe-js/collection
+          publish_npm packages/@strafe-js/formatters
+          publish_npm packages/@strafe-js/builders
+          publish_npm packages/@strafe-js/rest
+          publish_npm packages/@strafe-js/ws
+          publish_npm packages/strafebot
+          publish_npm packages/create-strafe-bot

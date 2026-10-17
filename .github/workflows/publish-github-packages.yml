@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -99,3 +99,24 @@ jobs:
         continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish packages to npmjs.org (when NPM_TOKEN is configured)
+        if: ${{ env.NPM_TOKEN != '' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set +e
+          echo "@strafe-js:registry=https://registry.npmjs.org" > .npmrc
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+          for dir in \
+            packages/@strafe-js/util \
+            packages/@strafe-js/collection \
+            packages/@strafe-js/formatters \
+            packages/@strafe-js/builders \
+            packages/@strafe-js/rest \
+            packages/@strafe-js/ws \
+            packages/strafebot \
+            packages/create-strafe-bot
+          do
+            (cd "$dir" && npm publish --registry https://registry.npmjs.org --access public) || true
+          done

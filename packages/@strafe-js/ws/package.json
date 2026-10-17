@@ -1,6 +1,6 @@
 {
   "name": "@strafe-js/ws",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Gateway WebSocket client for Strafe Chat",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +25,7 @@
   },
   "author": "strafe-js",
   "dependencies": {
-    "@strafe-js/util": "^1.1.0",
+    "@strafe-js/util": "^1.2.0",
     "ws": "^8.18.0"
   },
   "engines": {

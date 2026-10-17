@@ -33,7 +33,7 @@ class REST {
         this.token = opts.token;
         this.authScheme = opts.authScheme ?? 'Bot';
         this.retries = opts.retries ?? 3;
-        this.userAgent = opts.userAgent ?? 'strafebot-js/1.1';
+        this.userAgent = opts.userAgent ?? 'strafebot-js/1.2';
     }
     /**
      * Updates the authentication token used for subsequent HTTP requests.
