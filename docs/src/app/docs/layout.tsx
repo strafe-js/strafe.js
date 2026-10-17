@@ -37,6 +37,10 @@ export default function Layout({ children }: { children: ReactNode }) {
           icon: <Shield className="w-4 h-4 text-[#509b6b]" />,
         },
         {
+          text: 'OAuth2 Generator',
+          url: '/docs/tools/oauth2-generator',
+        },
+        {
           text: 'Command Builder',
           url: '/docs/tools/command-builder',
           icon: <Sparkles className="w-4 h-4 text-[#509b6b]" />,

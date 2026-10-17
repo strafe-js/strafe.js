@@ -1,0 +1,145 @@
+---
+title: OAuth2 & Bot Install Links
+description: Build bot installation URLs, authorize Strafe users, exchange OAuth2 tokens, and add members with spaces.join.
+---
+
+Strafe supports OAuth2 authorization code flows (`/oauth2/authorize` and `/oauth2/token`) for both adding bots to spaces and authenticating Strafe users in web applications.
+
+<Callout title="Application IDs Match Bot User IDs" type="info">
+  When you create a bot on a Developer Application (`POST /applications/:id/bot`), the bot user shares the exact same Snowflake ID as the parent application (`application.id === application.bot.id`). Pass that ID as `clientId` in all OAuth2 helpers.
+</Callout>
+
+## Supported OAuth2 Scopes
+
+| Scope | Description |
+| :--- | :--- |
+| `bot` | Prompts the user to install your application's bot into a Space where they hold `ManageSpace` (`1 << 12`) or `Administrator` (`1 << 11`). |
+| `identify` | Grants read access to `GET /users/@me` (`id`, `username`, `display_name`, `avatar_url`, `banner_url`). |
+| `email` | Includes `email` and `email_verified` on `GET /users/@me` responses. |
+| `spaces` | Grants read access to `GET /users/@me/spaces` (list of spaces the user belongs to). |
+| `spaces.join` | Allows your bot to add the user to a Space via `PUT /spaces/:id/members/:user_id`. |
+
+## Generating Bot Installation Links
+
+A pure `scope=bot` installation link does not require a registered `redirect_uri` or a backend token exchange. When the user approves the prompt, Strafe adds the bot to the chosen Space and creates a managed role with the requested permission bitmask.
+
+```ts title="src/invite.ts"
+import { generateBotInviteUrl } from '@strafe-js/builders';
+import { READ_AND_POST_PERMISSIONS } from '@strafe-js/util';
+
+const inviteUrl = generateBotInviteUrl({
+  clientId: '123456789012345678',
+  permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory', 'AttachFiles'],
+  // Optional: preselect a Space ID and lock the dropdown
+  spaceId: '987654321098765432',
+  disableSpaceSelect: true,
+});
+
+console.log('Install Bot:', inviteUrl);
+```
+
+If your `Client` is already logged in, call `client.generateInviteUrl()` directly:
+
+```ts title="src/index.ts"
+client.on('ready', () => {
+  console.log(
+    'Bot Invite URL:',
+    client.generateInviteUrl({
+      permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory'],
+    }),
+  );
+});
+```
+
+## Full OAuth2 Authorization Code Flow
+
+<Steps>
+<Step>
+### Redirect the User to the Consent Screen
+
+Use `generateOAuth2Url` from `@strafe-js/builders` to build the `/oauth2/authorize` URL with a CSRF `state` token:
+
+```ts title="src/routes/login.ts"
+import { generateOAuth2Url } from '@strafe-js/builders';
+
+export function buildLoginRedirect(state: string): string {
+  return generateOAuth2Url({
+    clientId: process.env.STRAFE_CLIENT_ID!,
+    redirectUri: 'https://example.com/oauth/callback',
+    scopes: ['identify', 'email', 'spaces', 'spaces.join'],
+    state,
+  });
+}
+```
+</Step>
+
+<Step>
+### Exchange the Authorization Code for Tokens
+
+Authorization codes expire after **10 minutes** and are single-use. Exchange the `code` query parameter via `rest.exchangeOAuth2Code()`:
+
+```ts title="src/routes/callback.ts"
+import { REST } from '@strafe-js/rest';
+
+const rest = new REST({
+  baseUrl: 'https://app.strafe.chat/api',
+  token: process.env.BOT_TOKEN!,
+  authScheme: 'Bot',
+});
+
+export async function handleCallback(code: string) {
+  const tokens = await rest.exchangeOAuth2Code({
+    clientId: process.env.STRAFE_CLIENT_ID!,
+    clientSecret: process.env.STRAFE_CLIENT_SECRET!,
+    code,
+    redirectUri: 'https://example.com/oauth/callback',
+  });
+
+  // Inspect the authorized user and granted scopes via GET /oauth2/@me
+  const tokenInfo = await rest.getOAuth2Me(tokens.access_token);
+  console.log('Authorized user:', tokenInfo.user?.username, tokenInfo.scopes);
+
+  return { tokens, user: tokenInfo.user };
+}
+```
+</Step>
+
+<Step>
+### Add the User to a Space (`spaces.join`)
+
+When the user granted the `spaces.join` scope and your bot is already a member of the target Space with `CreateInvite` (`1 << 13`) or `ManageSpace` (`1 << 12`), call `rest.addSpaceMemberWithToken()`:
+
+```ts title="src/routes/join-space.ts"
+await rest.addSpaceMemberWithToken(
+  '987654321098765432', // Space ID
+  tokenInfo.user!.id,   // User ID matching the access token
+  tokens.access_token,  // User's strf_oat_... access token
+);
+```
+</Step>
+
+<Step>
+### Refresh or Revoke Tokens
+
+Access tokens (`strf_oat_...`) are valid for **7 days**, and refresh tokens (`strf_ort_...`) are valid for **30 days**. Refreshing rotates both tokens immediately:
+
+```ts title="src/routes/tokens.ts"
+const refreshed = await rest.refreshOAuth2Token({
+  clientId: process.env.STRAFE_CLIENT_ID!,
+  clientSecret: process.env.STRAFE_CLIENT_SECRET!,
+  refreshToken: tokens.refresh_token,
+});
+
+// Revoke a token and delete the user's grant (RFC 7009)
+await rest.revokeOAuth2Token({
+  clientId: process.env.STRAFE_CLIENT_ID!,
+  clientSecret: process.env.STRAFE_CLIENT_SECRET!,
+  token: refreshed.access_token,
+});
+```
+</Step>
+</Steps>
+
+## Interactive URL Builder
+
+Experiment with scopes and permission masks live using the [OAuth2 & Bot Invite Generator](/docs/tools/oauth2-generator).

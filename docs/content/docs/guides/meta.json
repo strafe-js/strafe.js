@@ -1,4 +1,9 @@
 {
   "title": "Guides & Tutorials",
-  "pages": ["getting-started", "permissions"]
+  "pages": [
+    "getting-started",
+    "permissions",
+    "oauth2",
+    "e2ee-and-push"
+  ]
 }

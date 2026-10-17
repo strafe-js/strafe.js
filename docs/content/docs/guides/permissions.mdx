@@ -1,29 +1,65 @@
 ---
 title: Permission Engine (Equinox)
-description: How Strafe.js computes effective member permissions across spaces, roles, and room overrides.
+description: How Strafe.js computes effective member permissions across spaces, roles, room overrides, and threads.
 ---
 
 Strafe.js ships with a built-in **Equinox-compliant permission engine** via `client.resolveMemberPermissions(userId, spaceId, roomId?)`.
 
 ## 6-Stage Resolution Pipeline
 
-When evaluating permissions for a member in a space or room, `Client.resolveMemberPermissions()` executes the following deterministic cascade:
+<Steps>
+<Step>
+### Space Owner Short-Circuit
+If `space.owner_id === userId`, the member immediately receives `ALL_PERMISSIONS` (`268435455`).
+</Step>
 
-1. **Space Owner Short-Circuit**: If `space.owner_id === userId`, the member immediately receives `ALL_PERMISSIONS`.
-2. **Base Role Permissions**: Starts with the space's `@everyone` role (`space.everyone_role_id`) permission mask and bitwise-ORs (`|=`) the permission masks of all roles in `member.role_ids`.
-3. **Administrator Short-Circuit**: If `mask & Permission.Administrator` is non-zero, the member immediately receives `ALL_PERMISSIONS` (bypassing room-level denies).
-4. **Room Permission Overrides** (when `roomId` is provided):
-   - **4a. `@everyone` Room Override**: Applies `(mask & ~everyoneOverride.deny) | everyoneOverride.allow`.
-   - **4b. Aggregated Role Overrides**: Combines `deny` and `allow` masks across all roles held by the member, then applies `(mask & ~aggregatedDeny) | aggregatedAllow`.
-   - **4c. Member-Specific Override**: Applies `(mask & ~userOverride.deny) | userOverride.allow` for `userId`.
-5. **Implicit ViewRoom Denial**: If `!(mask & Permission.ViewRoom)`, all permissions in that room are cleared (`mask = 0`).
-6. **Implicit SendMessages Cascade**: If `!(mask & Permission.SendMessages)`, both `Permission.AttachFiles` and `Permission.MentionEveryone` are stripped.
+<Step>
+### Base Role Permissions
+Starts with the space's `@everyone` role (`space.everyone_role_id`) permission mask and bitwise-ORs (`|=`) the permission masks of all roles in `member.role_ids`.
+</Step>
+
+<Step>
+### Administrator Short-Circuit
+If `mask & Permission.Administrator` is non-zero, the member immediately receives `ALL_PERMISSIONS` (bypassing room-level denies).
+</Step>
+
+<Step>
+### Room & Thread Permission Overrides
+When `roomId` is provided (or inherited from `room.parent_id` for threads without their own overrides):
+- **4a. `@everyone` Room Override**: Applies `(mask & ~everyoneOverride.deny) | everyoneOverride.allow`.
+- **4b. Aggregated Role Overrides**: Combines `deny` and `allow` masks across all roles held by the member, then applies `(mask & ~aggregatedDeny) | aggregatedAllow`.
+- **4c. Member-Specific Override**: Applies `(mask & ~userOverride.deny) | userOverride.allow` for `userId`.
+</Step>
+
+<Step>
+### Implicit ViewRoom Denial
+If `!(mask & Permission.ViewRoom)`, all permissions in that room are cleared (`mask = 0`).
+</Step>
+
+<Step>
+### Implicit SendMessages Cascade
+If `!(mask & Permission.SendMessages)`, both `Permission.AttachFiles` and `Permission.MentionEveryone` are stripped.
+</Step>
+</Steps>
+
+<Callout title="Thread Permission Rules" type="info">
+  Threads (`RoomType.Thread = 6`) inherit their parent channel's role and user overrides when the thread has none of its own. Posting in a thread requires `Permission.SendMessagesInThreads` (`1 << 26`). Private threads (`room.thread?.private === true`) return `0` permissions unless the member is a thread participant or holds `Permission.ManageThreads` (`1 << 27`).
+</Callout>
+
+## Built-In Permission Mask Constants
+
+| Constant | Decimal | Description |
+| :--- | :--- | :--- |
+| `READ_AND_POST_PERMISSIONS` | `7` | `ViewRoom \| SendMessages \| ReadMessageHistory` |
+| `DEFAULT_EVERYONE_PERMISSIONS` | `10723359` | Default `@everyone` role mask on newly created spaces |
+| `ALL_ROOM_PERMISSIONS` | `268421071` | All room-scoped flags (excludes space-wide flags `ManageRoles`, `KickMembers`, `BanMembers`, `Administrator`, `ManageSpace`) |
+| `ALL_PERMISSIONS` | `268435455` | Bitwise union of all 28 permissions (`(1 << 28) - 1`) |
 
 ## Checking Permissions in Commands
 
 You can declare required caller and bot permissions directly on a `command()` definition, or check them dynamically via `ctx`:
 
-```ts
+```ts title="src/commands/kick.ts"
 import { command } from '@strafe-js/strafebot';
 
 export default command({

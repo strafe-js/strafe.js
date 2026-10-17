@@ -1,4 +1,9 @@
 {
   "title": "Interactive Tools",
-  "pages": ["permission-calculator", "command-builder", "api-playground"]
+  "pages": [
+    "permission-calculator",
+    "oauth2-generator",
+    "command-builder",
+    "api-playground"
+  ]
 }

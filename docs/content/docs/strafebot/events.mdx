@@ -53,7 +53,7 @@ description: Complete catalog of events emitted by Client and CommandHandler wit
 
 ## Example: Listening to Multiple Events
 
-```ts
+```ts title="src/events.ts"
 client.on('ready', (payload) => {
   console.log(`Connected as ${payload.user.username} in ${payload.spaces.length} spaces`);
 });

@@ -9,7 +9,7 @@ description: Declarative commands, typed argument schemas, permission guards, co
 
 Use the `command()` helper to define commands with full TypeScript inference for parsed arguments:
 
-```ts
+```ts title="src/commands/roll.ts"
 import { command } from '@strafe-js/strafebot';
 
 export const rollCommand = command({
