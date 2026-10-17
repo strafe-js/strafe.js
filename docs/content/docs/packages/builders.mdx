@@ -129,7 +129,7 @@ Instantiate with `message()` or `new MessageBuilder()`.
   parameters={[
     { name: 'list', type: 'PermissionName[]', required: true, description: 'Array of permission names.' },
   ]}
-  example={`const mask = permissions(['ViewRoom', 'SendMessages', 'EmbedLinks']);`}
+  example={`const mask = permissions(['ViewRoom', 'SendMessages', 'AttachFiles']);`}
 />
 
 <MethodCard
@@ -142,4 +142,36 @@ Instantiate with `message()` or `new MessageBuilder()`.
     { name: '...items', type: 'PermissionResolvable[]', required: true, description: 'Permission names, numbers, or arrays.' },
   ]}
   example={`const mask = permissionMask('ViewRoom', 'SendMessages', ['AttachFiles', 'AddReactions']);`}
+/>
+
+## OAuth2 & Bot Install Link Builders
+
+<MethodCard
+  name="generateBotInviteUrl"
+  signature="(opts: BotInviteUrlOptions) => string"
+  returnType="string"
+  isAsync={false}
+  description="Constructs a bot installation URL (/oauth2/authorize?response_type=code&scope=bot&permissions=...) for adding a bot to a Strafe space."
+  parameters={[
+    { name: 'opts.clientId', type: 'Snowflake', required: true, description: 'Application ID / bot user ID.' },
+    { name: 'opts.permissions', type: 'PermissionResolvable', required: false, description: 'Permissions requested for the bot role.' },
+    { name: 'opts.spaceId', type: 'Snowflake', required: false, description: 'Preselected Space ID.' },
+    { name: 'opts.disableSpaceSelect', type: 'boolean', required: false, description: 'Lock the space picker to spaceId.' },
+  ]}
+  example={`const url = generateBotInviteUrl({\n  clientId: '123456789012345678',\n  permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory'],\n});`}
+/>
+
+<MethodCard
+  name="generateOAuth2Url"
+  signature="(opts: OAuth2UrlOptions) => string"
+  returnType="string"
+  isAsync={false}
+  description="Constructs an OAuth2 authorization consent URL (/oauth2/authorize) for scopes identify, email, spaces, spaces.join, and bot."
+  parameters={[
+    { name: 'opts.clientId', type: 'Snowflake', required: true, description: 'Application client ID.' },
+    { name: 'opts.scopes', type: 'OAuth2Scope[]', required: false, default: "['identify']", description: 'Requested OAuth2 scopes.' },
+    { name: 'opts.redirectUri', type: 'string', required: false, description: 'Registered OAuth2 callback URI.' },
+    { name: 'opts.state', type: 'string', required: false, description: 'CSRF state token.' },
+  ]}
+  example={`const url = generateOAuth2Url({\n  clientId: '123456789012345678',\n  scopes: ['identify', 'spaces.join'],\n  redirectUri: 'https://example.com/callback',\n  state: 'csrf_token',\n});`}
 />

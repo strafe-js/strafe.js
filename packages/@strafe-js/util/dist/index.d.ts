@@ -103,6 +103,18 @@ export type PermissionName = keyof typeof Permission;
  */
 export type PermissionResolvable = number | PermissionName | PermissionResolvable[];
 /**
+ * Bitmask for basic text room reading and posting (`Permission.ViewRoom | Permission.SendMessages | Permission.ReadMessageHistory` = `7`).
+ */
+export declare const READ_AND_POST_PERMISSIONS: number;
+/**
+ * Default `@everyone` permission bitmask in a newly created space (`10723359`).
+ */
+export declare const DEFAULT_EVERYONE_PERMISSIONS = 10723359;
+/**
+ * Bitmask combining all room-scoped permission bits (`0..6` and `15..27`).
+ */
+export declare const ALL_ROOM_PERMISSIONS: number;
+/**
  * Bitwise OR combination of all 28 Strafe permissions (`0x0FFFFFFF` / `268435455`).
  * Automatically granted to Space Owners and members with `Permission.Administrator`.
  */
@@ -126,10 +138,16 @@ export declare const RoomType: {
     readonly GroupPM: 2;
     /** `(3)` Standard Space text room. */
     readonly Text: 3;
+    /** `(3)` Alias for `RoomType.Text`. */
+    readonly SpaceText: 3;
     /** `(4)` Space voice and video room. */
     readonly Voice: 4;
+    /** `(4)` Alias for `RoomType.Voice`. */
+    readonly SpaceVoice: 4;
     /** `(5)` Collapsible category/section header room. */
     readonly Section: 5;
+    /** `(5)` Alias for `RoomType.Section`. */
+    readonly SpaceSection: 5;
     /** `(6)` Discussion thread room attached to a parent text room. */
     readonly Thread: 6;
 };
@@ -347,13 +365,13 @@ export interface User {
     bio?: string;
     /** Extended profile description. */
     about_me?: string;
-    /** User pronouns string. */
+    /** Public user pronouns string (max 40 characters). */
     pronouns?: string;
-    /** User birthday string (`YYYY-MM-DD`). */
+    /** User birthday string in `MM-DD` format with no year (returned when opted in or on `/users/@me`). */
     birthday?: string;
-    /** Whether the user has opted into birthday notifications. */
+    /** Whether the user has opted into daily space birthday announcements. */
     birthday_opt_in?: boolean;
-    /** Whether today is the user's birthday. */
+    /** Whether today is the user's birthday (UTC, only present when `birthday_opt_in` is `true`). */
     is_birthday?: boolean;
     /** `true` if this account is a bot. */
     bot?: boolean;
@@ -708,5 +726,247 @@ export interface GatewayFrame<T = unknown> {
     space_id?: Snowflake;
     /** Optional User ID metadata on the frame envelope. */
     user_id?: Snowflake;
+}
+/**
+ * Checks whether a {@link Room} has end-to-end encryption (`e2ee_enabled`) turned on.
+ * Bots cannot read or send plaintext messages in encrypted rooms (`https://app.strafe.chat/docs/bots/#encryption-and-what-a-bot-can-see`).
+ *
+ * @example
+ * ```ts
+ * if (isEncryptedRoom(room)) return;
+ * ```
+ */
+export declare function isEncryptedRoom(room: Pick<Room, 'e2ee_enabled'> | null | undefined): boolean;
+/**
+ * Checks whether a {@link Message} was sent in an end-to-end encrypted room (`ciphertext` present without `plaintext`).
+ *
+ * @example
+ * ```ts
+ * if (isEncryptedMessage(msg)) return;
+ * ```
+ */
+export declare function isEncryptedMessage(msg: Pick<Message, 'plaintext' | 'ciphertext'> | null | undefined): boolean;
+/**
+ * Checks whether a {@link Message} is a server-generated system notice (`sender_id === "0"` or `system_type` set).
+ */
+export declare function isSystemMessage(msg: Pick<Message, 'sender_id' | 'system_type'> | null | undefined): boolean;
+/**
+ * Valid OAuth2 scope identifiers supported by Strafe authorization servers (`/oauth2/authorize`).
+ */
+export type OAuth2Scope = 'identify' | 'email' | 'spaces' | 'spaces.join' | 'bot';
+/**
+ * Token pair returned by `POST /oauth2/token` when exchanging an authorization code or refresh token.
+ */
+export interface OAuth2TokenResponse {
+    /** Bearer access token valid for 7 days (`604800` seconds). */
+    access_token: string;
+    /** Token type prefix (`'Bearer'`). */
+    token_type: 'Bearer' | string;
+    /** Lifetime of `access_token` in seconds (`604800`). */
+    expires_in: number;
+    /** Single-use refresh token used to obtain a new token pair. */
+    refresh_token: string;
+    /** Space-separated list of granted {@link OAuth2Scope} strings. */
+    scope: string;
+}
+/**
+ * Public metadata of a Strafe developer application (`GET /applications/:id/public` or `GET /oauth2/@me`).
+ */
+export interface OAuth2ApplicationPublic {
+    /** Application Snowflake ID (also equals the bot's User ID when `has_bot` is `true`). */
+    id: Snowflake;
+    /** Display name shown on the OAuth2 consent screen. */
+    name: string;
+    /** Public application description shown on the consent screen. */
+    description?: string;
+    /** Application icon URL or asset hash. */
+    icon?: string;
+    /** Whether a bot account has been attached to this application. */
+    has_bot: boolean;
+    /** Whether any user with `ManageSpace` can install this bot (`true`), or only the application owner (`false`). */
+    bot_public: boolean;
+    /** Hydrated bot {@link User} profile when present. */
+    bot?: User;
+}
+/**
+ * Full developer application record returned to the owner (`GET /applications/:id`).
+ */
+export interface OAuth2Application extends OAuth2ApplicationPublic {
+    /** Registered OAuth2 redirect URIs (up to 10 exact `http(s)` URLs). */
+    redirect_uris?: string[];
+    /** Client secret (returned once upon creation or `POST /applications/:id/secret`). */
+    client_secret?: string;
+    /** ISO-8601 creation timestamp. */
+    created_at?: string;
+    /** ISO-8601 last update timestamp. */
+    updated_at?: string;
+}
+/**
+ * Token inspection payload returned by `GET /oauth2/@me`.
+ */
+export interface OAuth2TokenInfo {
+    /** Application that owns the inspected token. */
+    application: OAuth2ApplicationPublic;
+    /** Array of granted {@link OAuth2Scope} values. */
+    scopes: OAuth2Scope[];
+    /** ISO-8601 expiration timestamp of the access token. */
+    expires: string;
+    /** Authenticated user profile (included when `scopes` contains `'identify'` or `'email'`). */
+    user?: User;
+}
+/**
+ * Authorized application grant entry returned by `GET /oauth2/@me/grants`.
+ */
+export interface OAuth2Grant {
+    /** Application that was granted access. */
+    application: OAuth2ApplicationPublic;
+    /** Approved scopes for this grant. */
+    scopes: OAuth2Scope[];
+    /** ISO-8601 timestamp when access was granted. */
+    created_at?: string;
+}
+/**
+ * Options for constructing an OAuth2 authorization URL (`/oauth2/authorize`).
+ */
+export interface OAuth2UrlOptions {
+    /** Instance base URL or API URL (defaults to `'https://app.strafe.chat'`). Trailing `/api` is stripped automatically. */
+    baseUrl?: string;
+    /** Application client ID (`client_id`). */
+    clientId: Snowflake;
+    /** Requested OAuth2 scopes (defaults to `['identify']`). */
+    scopes?: OAuth2Scope[];
+    /** Registered callback URI (`redirect_uri`), required when scopes other than `'bot'` are requested. */
+    redirectUri?: string;
+    /** Opaque CSRF token returned unchanged to `redirectUri`. */
+    state?: string;
+    /** Requested bot permissions when `'bot'` is included in `scopes`. */
+    permissions?: PermissionResolvable;
+    /** Optional space ID to preselect in the space picker. */
+    spaceId?: Snowflake;
+    /** When `true` (with `spaceId`), locks the space picker to `spaceId`. */
+    disableSpaceSelect?: boolean;
+}
+/**
+ * Options for constructing a bot installation URL (`/oauth2/authorize?scope=bot...`).
+ */
+export interface BotInviteUrlOptions {
+    /** Instance base URL or API URL (defaults to `'https://app.strafe.chat'`). Trailing `/api` is stripped automatically. */
+    baseUrl?: string;
+    /** Application client ID / bot user ID (`client_id`). */
+    clientId: Snowflake;
+    /** Permission bitmask or array of {@link PermissionName} flags requested for the bot's managed role. */
+    permissions?: PermissionResolvable;
+    /** Optional space ID to preselect in the space picker. */
+    spaceId?: Snowflake;
+    /** When `true` (with `spaceId`), locks the space picker to `spaceId`. */
+    disableSpaceSelect?: boolean;
+    /** Optional additional scopes to request alongside `'bot'` (for example `['identify']`). */
+    scopes?: OAuth2Scope[];
+    /** Optional callback URI (`redirect_uri`), required if additional scopes are requested. */
+    redirectUri?: string;
+    /** Optional CSRF state parameter. */
+    state?: string;
+}
+/**
+ * Web Push transport kind identifier (`PUT /users/@me/push`).
+ */
+export type PushTransportKind = 'fcm' | 'apns' | 'unifiedpush' | 'web';
+/**
+ * Notification delivery preferences for a Web Push subscription (`PUT / PATCH /users/@me/push`).
+ */
+export interface PushPreferences {
+    /** Include a plaintext message preview for non-E2EE rooms (default `true`). */
+    preview?: boolean;
+    /** Delivery filter for 1-on-1 PMs and group PMs (`'all'` or `'none'`, default `'all'`). */
+    pm?: 'all' | 'none';
+    /** Delivery filter for space rooms (`'all'`, `'mentions'`, or `'none'`, default `'mentions'`). */
+    space?: 'all' | 'mentions' | 'none';
+    /** Ring for incoming voice/video calls (default `true`). */
+    calls?: boolean;
+}
+/**
+ * Request body for registering a Web Push subscription via `PUT /users/@me/push`.
+ */
+export interface PushSubscriptionInput {
+    /** Absolute `https://` Web Push endpoint URL (max 2048 characters). */
+    endpoint: string;
+    /** Client P-256 public key and 16-byte authentication secret (base64url encoded). */
+    keys: {
+        /** Base64url-encoded 65-byte uncompressed P-256 public key. */
+        p256dh: string;
+        /** Base64url-encoded 16-byte random authentication secret. */
+        auth: string;
+    };
+    /** Push transport type (`'fcm' | 'apns' | 'unifiedpush' | 'web'`). */
+    kind: PushTransportKind;
+    /** Optional notification delivery preferences. */
+    prefs?: PushPreferences;
+}
+/**
+ * Push subscription status returned by `GET`, `PUT`, and `PATCH /users/@me/push`.
+ */
+export interface PushSubscriptionRecord {
+    /** Configured transport type. */
+    kind: PushTransportKind;
+    /** Hostname of the registered push endpoint. */
+    endpoint_host: string;
+    /** Effective notification preferences. */
+    prefs: Required<PushPreferences>;
+    /** ISO-8601 creation timestamp. */
+    created_at: string;
+    /** ISO-8601 last update timestamp. */
+    updated_at: string;
+    /** ISO-8601 timestamp of the last successful push delivery. */
+    last_success_at?: string;
+    /** Error description from the most recent failed delivery (`''` when none). */
+    last_error: string;
+    /** Consecutive delivery failure count. */
+    failures: number;
+}
+/**
+ * Decrypted RFC 8291 Web Push JSON payload delivered by a Strafe instance.
+ */
+export interface PushPayload {
+    /** Payload schema version (`1`). */
+    v: 1;
+    /** Push event type (`'msg' | 'read' | 'call' | 'call_end' | 'test'`). */
+    t: 'msg' | 'read' | 'call' | 'call_end' | 'test';
+    /** Target account Snowflake ID. */
+    uid: Snowflake;
+    /** Event timestamp in Unix milliseconds. */
+    ts: number;
+    /** Room Snowflake ID. */
+    rid?: Snowflake;
+    /** Room type discriminant ({@link RoomType}). */
+    rt?: RoomTypeValue;
+    /** Space Snowflake ID (for space rooms and threads). */
+    sid?: Snowflake;
+    /** Message ID (`msg`: created message ID; `read`: last read message ID). */
+    mid?: Snowflake;
+    /** Message author (`msg`) or caller (`call`) summary. */
+    a?: {
+        /** Author or caller Snowflake ID. */
+        id: Snowflake;
+        /** Display name or username. */
+        n: string;
+        /** Optional avatar CDN URL. */
+        av?: string;
+    };
+    /** Room, thread, or group PM name (omitted for 1-on-1 PMs). */
+    rn?: string;
+    /** Parent channel name when `rid` is a thread. */
+    pn?: string;
+    /** Space display name. */
+    sn?: string;
+    /** `true` when the room is end-to-end encrypted (`b` is always omitted). */
+    e?: boolean;
+    /** Plaintext preview (up to 300 characters, omitted when encrypted or `preview: false`). */
+    b?: string;
+    /** Number of file attachments on the message. */
+    att?: number;
+    /** `true` when the message mentions the recipient (`@user`, `@role`, or `@everyone`). */
+    m?: boolean;
+    /** Reserved flag for video calls. */
+    vid?: boolean;
 }
 //# sourceMappingURL=index.d.ts.map

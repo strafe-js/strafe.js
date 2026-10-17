@@ -94,6 +94,10 @@ export declare class Context<Schema extends CommandArgumentsSchema = CommandArgu
      */
     get content(): string;
     /**
+     * Whether the room where the command was invoked has end-to-end encryption (`e2ee_enabled`) enabled.
+     */
+    get isEncryptedRoom(): boolean;
+    /**
      * Cached {@link SpaceMember} record for the caller in the current space, or `null` in DMs / if uncached.
      */
     get member(): SpaceMember | null;

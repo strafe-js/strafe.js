@@ -28,13 +28,13 @@ const DOC_SECTIONS = [
   },
   {
     title: 'WebSocket Gateway (@strafe-js/ws)',
-    desc: 'Connect to wss://app.strafe.chat/gateway/events, handle opcodes 0–8, space_rooms, and real-time events.',
+    desc: 'Connect to wss://app.strafe.chat/gateway/events, handle opcodes 0-8, space_rooms, and real-time events.',
     href: '/docs/ws/overview',
     badge: 'Gateway',
   },
   {
-    title: 'REST API (@strafe-js/rest)',
-    desc: 'Full HTTP reference for Spaces, Rooms, Messages, Threads, Reactions, Pins, Roles, Bans, and Invites.',
+    title: 'REST API & OAuth2 (@strafe-js/rest)',
+    desc: 'HTTP reference for Spaces, Rooms, Messages, Threads, Reactions, Pins, OAuth2 token exchange, and Web Push.',
     href: '/docs/rest/overview',
     badge: 'REST API',
   },
@@ -110,10 +110,19 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 h-14 backdrop-blur-md bg-[#101216]/85 border-b border-[#2a2f39]">
         <div className="max-w-[1380px] mx-auto px-5 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
-            <Link href="/" className="strafe-brand">
-              <span className="strafe-brand-mark">Strafe</span>
-              <span className="strafe-brand-dot">.js</span>
-              <span className="strafe-brand-docs">DOCS</span>
+            <Link href="/" className="strafe-brand inline-flex items-center gap-2">
+              <img
+                src="https://app.strafe.chat/icons/icon-192.png"
+                alt="Strafe"
+                width={24}
+                height={24}
+                className="w-6 h-6 rounded-md"
+              />
+              <span>
+                <span className="strafe-brand-mark">Strafe</span>
+                <span className="strafe-brand-dot">.js</span>
+                <span className="strafe-brand-docs">DOCS</span>
+              </span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-1 text-[13px] font-medium text-[#b4bac6]">

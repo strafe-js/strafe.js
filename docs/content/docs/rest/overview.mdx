@@ -36,7 +36,7 @@ console.log(`Authenticated as ${me.username}`);
     { name: 'token', type: 'string', optional: true, description: 'Bot or Bearer token used in the Authorization header.' },
     { name: 'authScheme', type: "'Bot' | 'Bearer'", optional: true, description: 'Authorization scheme prefix (default: "Bot").' },
     { name: 'retries', type: 'number', optional: true, description: 'Number of automatic retries on HTTP 429 responses (default: 3).' },
-    { name: 'userAgent', type: 'string', optional: true, description: 'Custom User-Agent header (default: "strafebot-js/1.1").' },
+    { name: 'userAgent', type: 'string', optional: true, description: 'Custom User-Agent header (default: "strafebot-js/1.2").' },
   ]}
 />
 
@@ -138,4 +138,30 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
   returnType="Promise<null>"
   description="Kicks (DELETE /spaces/:id/members/:userId), bans (POST /spaces/:id/bans/:userId), or unbans (DELETE /spaces/:id/bans/:userId) a member."
   example={`await rest.banMember(spaceId, userId, 'Spamming');`}
+/>
+
+### OAuth2, Room Permission Overrides & Web Push
+
+<MethodCard
+  name="rest.exchangeOAuth2Code / rest.refreshOAuth2Token / rest.revokeOAuth2Token"
+  signature="(params) => Promise<OAuth2TokenResponse>"
+  returnType="Promise<OAuth2TokenResponse>"
+  description="Exchanges an authorization code (POST /oauth2/token), refreshes an access token, or revokes a token (POST /oauth2/token/revoke)."
+  example={`const tokens = await rest.exchangeOAuth2Code({\n  clientId: '123456789012345678',\n  clientSecret: process.env.CLIENT_SECRET!,\n  code: req.query.code,\n  redirectUri: 'https://example.com/callback',\n});`}
+/>
+
+<MethodCard
+  name="rest.getOAuth2Me / rest.addSpaceMemberWithToken"
+  signature="getOAuth2Me(accessToken?) => Promise<OAuth2TokenInfo> | addSpaceMemberWithToken(spaceId, userId, accessToken)"
+  returnType="Promise<OAuth2TokenInfo | { space_id: Snowflake; user_id: Snowflake } | undefined>"
+  description="Inspects a Bearer token via GET /oauth2/@me or adds a user to a space using a spaces.join OAuth2 token via PUT /spaces/:spaceId/members/:userId."
+  example={`const info = await rest.getOAuth2Me(tokens.access_token);\nawait rest.addSpaceMemberWithToken(spaceId, info.user!.id, tokens.access_token);`}
+/>
+
+<MethodCard
+  name="rest.setRoomRoleOverride / rest.setRoomUserOverride"
+  signature="(spaceId: Snowflake, roomId: Snowflake, targetId: Snowflake, body: { allow: number; deny: number }) => Promise<PermissionOverride>"
+  returnType="Promise<PermissionOverride>"
+  description="Creates or updates role or member room permission overrides (PUT /spaces/:spaceId/rooms/:roomId/overrides/...)."
+  example={`await rest.setRoomRoleOverride(spaceId, roomId, roleId, { allow: 1, deny: 2 });`}
 />

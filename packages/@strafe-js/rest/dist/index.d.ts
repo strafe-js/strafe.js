@@ -1,4 +1,4 @@
-import { Attachment, CreateMessageBody, EditMessageBody, Message, Role, Room, RoomTypeValue, Snowflake, Space, SpaceMember, ThreadMetadata, User } from '@strafe-js/util';
+import { Attachment, CreateMessageBody, EditMessageBody, Message, OAuth2Application, OAuth2ApplicationPublic, OAuth2Grant, OAuth2TokenInfo, OAuth2TokenResponse, PermissionOverride, PushPreferences, PushSubscriptionInput, PushSubscriptionRecord, Role, Room, RoomTypeValue, Snowflake, Space, SpaceMember, ThreadMetadata, User } from '@strafe-js/util';
 export { CreateMessageBody, EditMessageBody };
 /**
  * Configuration options for the {@link REST} HTTP client.
@@ -29,6 +29,8 @@ export interface RequestOptions {
     query?: Record<string, string | number | boolean | undefined>;
     /** Additional HTTP headers merged onto the request. */
     headers?: Record<string, string>;
+    /** When `false`, omits the default `Authorization` header even if a token is configured on the client. */
+    auth?: boolean;
 }
 /**
  * Space invite metadata returned by invite endpoints.
@@ -161,6 +163,14 @@ export declare class REST {
             custom_status?: string;
         };
     }): Promise<User>;
+    /**
+     * Uploads a new profile avatar image for the authenticated account via `POST /users/@me/avatar` (`multipart/form-data`).
+     */
+    uploadAvatar(file: Blob | Buffer, filename?: string): Promise<User>;
+    /**
+     * Uploads a new profile banner image for the authenticated account via `POST /users/@me/banner` (`multipart/form-data`).
+     */
+    uploadBanner(file: Blob | Buffer, filename?: string): Promise<User>;
     /**
      * Lists all spaces the authenticated user belongs to via `GET /users/@me/spaces`.
      */
@@ -305,6 +315,21 @@ export declare class REST {
      */
     setMemberRoles(spaceId: Snowflake, userId: Snowflake, roleIds: Snowflake[]): Promise<void>;
     /**
+     * Adds a user who authorized the application with the `spaces.join` OAuth2 scope to `spaceId`
+     * via `PUT /spaces/:spaceId/members/:userId`.
+     * Requires `Permission.CreateInvite` (or `ManageSpace` / `Administrator`) on the calling bot.
+     * Returns `{ space_id, user_id }` on `201 Created`, or `undefined` on `204 No Content` if already a member.
+     *
+     * @example
+     * ```ts
+     * await client.rest.addSpaceMemberWithToken(spaceId, userId, userOAuthAccessToken);
+     * ```
+     */
+    addSpaceMemberWithToken(spaceId: Snowflake, userId: Snowflake, accessToken: string): Promise<{
+        space_id: Snowflake;
+        user_id: Snowflake;
+    } | undefined>;
+    /**
      * Kicks a member from a space via `DELETE /spaces/:spaceId/members/:userId`.
      * Requires `Permission.KickMembers`.
      */
@@ -380,6 +405,42 @@ export declare class REST {
      * Requires `Permission.ManageRoles`.
      */
     deleteRole(spaceId: Snowflake, roleId: Snowflake): Promise<void>;
+    /**
+     * Lists all role permission overrides configured on `roomId` via `GET /spaces/:spaceId/rooms/:roomId/overrides`.
+     * Requires `Permission.ManageRoles`.
+     */
+    getRoomRoleOverrides(spaceId: Snowflake, roomId: Snowflake): Promise<PermissionOverride[]>;
+    /**
+     * Sets or updates a role permission override on `roomId` via `PUT /spaces/:spaceId/rooms/:roomId/overrides/:roleId`.
+     * Only room-scoped permission bits are accepted. Requires `Permission.ManageRoles`.
+     */
+    setRoomRoleOverride(spaceId: Snowflake, roomId: Snowflake, roleId: Snowflake, body: {
+        allow: number;
+        deny: number;
+    }): Promise<PermissionOverride>;
+    /**
+     * Deletes a role permission override from `roomId` via `DELETE /spaces/:spaceId/rooms/:roomId/overrides/:roleId`.
+     * Requires `Permission.ManageRoles`.
+     */
+    deleteRoomRoleOverride(spaceId: Snowflake, roomId: Snowflake, roleId: Snowflake): Promise<void>;
+    /**
+     * Lists all member-specific permission overrides configured on `roomId` via
+     * `GET /spaces/:spaceId/rooms/:roomId/overrides/users`. Requires `Permission.ManageRoles`.
+     */
+    getRoomUserOverrides(spaceId: Snowflake, roomId: Snowflake): Promise<PermissionOverride[]>;
+    /**
+     * Sets or updates a member-specific permission override on `roomId` via
+     * `PUT /spaces/:spaceId/rooms/:roomId/overrides/users/:userId`. Requires `Permission.ManageRoles`.
+     */
+    setRoomUserOverride(spaceId: Snowflake, roomId: Snowflake, userId: Snowflake, body: {
+        allow: number;
+        deny: number;
+    }): Promise<PermissionOverride>;
+    /**
+     * Deletes a member-specific permission override from `roomId` via
+     * `DELETE /spaces/:spaceId/rooms/:roomId/overrides/users/:userId`. Requires `Permission.ManageRoles`.
+     */
+    deleteRoomUserOverride(spaceId: Snowflake, roomId: Snowflake, userId: Snowflake): Promise<void>;
     /**
      * Sends a message to `roomId` via `POST /rooms/:roomId/messages`.
      * Accepts a plaintext string, a {@link CreateMessageBody} object, or `message().toJSON()` from `@strafe-js/builders`.
@@ -601,12 +662,190 @@ export declare class REST {
      */
     deleteInvite(spaceId: Snowflake, code: string): Promise<void>;
     /**
-     * Resolves public preview information for an invite code via `GET /spaces/invites/:code`.
+     * Resolves public preview information for an invite code via `GET /spaces/invites/:code` (no authentication required).
      */
     getInvite(code: string): Promise<{
         space: Partial<Space>;
         inviter_display_name?: string;
     }>;
+    /**
+     * Redeems an invite code to join its space via `POST /spaces/invites/:code/join`.
+     */
+    joinInvite(code: string): Promise<Space>;
+    /**
+     * Exchanges a single-use OAuth2 authorization `code` (valid for 10 minutes) for a 7-day Bearer `access_token`
+     * and `refresh_token` via `POST /oauth2/token` (`grant_type: 'authorization_code'`).
+     *
+     * @example
+     * ```ts
+     * const tokens = await rest.exchangeOAuth2Code({
+     *   clientId: '2104652899186380800',
+     *   clientSecret: process.env.STRAFE_CLIENT_SECRET!,
+     *   code: req.query.code,
+     *   redirectUri: 'https://app.example.com/callback',
+     * });
+     * ```
+     */
+    exchangeOAuth2Code(params: {
+        clientId: Snowflake;
+        clientSecret: string;
+        code: string;
+        redirectUri: string;
+    } | {
+        client_id: Snowflake;
+        client_secret: string;
+        code: string;
+        redirect_uri: string;
+    }): Promise<OAuth2TokenResponse>;
+    /**
+     * Exchanges a `refresh_token` for a new OAuth2 token pair via `POST /oauth2/token` (`grant_type: 'refresh_token'`).
+     * Invalidates the previous token pair immediately upon issuance.
+     */
+    refreshOAuth2Token(params: {
+        clientId: Snowflake;
+        clientSecret: string;
+        refreshToken: string;
+    } | {
+        client_id: Snowflake;
+        client_secret: string;
+        refresh_token: string;
+    }): Promise<OAuth2TokenResponse>;
+    /**
+     * Revokes an OAuth2 access or refresh token and removes the user's grant via `POST /oauth2/token/revoke` (RFC 7009).
+     */
+    revokeOAuth2Token(params: {
+        clientId: Snowflake;
+        clientSecret: string;
+        token: string;
+    } | {
+        client_id: Snowflake;
+        client_secret: string;
+        token: string;
+    }): Promise<Record<string, never>>;
+    /**
+     * Inspects an OAuth2 access token via `GET /oauth2/@me`, returning the owning application, granted scopes,
+     * expiration timestamp, and (when `'identify'` or `'email'` is granted) the user profile.
+     * Pass `accessToken` to inspect a specific Bearer token without mutating `this.token`.
+     */
+    getOAuth2Me(accessToken?: string): Promise<OAuth2TokenInfo>;
+    /**
+     * Lists all applications authorized by the current user session via `GET /oauth2/@me/grants` (session token only).
+     */
+    getOAuth2Grants(): Promise<OAuth2Grant[]>;
+    /**
+     * Revokes an application's OAuth2 grant for the current user session via `DELETE /oauth2/@me/grants/:appId` (session token only).
+     */
+    revokeOAuth2Grant(appId: Snowflake): Promise<void>;
+    /**
+     * Fetches the public profile of any developer application via `GET /applications/:appId/public`.
+     */
+    getApplicationPublic(appId: Snowflake): Promise<OAuth2ApplicationPublic>;
+    /**
+     * Lists all developer applications owned by the signed-in session via `GET /applications` (session token only).
+     */
+    getApplications(): Promise<OAuth2Application[]>;
+    /**
+     * Creates a new developer application via `POST /applications` (session token only).
+     * Returns the created application with `client_secret` populated once.
+     */
+    createApplication(name: string): Promise<OAuth2Application>;
+    /**
+     * Fetches a developer application owned by the signed-in session via `GET /applications/:appId` (session token only).
+     */
+    getApplication(appId: Snowflake): Promise<OAuth2Application>;
+    /**
+     * Updates application settings (`name`, `description`, `icon`, `redirect_uris`, `bot_public`)
+     * via `PATCH /applications/:appId` (session token only).
+     */
+    editApplication(appId: Snowflake, body: {
+        name?: string;
+        description?: string;
+        icon?: string;
+        redirect_uris?: string[];
+        bot_public?: boolean;
+    }): Promise<OAuth2Application>;
+    /**
+     * Deletes a developer application, its client secret, and its bot token via `DELETE /applications/:appId` (session token only).
+     */
+    deleteApplication(appId: Snowflake): Promise<void>;
+    /**
+     * Mints a new `client_secret` (shown once) for `appId` via `POST /applications/:appId/secret` (session token only).
+     */
+    resetApplicationSecret(appId: Snowflake): Promise<{
+        client_secret: string;
+    }>;
+    /**
+     * Attaches a bot account to `appId` and returns its initial `token` (shown once) via
+     * `POST /applications/:appId/bot` (session token only).
+     */
+    createApplicationBot(appId: Snowflake): Promise<{
+        bot: User;
+        token: string;
+    }>;
+    /**
+     * Updates the bot's profile fields (`display_name`, `about_me`, `bio`, `accent_color`) via
+     * `PATCH /applications/:appId/bot` (session token only).
+     */
+    editApplicationBot(appId: Snowflake, body: {
+        display_name?: string;
+        about_me?: string;
+        bio?: string;
+        accent_color?: string;
+    }): Promise<User>;
+    /**
+     * Uploads a new avatar image for the application's bot via `POST /applications/:appId/bot/avatar` (session token only).
+     */
+    uploadApplicationBotAvatar(appId: Snowflake, file: Blob | Buffer, filename?: string): Promise<User>;
+    /**
+     * Uploads a new banner image for the application's bot via `POST /applications/:appId/bot/banner` (session token only).
+     */
+    uploadApplicationBotBanner(appId: Snowflake, file: Blob | Buffer, filename?: string): Promise<User>;
+    /**
+     * Resets the bot's authentication token (shown once) and disconnects active gateway sessions with `SESSION_REVOKED`
+     * via `POST /applications/:appId/bot/token` (session token only).
+     */
+    resetApplicationBotToken(appId: Snowflake): Promise<{
+        token: string;
+    }>;
+    /**
+     * Fetches the instance's uncompressed P-256 VAPID public key (base64url) via `GET /push/vapid-key` (no authentication required).
+     */
+    getPushVapidKey(): Promise<{
+        public_key: string;
+    }>;
+    /**
+     * Registers or replaces the Web Push subscription for the current session via `PUT /users/@me/push` (session token only).
+     */
+    putPushSubscription(body: PushSubscriptionInput): Promise<{
+        subscription: PushSubscriptionRecord;
+    }>;
+    /**
+     * Updates notification delivery preferences for the current session's Web Push subscription
+     * via `PATCH /users/@me/push` (session token only).
+     */
+    patchPushSubscription(prefs: PushPreferences): Promise<{
+        subscription: PushSubscriptionRecord;
+    }>;
+    /**
+     * Fetches the active Web Push subscription metadata for the current session via `GET /users/@me/push` (session token only).
+     */
+    getPushSubscription(): Promise<{
+        subscription: PushSubscriptionRecord;
+    }>;
+    /**
+     * Deletes the active Web Push subscription for the current session via `DELETE /users/@me/push` (session token only).
+     */
+    deletePushSubscription(): Promise<void>;
+    /**
+     * Dispatches an immediate `test` Web Push notification to the current session's endpoint
+     * via `POST /users/@me/push/test` (session token only).
+     */
+    testPushSubscription(): Promise<{
+        delivered: boolean;
+        status?: number;
+        error?: string;
+    }>;
+    private _uploadMultipartFile;
     /**
      * Uploads a binary `Blob` or `Buffer` as a multipart file attachment to `POST /rooms/:roomId/attachments`
      * (or to a custom upload path when called with the 3-argument overload).

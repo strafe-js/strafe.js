@@ -2,14 +2,22 @@ import { EventEmitter } from 'node:events';
 import {
   ALL_PERMISSIONS,
   BitField,
+  BotInviteUrlOptions,
+  isEncryptedMessage,
+  isEncryptedRoom,
+  Message,
   Permission,
+  PermissionOverride,
   ReadyPayload,
+  Role,
   Room,
+  RoomType,
   Snowflake,
   Space,
   SpaceMember,
   User,
 } from '@strafe-js/util';
+import { generateBotInviteUrl } from '@strafe-js/builders';
 import { Collection } from '@strafe-js/collection';
 import { REST, RESTOptions } from '@strafe-js/rest';
 import { Gateway, GatewayOptions, GatewayEvents } from '@strafe-js/ws';
@@ -44,9 +52,14 @@ export interface ClientOptions {
 }
 
 /**
- * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents} and {@link CommandEvents}.
+ * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents}, {@link CommandEvents},
+ * and E2EE room notifications.
  */
-export type ClientEvents = GatewayEvents & CommandEvents;
+export type ClientEvents = GatewayEvents &
+  CommandEvents & {
+    /** Emitted when a `MESSAGE_CREATE` frame arrives from an end-to-end encrypted room (`ciphertext` without `plaintext`). */
+    encryptedMessageCreate: (message: Message) => void;
+  };
 
 export declare interface Client {
   /** Registers a typed listener for a {@link ClientEvents} event. */
@@ -231,6 +244,43 @@ export class Client extends EventEmitter {
   }
 
   /**
+   * Checks whether a cached room has end-to-end encryption (`e2ee_enabled`) enabled.
+   * Bots cannot read or post plaintext messages in encrypted rooms.
+   */
+  isRoomEncrypted(roomId: Snowflake): boolean {
+    return isEncryptedRoom(this.rooms.get(roomId));
+  }
+
+  /**
+   * Generates an OAuth2 bot installation link (`/oauth2/authorize?scope=bot...`) for this bot.
+   * Defaults `clientId` to `client.user.id` and `baseUrl` to `ClientOptions.apiBase`.
+   *
+   * @throws {Error} When neither `opts.clientId` nor `client.user.id` is available.
+   * @example
+   * ```ts
+   * const url = client.generateInviteUrl({
+   *   permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory', 'ManageMessages'],
+   * });
+   * ```
+   */
+  generateInviteUrl(
+    opts: Omit<BotInviteUrlOptions, 'clientId' | 'baseUrl'> & {
+      clientId?: Snowflake;
+      baseUrl?: string;
+    } = {},
+  ): string {
+    const clientId = opts.clientId ?? this.user?.id;
+    if (!clientId) {
+      throw new Error('clientId is required before client is ready');
+    }
+    return generateBotInviteUrl({
+      ...opts,
+      clientId,
+      baseUrl: opts.baseUrl ?? this.opts.apiBase,
+    });
+  }
+
+  /**
    * Computes the effective 28-bit permission bitmask for `userId` in `spaceId` (and optionally `roomId`)
    * using the 6-stage Equinox permission cascade:
    * 1. Space owner receives {@link ALL_PERMISSIONS}.
@@ -276,8 +326,15 @@ export class Client extends EventEmitter {
 
     if (roomId) {
       const room = this.rooms.get(roomId);
-      const roleOverrides = room?.permission_overrides ?? [];
-      const userOverrides = room?.user_overrides ?? [];
+      const effectiveRoom =
+        room?.type === RoomType.Thread &&
+        room.parent_id &&
+        !(room.permission_overrides?.length || room.user_overrides?.length)
+          ? this.rooms.get(room.parent_id) ?? room
+          : room;
+
+      const roleOverrides = effectiveRoom?.permission_overrides ?? [];
+      const userOverrides = effectiveRoom?.user_overrides ?? [];
 
       if (roleOverrides.length > 0) {
         if (space.everyone_role_id) {
@@ -315,6 +372,16 @@ export class Client extends EventEmitter {
           mask &= ~userOv.deny;
           mask |= userOv.allow;
         }
+      }
+
+      if (
+        room?.type === RoomType.Thread &&
+        room.thread?.private &&
+        (mask & Permission.ManageThreads) === 0 &&
+        room.thread.owner_id !== userId &&
+        !(userId === this.user?.id && room.thread.joined)
+      ) {
+        return 0;
       }
     }
 
@@ -395,6 +462,22 @@ export class Client extends EventEmitter {
           this.spaces.set(s.id, { ...prev, ...s });
           if (name === 'spaceCreate' && (this.opts.autoSubscribeSpaces ?? true)) {
             this.gateway.subscribe(s.id);
+            if (s.rooms?.length) {
+              for (const r of s.rooms) {
+                this._cacheRoom(r, s.id);
+                this.gateway.subscribe(r.id);
+              }
+            } else {
+              void this.rest
+                .getSpaceRooms(s.id)
+                .then((rooms) => {
+                  for (const r of rooms ?? []) {
+                    this._cacheRoom(r, s.id);
+                    this.gateway.subscribe(r.id);
+                  }
+                })
+                .catch(() => {});
+            }
           }
         }
       } else if (name === 'spaceDelete' || name === 'spaceLeave') {
@@ -412,7 +495,9 @@ export class Client extends EventEmitter {
         name === 'roomCreate' ||
         name === 'roomUpdate' ||
         name === 'spaceRoomCreate' ||
-        name === 'spaceRoomUpdate'
+        name === 'spaceRoomUpdate' ||
+        name === 'threadCreate' ||
+        name === 'threadUpdate'
       ) {
         const r = d as unknown as Room;
         if (r?.id) {
@@ -420,13 +505,20 @@ export class Client extends EventEmitter {
           const merged = { ...prev, ...r };
           this._cacheRoom(merged, envelopeSpaceId);
           if (
-            (name === 'roomCreate' || name === 'spaceRoomCreate') &&
+            (name === 'roomCreate' ||
+              name === 'spaceRoomCreate' ||
+              name === 'threadCreate') &&
             (this.opts.autoSubscribeSpaces ?? true)
           ) {
             this.gateway.subscribe(merged.id);
           }
         }
-      } else if (name === 'roomDelete' || name === 'spaceRoomDelete') {
+      } else if (
+        name === 'roomDelete' ||
+        name === 'spaceRoomDelete' ||
+        name === 'threadDelete' ||
+        name === 'roomLeave'
+      ) {
         const id = (d?.id ?? d?.room_id) as Snowflake | undefined;
         const sid = (d?.space_id ?? envelopeSpaceId) as Snowflake | undefined;
         if (id) {
@@ -436,6 +528,78 @@ export class Client extends EventEmitter {
           if (targetSid) {
             this.spaceRooms.get(targetSid)?.delete(id);
           }
+        }
+      } else if (name === 'spaceRoleCreate' || name === 'spaceRoleUpdate') {
+        const role = d as unknown as Role & { space_id?: Snowflake };
+        const sid = role?.space_id ?? envelopeSpaceId;
+        if (sid && role?.id) {
+          const space = this.spaces.get(sid);
+          if (space) {
+            const roles = [...(space.roles ?? [])];
+            const idx = roles.findIndex((r) => r.id === role.id);
+            if (idx >= 0) roles[idx] = { ...roles[idx], ...role };
+            else roles.push(role);
+            space.roles = roles;
+          }
+        }
+      } else if (name === 'spaceRoleDelete') {
+        const roleId = d?.role_id as Snowflake | undefined;
+        const sid = (d?.space_id ?? envelopeSpaceId) as Snowflake | undefined;
+        if (sid && roleId) {
+          const space = this.spaces.get(sid);
+          if (space?.roles) {
+            space.roles = space.roles.filter((r) => r.id !== roleId);
+          }
+        }
+      } else if (name === 'spaceRoomOverrideUpdate') {
+        const ov = d as unknown as PermissionOverride & { room_id?: Snowflake };
+        const rid = ov?.room_id ?? (isNested ? (rawD?.room_id as Snowflake | undefined) : frame.room_id);
+        if (rid && ov?.role_id) {
+          const room = this.rooms.get(rid);
+          if (room) {
+            const list = [...(room.permission_overrides ?? [])];
+            const idx = list.findIndex((o) => o.role_id === ov.role_id);
+            if (idx >= 0) list[idx] = { ...list[idx], ...ov };
+            else list.push(ov);
+            room.permission_overrides = list;
+          }
+        }
+      } else if (name === 'spaceRoomOverrideDelete') {
+        const roleId = d?.role_id as Snowflake | undefined;
+        const rid = (d?.room_id ?? (isNested ? rawD?.room_id : frame.room_id)) as Snowflake | undefined;
+        if (rid && roleId) {
+          const room = this.rooms.get(rid);
+          if (room?.permission_overrides) {
+            room.permission_overrides = room.permission_overrides.filter((o) => o.role_id !== roleId);
+          }
+        }
+      } else if (name === 'spaceRoomUserOverrideUpdate') {
+        const ov = d as unknown as PermissionOverride & { room_id?: Snowflake };
+        const rid = ov?.room_id ?? (isNested ? (rawD?.room_id as Snowflake | undefined) : frame.room_id);
+        if (rid && ov?.user_id) {
+          const room = this.rooms.get(rid);
+          if (room) {
+            const list = [...(room.user_overrides ?? [])];
+            const idx = list.findIndex((o) => o.user_id === ov.user_id);
+            if (idx >= 0) list[idx] = { ...list[idx], ...ov };
+            else list.push(ov);
+            room.user_overrides = list;
+          }
+        }
+      } else if (name === 'spaceRoomUserOverrideDelete') {
+        const userId = d?.user_id as Snowflake | undefined;
+        const rid = (d?.room_id ?? (isNested ? rawD?.room_id : frame.room_id)) as Snowflake | undefined;
+        if (rid && userId) {
+          const room = this.rooms.get(rid);
+          if (room?.user_overrides) {
+            room.user_overrides = room.user_overrides.filter((o) => o.user_id !== userId);
+          }
+        }
+      } else if (name === 'userUpdate') {
+        const u = d as unknown as Partial<User> & { user_id?: Snowflake };
+        const uid = u?.user_id ?? u?.id;
+        if (uid && this.user && uid === this.user.id) {
+          this.user = { ...this.user, ...u };
         }
       } else if (name === 'spaceMemberAdd' || name === 'spaceMemberUpdate') {
         const m = d as unknown as SpaceMember & { space_id?: Snowflake };
@@ -473,6 +637,9 @@ export class Client extends EventEmitter {
       }
 
       this.emit(name, d, frame);
+      if (name === 'messageCreate' && isEncryptedMessage(d as unknown as Message)) {
+        this.emit('encryptedMessageCreate', d as unknown as Message);
+      }
       if (name === 'spaceRoomCreate') this.emit('roomCreate', d as unknown as Room);
       else if (name === 'spaceRoomUpdate') this.emit('roomUpdate', d as unknown as Room);
       else if (name === 'spaceRoomDelete') this.emit('roomDelete', d as any);

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Client = void 0;
 const node_events_1 = require("node:events");
 const util_1 = require("@strafe-js/util");
+const builders_1 = require("@strafe-js/builders");
 const collection_1 = require("@strafe-js/collection");
 const rest_1 = require("@strafe-js/rest");
 const ws_1 = require("@strafe-js/ws");
@@ -168,6 +169,36 @@ class Client extends node_events_1.EventEmitter {
         return this.members.get(spaceId)?.get(userId);
     }
     /**
+     * Checks whether a cached room has end-to-end encryption (`e2ee_enabled`) enabled.
+     * Bots cannot read or post plaintext messages in encrypted rooms.
+     */
+    isRoomEncrypted(roomId) {
+        return (0, util_1.isEncryptedRoom)(this.rooms.get(roomId));
+    }
+    /**
+     * Generates an OAuth2 bot installation link (`/oauth2/authorize?scope=bot...`) for this bot.
+     * Defaults `clientId` to `client.user.id` and `baseUrl` to `ClientOptions.apiBase`.
+     *
+     * @throws {Error} When neither `opts.clientId` nor `client.user.id` is available.
+     * @example
+     * ```ts
+     * const url = client.generateInviteUrl({
+     *   permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory', 'ManageMessages'],
+     * });
+     * ```
+     */
+    generateInviteUrl(opts = {}) {
+        const clientId = opts.clientId ?? this.user?.id;
+        if (!clientId) {
+            throw new Error('clientId is required before client is ready');
+        }
+        return (0, builders_1.generateBotInviteUrl)({
+            ...opts,
+            clientId,
+            baseUrl: opts.baseUrl ?? this.opts.apiBase,
+        });
+    }
+    /**
      * Computes the effective 28-bit permission bitmask for `userId` in `spaceId` (and optionally `roomId`)
      * using the 6-stage Equinox permission cascade:
      * 1. Space owner receives {@link ALL_PERMISSIONS}.
@@ -208,8 +239,13 @@ class Client extends node_events_1.EventEmitter {
         }
         if (roomId) {
             const room = this.rooms.get(roomId);
-            const roleOverrides = room?.permission_overrides ?? [];
-            const userOverrides = room?.user_overrides ?? [];
+            const effectiveRoom = room?.type === util_1.RoomType.Thread &&
+                room.parent_id &&
+                !(room.permission_overrides?.length || room.user_overrides?.length)
+                ? this.rooms.get(room.parent_id) ?? room
+                : room;
+            const roleOverrides = effectiveRoom?.permission_overrides ?? [];
+            const userOverrides = effectiveRoom?.user_overrides ?? [];
             if (roleOverrides.length > 0) {
                 if (space.everyone_role_id) {
                     const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
@@ -244,6 +280,13 @@ class Client extends node_events_1.EventEmitter {
                     mask &= ~userOv.deny;
                     mask |= userOv.allow;
                 }
+            }
+            if (room?.type === util_1.RoomType.Thread &&
+                room.thread?.private &&
+                (mask & util_1.Permission.ManageThreads) === 0 &&
+                room.thread.owner_id !== userId &&
+                !(userId === this.user?.id && room.thread.joined)) {
+                return 0;
             }
         }
         if ((mask & util_1.Permission.ViewRoom) === 0) {
@@ -316,6 +359,23 @@ class Client extends node_events_1.EventEmitter {
                     this.spaces.set(s.id, { ...prev, ...s });
                     if (name === 'spaceCreate' && (this.opts.autoSubscribeSpaces ?? true)) {
                         this.gateway.subscribe(s.id);
+                        if (s.rooms?.length) {
+                            for (const r of s.rooms) {
+                                this._cacheRoom(r, s.id);
+                                this.gateway.subscribe(r.id);
+                            }
+                        }
+                        else {
+                            void this.rest
+                                .getSpaceRooms(s.id)
+                                .then((rooms) => {
+                                for (const r of rooms ?? []) {
+                                    this._cacheRoom(r, s.id);
+                                    this.gateway.subscribe(r.id);
+                                }
+                            })
+                                .catch(() => { });
+                        }
                     }
                 }
             }
@@ -335,19 +395,26 @@ class Client extends node_events_1.EventEmitter {
             else if (name === 'roomCreate' ||
                 name === 'roomUpdate' ||
                 name === 'spaceRoomCreate' ||
-                name === 'spaceRoomUpdate') {
+                name === 'spaceRoomUpdate' ||
+                name === 'threadCreate' ||
+                name === 'threadUpdate') {
                 const r = d;
                 if (r?.id) {
                     const prev = this.rooms.get(r.id);
                     const merged = { ...prev, ...r };
                     this._cacheRoom(merged, envelopeSpaceId);
-                    if ((name === 'roomCreate' || name === 'spaceRoomCreate') &&
+                    if ((name === 'roomCreate' ||
+                        name === 'spaceRoomCreate' ||
+                        name === 'threadCreate') &&
                         (this.opts.autoSubscribeSpaces ?? true)) {
                         this.gateway.subscribe(merged.id);
                     }
                 }
             }
-            else if (name === 'roomDelete' || name === 'spaceRoomDelete') {
+            else if (name === 'roomDelete' ||
+                name === 'spaceRoomDelete' ||
+                name === 'threadDelete' ||
+                name === 'roomLeave') {
                 const id = (d?.id ?? d?.room_id);
                 const sid = (d?.space_id ?? envelopeSpaceId);
                 if (id) {
@@ -357,6 +424,91 @@ class Client extends node_events_1.EventEmitter {
                     if (targetSid) {
                         this.spaceRooms.get(targetSid)?.delete(id);
                     }
+                }
+            }
+            else if (name === 'spaceRoleCreate' || name === 'spaceRoleUpdate') {
+                const role = d;
+                const sid = role?.space_id ?? envelopeSpaceId;
+                if (sid && role?.id) {
+                    const space = this.spaces.get(sid);
+                    if (space) {
+                        const roles = [...(space.roles ?? [])];
+                        const idx = roles.findIndex((r) => r.id === role.id);
+                        if (idx >= 0)
+                            roles[idx] = { ...roles[idx], ...role };
+                        else
+                            roles.push(role);
+                        space.roles = roles;
+                    }
+                }
+            }
+            else if (name === 'spaceRoleDelete') {
+                const roleId = d?.role_id;
+                const sid = (d?.space_id ?? envelopeSpaceId);
+                if (sid && roleId) {
+                    const space = this.spaces.get(sid);
+                    if (space?.roles) {
+                        space.roles = space.roles.filter((r) => r.id !== roleId);
+                    }
+                }
+            }
+            else if (name === 'spaceRoomOverrideUpdate') {
+                const ov = d;
+                const rid = ov?.room_id ?? (isNested ? rawD?.room_id : frame.room_id);
+                if (rid && ov?.role_id) {
+                    const room = this.rooms.get(rid);
+                    if (room) {
+                        const list = [...(room.permission_overrides ?? [])];
+                        const idx = list.findIndex((o) => o.role_id === ov.role_id);
+                        if (idx >= 0)
+                            list[idx] = { ...list[idx], ...ov };
+                        else
+                            list.push(ov);
+                        room.permission_overrides = list;
+                    }
+                }
+            }
+            else if (name === 'spaceRoomOverrideDelete') {
+                const roleId = d?.role_id;
+                const rid = (d?.room_id ?? (isNested ? rawD?.room_id : frame.room_id));
+                if (rid && roleId) {
+                    const room = this.rooms.get(rid);
+                    if (room?.permission_overrides) {
+                        room.permission_overrides = room.permission_overrides.filter((o) => o.role_id !== roleId);
+                    }
+                }
+            }
+            else if (name === 'spaceRoomUserOverrideUpdate') {
+                const ov = d;
+                const rid = ov?.room_id ?? (isNested ? rawD?.room_id : frame.room_id);
+                if (rid && ov?.user_id) {
+                    const room = this.rooms.get(rid);
+                    if (room) {
+                        const list = [...(room.user_overrides ?? [])];
+                        const idx = list.findIndex((o) => o.user_id === ov.user_id);
+                        if (idx >= 0)
+                            list[idx] = { ...list[idx], ...ov };
+                        else
+                            list.push(ov);
+                        room.user_overrides = list;
+                    }
+                }
+            }
+            else if (name === 'spaceRoomUserOverrideDelete') {
+                const userId = d?.user_id;
+                const rid = (d?.room_id ?? (isNested ? rawD?.room_id : frame.room_id));
+                if (rid && userId) {
+                    const room = this.rooms.get(rid);
+                    if (room?.user_overrides) {
+                        room.user_overrides = room.user_overrides.filter((o) => o.user_id !== userId);
+                    }
+                }
+            }
+            else if (name === 'userUpdate') {
+                const u = d;
+                const uid = u?.user_id ?? u?.id;
+                if (uid && this.user && uid === this.user.id) {
+                    this.user = { ...this.user, ...u };
                 }
             }
             else if (name === 'spaceMemberAdd' || name === 'spaceMemberUpdate') {
@@ -398,6 +550,9 @@ class Client extends node_events_1.EventEmitter {
                 }
             }
             this.emit(name, d, frame);
+            if (name === 'messageCreate' && (0, util_1.isEncryptedMessage)(d)) {
+                this.emit('encryptedMessageCreate', d);
+            }
             if (name === 'spaceRoomCreate')
                 this.emit('roomCreate', d);
             else if (name === 'spaceRoomUpdate')

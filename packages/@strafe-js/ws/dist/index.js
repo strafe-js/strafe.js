@@ -224,6 +224,9 @@ class Gateway extends node_events_1.EventEmitter {
                 }
                 this.emit('raw', frame);
                 if (eventType) {
+                    if (eventType === 'SESSION_REVOKED') {
+                        this.shouldReconnect = false;
+                    }
                     this.emit(this._eventName(eventType), innerPayload, frame);
                 }
                 break;
