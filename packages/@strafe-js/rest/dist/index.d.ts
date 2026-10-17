@@ -12,7 +12,7 @@ export interface RESTOptions {
     authScheme?: 'Bot' | 'Bearer';
     /** Maximum number of automatic retry attempts on HTTP `429 Too Many Requests` responses. Defaults to `3`. */
     retries?: number;
-    /** Custom `User-Agent` header sent with every HTTP request. Defaults to `'strafebot-js/1.1'`. */
+    /** Custom `User-Agent` header sent with every HTTP request. Defaults to `'strafebot-js/1.2'`. */
     userAgent?: string;
 }
 /**

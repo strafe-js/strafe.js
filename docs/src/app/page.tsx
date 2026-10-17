@@ -55,49 +55,49 @@ const DOC_SECTIONS = [
 const PACKAGES = [
   {
     name: '@strafe-js/strafebot',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'High-level Bot Client, state caches (spaces, rooms, spaceRooms, members), Equinox permission engine, and typed Command Framework.',
     href: '/docs/strafebot/client',
   },
   {
     name: '@strafe-js/rest',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'Fetch-based HTTP REST client with automatic 429 Retry-After backoff, threads, reactions, pins, search, and multipart uploads.',
     href: '/docs/rest/overview',
   },
   {
     name: '@strafe-js/ws',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'Stargate WebSocket Gateway client supporting nested & flat op:3 event envelopes, heartbeats, and jittered reconnects.',
     href: '/docs/ws/overview',
   },
   {
     name: '@strafe-js/builders',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'Fluent MessageBuilder and permission bitmask factories for clean payload construction.',
     href: '/docs/packages/builders',
   },
   {
     name: '@strafe-js/formatters',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'Markdown, mention (<@id>, <#id>, <@&id>), custom emoji (<:name:id>, custom:id), and codeblock formatters.',
     href: '/docs/packages/formatters',
   },
   {
     name: '@strafe-js/collection',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'Extended Map<K, V> data structure with functional query helpers (find, filter, map, first).',
     href: '/docs/packages/collection',
   },
   {
     name: '@strafe-js/util',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: '28-bit Strafe Permission flags, BitField class, GatewayOp & RoomType constants, error classes, and TypeScript interfaces.',
     href: '/docs/packages/util',
   },
   {
     name: 'create-strafebot',
-    version: 'v1.1.0',
+    version: 'v1.2.0',
     desc: 'Interactive CLI tool to scaffold new TypeScript bots and generate command modules.',
     href: '/docs/cli/overview',
   },
@@ -152,7 +152,7 @@ export default function HomePage() {
 
           <div className="flex items-center gap-2.5 text-xs">
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] bg-[#509b6b]/15 text-[#6ab585] border border-[#509b6b]/30">
-              v1.1.0
+              v1.2.0
             </span>
             <a
               href="https://app.strafe.chat/docs/"
@@ -180,7 +180,7 @@ export default function HomePage() {
         {/* Hero Box */}
         <div className="strafe-hero mb-9">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-[#509b6b]/15 text-[#6ab585] border border-[#509b6b]/30 mb-3">
-            @strafe-js/strafebot • v1.1.0
+            @strafe-js/strafebot • v1.2.0
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-[#e6e8ec] leading-tight">
             Strafe.js Developer Documentation
@@ -247,7 +247,7 @@ export default function HomePage() {
         </h2>
         <div className="rounded-[10px] border border-[#2a2f39] bg-[#0b0d11] overflow-hidden mb-10">
           <div className="px-4 py-2.5 bg-[#171a20] border-b border-[#2a2f39] flex items-center justify-between text-xs text-[#7f8797] font-mono">
-            <span>src/index.ts — @strafe-js/strafebot v1.1.0</span>
+            <span>src/index.ts - @strafe-js/strafebot v1.2.0</span>
             <span className="text-[#6ab585]">TypeScript ESM</span>
           </div>
           <pre className="p-4 text-[13px] leading-[1.55] font-mono text-[#e6e8ec] overflow-x-auto bg-[#0b0d11]">
@@ -288,7 +288,7 @@ await client.login(process.env.BOT_TOKEN!);`}</code>
 
         {/* Monorepo Packages Table / Cards */}
         <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
-          Monorepo Packages (v1.1.0)
+          Monorepo Packages (v1.2.0)
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-10">
           {PACKAGES.map((pkg) => (
@@ -342,7 +342,7 @@ await client.login(process.env.BOT_TOKEN!);`}</code>
 
       {/* Footer */}
       <footer className="py-6 border-t border-[#2a2f39] text-center text-xs text-[#7f8797]">
-        Strafe.js v1.1.0 • Apache-2.0 License • Built for{' '}
+        Strafe.js v1.2.0 • Apache-2.0 License • Built for{' '}
         <a
           href="https://app.strafe.chat/docs/"
           target="_blank"

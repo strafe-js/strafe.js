@@ -1,6 +1,6 @@
 {
   "name": "@strafe-js/builders",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Payload builders for Strafe API calls",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,12 +20,12 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/strafe-js/strafe.js.git",
+    "url": "git+https://github.com/strafe-js/strafe.js.git",
     "directory": "packages/@strafe-js/builders"
   },
   "author": "strafe-js",
   "dependencies": {
-    "@strafe-js/util": "^1.1.0"
+    "@strafe-js/util": "^1.2.0"
   },
   "engines": {
     "node": ">=18"
