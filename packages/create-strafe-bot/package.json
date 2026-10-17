@@ -4,13 +4,13 @@
   "description": "CLI to scaffold a Strafe bot project and commands",
   "type": "module",
   "bin": {
-    "create-strafebot": "./src/cli.js",
-    "create-strafe-bot": "./src/cli.js"
+    "create-strafebot": "src/cli.js",
+    "create-strafe-bot": "src/cli.js"
   },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/strafe-js/strafe.js.git",
+    "url": "git+https://github.com/strafe-js/strafe.js.git",
     "directory": "packages/create-strafe-bot"
   },
   "author": "strafe-js",

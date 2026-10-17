@@ -20,7 +20,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/strafe-js/strafe.js.git",
+    "url": "git+https://github.com/strafe-js/strafe.js.git",
     "directory": "packages/@strafe-js/ws"
   },
   "author": "strafe-js",
