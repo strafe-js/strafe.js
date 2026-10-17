@@ -29,10 +29,8 @@ export class MessageBuilder {
   private data: CreateMessageBody = {};
 
   /**
-   * Sets the plaintext content of the message.
+   * Sets the `plaintext` field on the underlying {@link CreateMessageBody}.
    *
-   * @param text - Message text content.
-   * @returns This `MessageBuilder` instance for chaining.
    * @example
    * ```ts
    * const body = message().setContent('Hello world!').toJSON();
@@ -44,10 +42,8 @@ export class MessageBuilder {
   }
 
   /**
-   * Sets `reply_to_id` so the message replies directly to an existing message in the room.
+   * Sets `reply_to_id` so the message references an existing message in the same room.
    *
-   * @param messageId - Snowflake ID of the message being replied to.
-   * @returns This `MessageBuilder` instance for chaining.
    * @example
    * ```ts
    * const body = message().setContent('Replying!').setReply(msg.id).toJSON();
@@ -59,10 +55,8 @@ export class MessageBuilder {
   }
 
   /**
-   * Explicitly specifies which User IDs should be notified by this message.
+   * Sets the explicit `mentions` array of User {@link Snowflake} IDs to notify.
    *
-   * @param userIds - Array of user Snowflake IDs.
-   * @returns This `MessageBuilder` instance for chaining.
    * @example
    * ```ts
    * const body = message().setContent('Hey <@123>!').setMentions(['123']).toJSON();
@@ -74,10 +68,8 @@ export class MessageBuilder {
   }
 
   /**
-   * Explicitly specifies which Role IDs should be notified by this message.
+   * Sets the explicit `mention_roles` array of Role {@link Snowflake} IDs to notify.
    *
-   * @param roleIds - Array of role Snowflake IDs.
-   * @returns This `MessageBuilder` instance for chaining.
    * @example
    * ```ts
    * const body = message().setContent('Alert <@&456>!').setRoleMentions(['456']).toJSON();
@@ -89,10 +81,8 @@ export class MessageBuilder {
   }
 
   /**
-   * Enables or disables `@everyone` notifications in the message payload.
+   * Sets `mention_everyone` (defaults to `true`). Requires `Permission.MentionEveryone` and `Permission.SendMessages`.
    *
-   * @param value - Whether `@everyone` mention notification is enabled (defaults to `true`).
-   * @returns This `MessageBuilder` instance for chaining.
    * @example
    * ```ts
    * const body = message().setContent('@everyone update').mentionEveryone(true).toJSON();
@@ -104,10 +94,8 @@ export class MessageBuilder {
   }
 
   /**
-   * Attaches previously uploaded attachment IDs (from `rest.uploadAttachment`) to the message.
+   * Sets the `attachments` array of uploaded Attachment {@link Snowflake} IDs returned by `rest.uploadAttachment()`.
    *
-   * @param ids - Array of uploaded Attachment Snowflake IDs.
-   * @returns This `MessageBuilder` instance for chaining.
    * @example
    * ```ts
    * const uploaded = await client.rest.uploadAttachment(roomId, buf, 'report.txt');
@@ -120,9 +108,8 @@ export class MessageBuilder {
   }
 
   /**
-   * Returns a shallow copy of the constructed {@link CreateMessageBody} payload ready for REST calls.
+   * Returns a shallow clone of the built {@link CreateMessageBody} payload.
    *
-   * @returns Constructed `CreateMessageBody` object.
    * @example
    * ```ts
    * const payload = message().setContent('Ready').toJSON();
@@ -134,9 +121,8 @@ export class MessageBuilder {
 }
 
 /**
- * Factory helper that creates a new fluent {@link MessageBuilder} instance.
+ * Creates a new {@link MessageBuilder} instance.
  *
- * @returns A new `MessageBuilder`.
  * @example
  * ```ts
  * const payload = message().setContent('Hello Strafe!').toJSON();
@@ -147,10 +133,8 @@ export function message(): MessageBuilder {
 }
 
 /**
- * Resolves an array of {@link PermissionName} strings into a numeric permission bitmask.
+ * Combines an array of {@link PermissionName} strings into a single numeric bitmask via {@link resolvePermission}.
  *
- * @param list - Array of permission names to combine.
- * @returns Numeric bitwise OR permission mask.
  * @example
  * ```ts
  * const mask = permissions(['ViewRoom', 'SendMessages', 'AttachFiles']);
@@ -164,8 +148,6 @@ export function permissions(list: PermissionName[]): number {
  * Variadic helper that resolves any combination of {@link PermissionName} strings,
  * numeric masks, or nested arrays into a single numeric permission bitmask.
  *
- * @param bits - Permission names, numbers, or arrays to combine.
- * @returns Combined numeric permission bitmask.
  * @example
  * ```ts
  * const mask = permissionMask('ViewRoom', 'SendMessages', ['AttachFiles', 'AddReactions']);

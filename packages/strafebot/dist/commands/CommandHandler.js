@@ -5,47 +5,72 @@ const util_1 = require("@strafe-js/util");
 const Command_js_1 = require("./Command.js");
 const Context_js_1 = require("./Context.js");
 const CommandArgument_js_1 = require("./CommandArgument.js");
+/**
+ * Registry and dispatcher for prefix commands on a {@link Client}.
+ * Evaluates longest-prefix matching, quote-aware tokenization, `guildOnly`/`dmOnly` guards,
+ * owner guards, caller and bot Equinox permissions, per-user cooldowns, and schema argument validation.
+ */
 class CommandHandler {
+    /** Parent {@link Client} instance. */
     client;
+    /** Registered commands keyed by primary lowercase command name. */
     commands = new Map();
+    /** Alias lookup table mapping `alias -> primaryCommandName`. */
     aliases = new Map();
+    /** Active cooldown expiration timestamps (`Date.now() + cooldown`) keyed by `${commandName}:${userId}`. */
     cooldowns = new Map();
+    /** Set of bot owner user Snowflake IDs permitted to run `botOwnerOnly` commands. */
     owners;
+    /** Active command prefixes sorted from longest to shortest so multi-character prefixes match before shorter prefixes. */
     prefixes;
+    /** Whether messages from bot accounts (`msg.bot === true`) are ignored. */
     ignoreBots;
+    /** Whether messages from `client.user.id` are ignored. */
     ignoreSelf;
     _bound = false;
+    /**
+     * Creates a new {@link CommandHandler} bound to `client`.
+     */
     constructor(client, opts = {}) {
         this.client = client;
         this.prefixes = (Array.isArray(opts.prefix) ? opts.prefix : [opts.prefix ?? '!'])
             .map((p) => p ?? '')
-            .sort((a, b) => b.length - a.length); // longest prefix first
+            .sort((a, b) => b.length - a.length);
         this.owners = new Set(opts.owners ?? []);
         this.ignoreBots = opts.ignoreBots !== false;
         this.ignoreSelf = opts.ignoreSelf !== false;
     }
+    /**
+     * Replaces the active prefix list and re-sorts prefixes from longest to shortest.
+     */
     setPrefix(prefix) {
         this.prefixes = (Array.isArray(prefix) ? prefix : [prefix])
             .map((p) => p ?? '')
             .sort((a, b) => b.length - a.length);
         return this;
     }
+    /**
+     * Replaces the set of bot owner Snowflake IDs allowed to run `botOwnerOnly` commands.
+     */
     setOwners(ids) {
         this.owners.clear();
         for (const id of ids)
             this.owners.add(id);
         return this;
     }
+    /**
+     * Registers a {@link Command} or {@link CommandOptions} object and indexes its aliases.
+     *
+     * @throws {Error} When the command name or any alias collides with an already registered command or alias.
+     */
     register(cmd) {
         const command = cmd instanceof Command_js_1.Command ? cmd : new Command_js_1.Command(cmd);
-        // Check duplicate main name or collision with alias
         if (this.commands.has(command.name)) {
             throw new Error(`Duplicate command name: ${command.name}`);
         }
         if (this.aliases.has(command.name)) {
             throw new Error(`Command name "${command.name}" conflicts with an existing alias`);
         }
-        // Check aliases
         for (const alias of command.aliases) {
             if (this.commands.has(alias)) {
                 throw new Error(`Alias "${alias}" conflicts with an existing command name`);
@@ -60,11 +85,18 @@ class CommandHandler {
         }
         return this;
     }
+    /**
+     * Registers an array of commands sequentially via {@link CommandHandler.register}.
+     */
     registerAll(list) {
         for (const c of list)
             this.register(c);
         return this;
     }
+    /**
+     * Resolves a registered {@link Command} by its primary name or alias (case-insensitive),
+     * or returns `null` if not found.
+     */
     get(name) {
         const key = name.toLowerCase();
         const realName = this.commands.has(key) ? key : this.aliases.get(key);
@@ -72,6 +104,9 @@ class CommandHandler {
             return null;
         return this.commands.get(realName) ?? null;
     }
+    /**
+     * Subscribes this handler to `client.on('messageCreate')`. Idempotent if called multiple times.
+     */
     attach() {
         if (this._bound)
             return this;
@@ -101,7 +136,6 @@ class CommandHandler {
         const without = content.slice(usedPrefix.length).trim();
         if (!without)
             return;
-        // Tokenize text taking into account quotes and escape characters
         const rawTokens = (0, CommandArgument_js_1.tokenizeArguments)(without);
         const commandName = (rawTokens.shift() ?? '').toLowerCase();
         if (!commandName)
@@ -132,7 +166,6 @@ class CommandHandler {
                 return;
             }
         }
-        // 1. Calculate caller/member permissions
         let memberPermissions = 0;
         if (command.permissions.length || command.permissionMask) {
             memberPermissions = this.client.resolveMemberPermissions(msg.sender_id, spaceId, msg.room_id);
@@ -142,7 +175,6 @@ class CommandHandler {
                 return;
             }
         }
-        // 2. Calculate bot permissions
         let botPermissions = 0;
         const botUserId = this.client.user?.id;
         if (command.botPermissions.length || command.botPermissionMask) {
@@ -151,10 +183,8 @@ class CommandHandler {
                 return;
             }
             if (spaceId) {
-                // Check cache for bot member
                 let botMember = this.client.members.get(spaceId)?.get(botUserId);
                 if (!botMember) {
-                    // Attempt single fetch via REST
                     botMember = (await this.client.fetchMember(spaceId, botUserId)) ?? undefined;
                 }
                 if (!botMember) {
@@ -164,7 +194,6 @@ class CommandHandler {
                 botPermissions = this.client.resolveMemberPermissions(botUserId, spaceId, msg.room_id);
             }
             else {
-                // DMs - bot has full permissions
                 botPermissions = (0, util_1.resolvePermission)(command.botPermissions) | command.botPermissionMask;
             }
             const needBot = command.botPermissionMask || (0, util_1.resolvePermission)(command.botPermissions);
@@ -173,7 +202,6 @@ class CommandHandler {
                 return;
             }
         }
-        // 3. Cooldown check & cleanup
         if (command.cooldown > 0) {
             const key = `${command.name}:${msg.sender_id}`;
             const now = Date.now();
@@ -183,7 +211,6 @@ class CommandHandler {
                 await this._safeReply(msg, `Please wait ${left}s before reusing the \`${command.name}\` command.`);
                 return;
             }
-            // Cleanup old expired cooldowns periodically to prevent memory leaks
             if (this.cooldowns.size > 1000) {
                 for (const [k, exp] of this.cooldowns.entries()) {
                     if (now >= exp)
@@ -192,7 +219,6 @@ class CommandHandler {
             }
             this.cooldowns.set(key, now + command.cooldown);
         }
-        // 4. Parse arguments (New schema or positional fallback)
         let parsedArgs;
         if (command.argumentsSchema) {
             try {
@@ -208,7 +234,6 @@ class CommandHandler {
             }
         }
         else {
-            // Legacy positional arguments check
             if (rawTokens.length < command.minArgs) {
                 await this._safeReply(msg, `Usage: ${usedPrefix}${command.name} ${command.usage}`.trim());
                 return;

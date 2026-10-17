@@ -1,10 +1,8 @@
 import { Snowflake } from '@strafe-js/util';
 
 /**
- * Formats a User {@link Snowflake} ID into a Strafe user mention string (`<@id>`).
+ * Formats a User {@link Snowflake} ID into an inline Strafe user mention token (`<@id>`).
  *
- * @param id - Target User Snowflake ID.
- * @returns Formatted user mention string (`<@id>`).
  * @example
  * ```ts
  * userMention('123456789012345678'); // "<@123456789012345678>"
@@ -13,10 +11,8 @@ import { Snowflake } from '@strafe-js/util';
 export const userMention = (id: Snowflake): string => `<@${id}>`;
 
 /**
- * Formats a Role {@link Snowflake} ID into a Strafe role mention string (`<@&id>`).
+ * Formats a Role {@link Snowflake} ID into an inline Strafe role mention token (`<@&id>`).
  *
- * @param id - Target Role Snowflake ID.
- * @returns Formatted role mention string (`<@&id>`).
  * @example
  * ```ts
  * roleMention('234567890123456789'); // "<@&234567890123456789>"
@@ -25,10 +21,8 @@ export const userMention = (id: Snowflake): string => `<@${id}>`;
 export const roleMention = (id: Snowflake): string => `<@&${id}>`;
 
 /**
- * Formats a Room {@link Snowflake} ID into a Strafe room mention string (`<#id>`).
+ * Formats a Room {@link Snowflake} ID into an inline Strafe room link token (`<#id>`).
  *
- * @param id - Target Room Snowflake ID.
- * @returns Formatted room mention string (`<#id>`).
  * @example
  * ```ts
  * roomMention('345678901234567890'); // "<#345678901234567890>"
@@ -37,12 +31,9 @@ export const roleMention = (id: Snowflake): string => `<@&${id}>`;
 export const roomMention = (id: Snowflake): string => `<#${id}>`;
 
 /**
- * Formats a static (`<:name:id>`) or animated (`<a:name:id>`) custom Strafe emoji tag for message content.
+ * Formats a custom Strafe emoji tag (`<:name:id>` when static, or `<a:name:id>` when `animated` is `true`)
+ * for embedding inside message content.
  *
- * @param name - Emoji name.
- * @param id - Emoji Snowflake ID.
- * @param animated - Whether the emoji is animated (defaults to `false`).
- * @returns Formatted custom emoji tag string.
  * @example
  * ```ts
  * customEmoji('wave', '456789012345678901');       // "<:wave:456789012345678901>"
@@ -56,10 +47,9 @@ export const customEmoji = (
 ): string => `<${animated ? 'a' : ''}:${name}:${id}>`;
 
 /**
- * Formats a custom emoji Snowflake ID for use with reaction endpoints (`custom:<id>`).
+ * Formats a custom emoji {@link Snowflake} ID into the `custom:<id>` identifier expected by
+ * `rest.addReaction()`, `rest.removeReaction()`, and `rest.getReactions()`.
  *
- * @param id - Custom emoji Snowflake ID.
- * @returns Reaction emoji identifier (`custom:<id>`).
  * @example
  * ```ts
  * await client.rest.addReaction(roomId, messageId, customReactionEmoji('456789012345678901'));
@@ -68,11 +58,8 @@ export const customEmoji = (
 export const customReactionEmoji = (id: Snowflake): string => `custom:${id}`;
 
 /**
- * Escapes special Markdown formatting characters (`*`, `_`, `` ` ``, `~`, `|`, `\`) in user-supplied text
- * to prevent unintended formatting.
+ * Backslash-escapes Markdown control characters (`*`, `_`, `` ` ``, `~`, `|`, `\`) in untrusted text.
  *
- * @param text - Raw input string to escape.
- * @returns Markdown-escaped string.
  * @example
  * ```ts
  * escapeMarkdown('**bold_and_italic**'); // "\\*\\*bold\\_and\\_italic\\*\\*"

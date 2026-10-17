@@ -1,5 +1,5 @@
 /**
- * A 64-bit unsigned integer ID serialized as a 16–20 digit numeric string used across the Strafe API.
+ * A 64-bit unsigned integer ID serialized as a 16 to 20 digit numeric string across the Strafe API.
  *
  * @example
  * ```ts
@@ -21,71 +21,71 @@ export type Snowflake = string;
  */
 export const Permission = {
   /** `(1 << 0 = 1)` Allows viewing a room. Without `ViewRoom`, all other room permissions are implicitly revoked. */
-  ViewRoom: 1 << 0,               // 1
+  ViewRoom: 1 << 0,
   /** `(1 << 1 = 2)` Allows sending text messages in a room. Required for `AttachFiles` and `MentionEveryone`. */
-  SendMessages: 1 << 1,           // 2
+  SendMessages: 1 << 1,
   /** `(1 << 2 = 4)` Allows reading historical messages in a room. */
-  ReadMessageHistory: 1 << 2,     // 4
+  ReadMessageHistory: 1 << 2,
   /** `(1 << 3 = 8)` Allows adding new emoji reactions to messages. */
-  AddReactions: 1 << 3,           // 8
+  AddReactions: 1 << 3,
   /** `(1 << 4 = 16)` Allows using custom emojis from external spaces. */
-  UseExternalEmojis: 1 << 4,      // 16
+  UseExternalEmojis: 1 << 4,
   /** `(1 << 5 = 32)` Allows mentioning `@everyone` to notify all members in a room. Depends on `SendMessages`. */
-  MentionEveryone: 1 << 5,        // 32
+  MentionEveryone: 1 << 5,
   /** `(1 << 6 = 64)` Allows deleting other members' messages and pinning/unpinning messages. */
-  ManageMessages: 1 << 6,         // 64
+  ManageMessages: 1 << 6,
   /** `(1 << 7 = 128)` Allows creating, editing, deleting, and assigning roles below the member's highest role. */
-  ManageRoles: 1 << 7,            // 128
+  ManageRoles: 1 << 7,
   /** `(1 << 8 = 256)` Allows creating, editing, and deleting rooms and room permission overrides. */
-  ManageRooms: 1 << 8,            // 256
+  ManageRooms: 1 << 8,
   /** `(1 << 9 = 512)` Allows kicking members from the space. */
-  KickMembers: 1 << 9,            // 512
+  KickMembers: 1 << 9,
   /** `(1 << 10 = 1024)` Allows permanently banning and unbanning members from the space. */
-  BanMembers: 1 << 10,           // 1024
+  BanMembers: 1 << 10,
   /** `(1 << 11 = 2048)` Grants all permissions (`ALL_PERMISSIONS`) and bypasses all room-level permission overrides. */
-  Administrator: 1 << 11,         // 2048
+  Administrator: 1 << 11,
   /** `(1 << 12 = 4096)` Allows editing space settings such as name, description, icon, and system rooms. */
-  ManageSpace: 1 << 12,           // 4096
+  ManageSpace: 1 << 12,
   /** `(1 << 13 = 8192)` Allows creating invite links to the space. */
-  CreateInvite: 1 << 13,          // 8192
+  CreateInvite: 1 << 13,
   /** `(1 << 13 = 8192)` Alias for {@link Permission.CreateInvite}. */
-  CreateInvites: 1 << 13,         // Alias for CreateInvite (8192)
+  CreateInvites: 1 << 13,
   /** `(1 << 14 = 16384)` Allows uploading, renaming, and deleting custom space emojis. */
-  ManageEmojis: 1 << 14,          // 16384
+  ManageEmojis: 1 << 14,
   /** `(1 << 15 = 32768)` Allows connecting to voice rooms. */
-  Connect: 1 << 15,               // 32768
+  Connect: 1 << 15,
   /** `(1 << 16 = 65536)` Allows speaking in voice rooms. */
-  Speak: 1 << 16,                 // 65536
+  Speak: 1 << 16,
   /** `(1 << 17 = 131072)` Allows streaming video or sharing screens in voice rooms. */
-  Video: 1 << 17,                 // 131072
+  Video: 1 << 17,
   /** `(1 << 18 = 262144)` Allows server-muting members in voice rooms. */
-  MuteMembers: 1 << 18,           // 262144
+  MuteMembers: 1 << 18,
   /** `(1 << 19 = 524288)` Allows server-deafening members in voice rooms. */
-  DeafenMembers: 1 << 19,         // 524288
+  DeafenMembers: 1 << 19,
   /** `(1 << 20 = 1048576)` Allows moving members between voice rooms. */
-  MoveMembers: 1 << 20,           // 1048576
+  MoveMembers: 1 << 20,
   /** `(1 << 21 = 2097152)` Allows using voice activity detection instead of push-to-talk. */
-  UseVoiceActivity: 1 << 21,      // 2097152
+  UseVoiceActivity: 1 << 21,
   /** `(1 << 22 = 4194304)` Allows speaking with priority audio attenuation in voice rooms. */
-  PrioritySpeaker: 1 << 22,       // 4194304
+  PrioritySpeaker: 1 << 22,
   /** `(1 << 23 = 8388608)` Allows uploading files and media attachments in messages. Depends on `SendMessages`. */
-  AttachFiles: 1 << 23,           // 8388608
+  AttachFiles: 1 << 23,
   /** `(1 << 24 = 16777216)` Allows creating public discussion threads in text rooms. */
-  CreatePublicThreads: 1 << 24,   // 16777216
+  CreatePublicThreads: 1 << 24,
   /** `(1 << 25 = 33554432)` Allows creating private invite-only threads in text rooms. */
-  CreatePrivateThreads: 1 << 25,  // 33554432
+  CreatePrivateThreads: 1 << 25,
   /** `(1 << 26 = 67108864)` Allows sending messages inside active threads. */
-  SendMessagesInThreads: 1 << 26, // 67108864
+  SendMessagesInThreads: 1 << 26,
   /** `(1 << 27 = 134217728)` Allows archiving, unarchiving, locking, and deleting threads. */
-  ManageThreads: 1 << 27,         // 134217728
+  ManageThreads: 1 << 27,
   /** Legacy alias for `UseVoiceActivity` (`1 << 21`). */
-  ChangeNickname: 1 << 21,        // Legacy alias
+  ChangeNickname: 1 << 21,
   /** Legacy alias for `ManageRoles` (`1 << 7`). */
-  ManageNicknames: 1 << 7,        // Legacy alias
+  ManageNicknames: 1 << 7,
   /** Legacy alias for `Speak` (`1 << 16`). */
-  SendVoiceMessages: 1 << 16,     // Legacy alias
+  SendVoiceMessages: 1 << 16,
   /** Legacy alias for `UseExternalEmojis` (`1 << 4`). */
-  EmbedLinks: 1 << 4,             // Legacy alias
+  EmbedLinks: 1 << 4,
 } as const;
 
 /**
@@ -209,12 +209,7 @@ export class StrafeError extends Error {
   body?: unknown;
 
   /**
-   * Creates a new `StrafeError`.
-   *
-   * @param message - Human-readable error description.
-   * @param status - HTTP status code.
-   * @param code - Optional API error code string.
-   * @param body - Optional raw response body.
+   * Initializes `this.name = 'StrafeError'` and attaches the HTTP status, API error code, and parsed response body.
    */
   constructor(message: string, status: number, code?: string, body?: unknown) {
     super(message);
@@ -245,10 +240,7 @@ export class RateLimitError extends StrafeError {
   retryAfter: number;
 
   /**
-   * Creates a new `RateLimitError`.
-   *
-   * @param retryAfter - Seconds to wait before retrying, parsed from `retry_after` or `Retry-After`.
-   * @param body - Optional raw response body.
+   * Initializes a `429` `StrafeError` with `code: 'rate_limited'` and the retry cooldown in seconds.
    */
   constructor(retryAfter: number, body?: unknown) {
     super(`Rate limited; retry after ${retryAfter}s`, 429, 'rate_limited', body);
@@ -305,30 +297,26 @@ const CANONICAL_PERMISSIONS: [PermissionName, number][] = [
  * ```
  */
 export class BitField {
-  /** Underlying numeric permission bitmask. */
+  /** Underlying 32-bit numeric permission bitmask. */
   bits: number;
 
   /**
-   * Creates a new `BitField` instance from a permission name, numeric bitmask, or array of resolvables.
-   *
-   * @param bits - Initial permissions to set (defaults to `0`).
+   * Resolves `bits` via {@link resolvePermission} into a numeric mask (defaults to `0`).
    */
   constructor(bits: PermissionResolvable = 0) {
     this.bits = resolvePermission(bits);
   }
 
   /**
-   * Numeric value of the underlying permission bitmask.
+   * Read-only accessor returning `this.bits`.
    */
   get bitfield(): number {
     return this.bits;
   }
 
   /**
-   * Checks whether all specified permission bits are set in this bitfield.
+   * Checks whether every permission bit in `perm` is set (`(this.bits & mask) === mask`).
    *
-   * @param perm - Permission name, numeric bitmask, or array of permissions to test.
-   * @returns `true` if every bit in `perm` is present.
    * @example
    * ```ts
    * perms.has('ManageMessages');
@@ -341,10 +329,8 @@ export class BitField {
   }
 
   /**
-   * Mutates this `BitField` by setting (`|=`) all specified permissions.
+   * Mutates this `BitField` in place by bitwise-ORing (`|=`) all resolved permissions.
    *
-   * @param perms - Permissions to add.
-   * @returns This `BitField` instance for chaining.
    * @example
    * ```ts
    * perms.add('AddReactions', 'AttachFiles');
@@ -356,10 +342,8 @@ export class BitField {
   }
 
   /**
-   * Mutates this `BitField` by clearing (`&= ~`) all specified permissions.
+   * Mutates this `BitField` in place by clearing (`&= ~`) all resolved permissions.
    *
-   * @param perms - Permissions to remove.
-   * @returns This `BitField` instance for chaining.
    * @example
    * ```ts
    * perms.remove('AttachFiles');
@@ -371,9 +355,9 @@ export class BitField {
   }
 
   /**
-   * Converts all active bits in this `BitField` into an array of canonical {@link PermissionName} strings.
+   * Returns all active bits in this `BitField` as an array of canonical 28-bit {@link PermissionName} strings
+   * (excluding legacy alias keys).
    *
-   * @returns Array of active permission names.
    * @example
    * ```ts
    * const names = perms.toArray(); // ['ViewRoom', 'SendMessages']
@@ -388,14 +372,14 @@ export class BitField {
   }
 
   /**
-   * Serializes the bitfield to its numeric bitmask value for JSON encoding.
+   * Serializes the bitfield to its numeric bitmask value when passed to `JSON.stringify()`.
    */
   toJSON(): number {
     return this.bits;
   }
 
   /**
-   * Returns the primitive numeric bitmask value.
+   * Returns the numeric bitmask for primitive coercion.
    */
   valueOf(): number {
     return this.bits;
@@ -404,11 +388,9 @@ export class BitField {
 
 /**
  * Resolves a {@link PermissionName}, numeric bitmask, or nested array of {@link PermissionResolvable}
- * values into a single numeric bitmask.
+ * values into a single bitwise-OR numeric mask.
  *
- * @param input - Permission name, number, or array of resolvables.
- * @returns Resolved numeric permission bitmask.
- * @throws {Error} If an unknown permission name string is passed.
+ * @throws {Error} When an unrecognized permission name string is passed.
  * @example
  * ```ts
  * const mask = resolvePermission(['ViewRoom', 'SendMessages']); // 3
@@ -428,10 +410,8 @@ export function resolvePermission(input: PermissionResolvable): number {
 }
 
 /**
- * Type guard that checks whether an unknown value is a valid 16–20 digit numeric {@link Snowflake} ID string.
+ * Type guard that checks whether `id` is a string of 16 to 20 ASCII digits (`/^\d{16,20}$/`).
  *
- * @param id - Value to validate.
- * @returns `true` if `id` is a valid Snowflake string.
  * @example
  * ```ts
  * if (isSnowflake(input)) {
@@ -444,9 +424,8 @@ export function isSnowflake(id: unknown): id is Snowflake {
 }
 
 /**
- * Returns a Promise that resolves after the specified number of milliseconds.
+ * Resolves after `ms` milliseconds using `setTimeout`.
  *
- * @param ms - Duration to sleep in milliseconds.
  * @example
  * ```ts
  * await sleep(1000);
@@ -576,31 +555,31 @@ export interface Room {
   id: Snowflake;
   /** Parent Space ID (undefined for DM and Group DM rooms). */
   space_id?: Snowflake;
-  /** Parent section ID or parent text room ID (for threads). */
+  /** Parent section ID (`RoomType.Section`) or parent text room ID (for `RoomType.Thread`). */
   parent_id?: Snowflake;
-  /** Room name. */
+  /** Display name of the room (omitted on 1-on-1 `RoomType.PM` rooms). */
   name?: string;
-  /** Numeric room type ({@link RoomType}). */
+  /** Numeric room type discriminant ({@link RoomType}). */
   type: RoomTypeValue;
-  /** Room topic or description text. */
+  /** Optional header topic or description text configured on the room. */
   topic?: string;
-  /** Ordering position within the space room list. */
+  /** Zero-based ordering index within the space room list. */
   position?: number;
-  /** Whether end-to-end encryption (E2EE) is enabled for this room. */
+  /** Whether end-to-end encryption (E2EE) is enabled for messages in this room. */
   e2ee_enabled?: boolean;
-  /** Per-user rate limit (slowmode) in seconds. */
+  /** Per-user message cooldown (slowmode) in seconds (`0` when disabled). */
   slowmode_seconds?: number;
-  /** Maximum number of connected users for voice rooms. */
+  /** Maximum number of simultaneous voice participants (`0` or `undefined` when unlimited). */
   user_limit?: number;
-  /** Audio bitrate in bits per second for voice rooms. */
+  /** Target audio bitrate in bits per second for `RoomType.Voice` rooms. */
   bitrate?: number;
-  /** Array of recipient User IDs for DM and Group DM rooms. */
+  /** Participant User IDs for `RoomType.PM` and `RoomType.GroupPM` rooms. */
   recipients?: Snowflake[];
-  /** Role and user permission overrides configured on this room. */
+  /** Role and user permission overrides evaluated in step 4 of the Equinox permission cascade. */
   permission_overrides?: PermissionOverride[];
-  /** User-specific permission overrides configured on this room. */
+  /** Member-specific permission overrides evaluated after role overrides. */
   user_overrides?: PermissionOverride[];
-  /** Thread metadata when `type === RoomType.Thread`. */
+  /** Thread state metadata populated when `type === RoomType.Thread`. */
   thread?: ThreadMetadata;
   /** ISO-8601 creation timestamp. */
   created_at?: string;
@@ -614,41 +593,41 @@ export interface Space {
   id: Snowflake;
   /** Display name of the space. */
   name: string;
-  /** Short acronym derived from the space name. */
+  /** Abbreviated initials derived from `name` for fallback icon rendering. */
   name_acronym?: string;
-  /** Space description. */
+  /** Public summary text shown in space discovery and invite previews. */
   description?: string;
-  /** Space icon URL or asset hash. */
+  /** Space icon CDN URL or asset hash. */
   icon?: string;
-  /** Space banner URL or asset hash. */
+  /** Space header banner CDN URL or asset hash. */
   banner?: string;
   /** Snowflake ID of the space owner (always granted {@link ALL_PERMISSIONS}). */
   owner_id: Snowflake;
-  /** Snowflake ID of the default `@everyone` role for base permissions. */
+  /** Snowflake ID of the default `@everyone` role used as the base permission mask. */
   everyone_role_id?: Snowflake;
-  /** Room ID where system join/boost messages are posted. */
+  /** Room ID where automated join and boost notifications are posted. */
   system_room_id?: Snowflake;
-  /** Bitflags controlling system room notifications. */
+  /** Bitflags controlling which automated events are posted to `system_room_id`. */
   system_room_flags?: number;
-  /** Default notification level (`0` = all messages, `1` = mentions only). */
+  /** Default member notification level (`0` = all messages, `1` = only `@mentions`). */
   default_message_notifications?: number;
-  /** Voice room ID used for AFK members. */
+  /** Voice room ID where inactive voice members are moved (`null` when unset). */
   afk_room_id?: Snowflake | null;
-  /** AFK timeout in seconds (`60`, `300`, `900`, `1800`, `3600`). */
+  /** Inactivity timeout in seconds (`60`, `300`, `900`, `1800`, `3600`) before moving to `afk_room_id`. */
   afk_timeout?: number;
-  /** Whether the public space widget is enabled. */
+  /** Whether the public embeddable space widget is enabled. */
   widget_enabled?: boolean;
-  /** Room ID linked in the space widget invite. */
+  /** Room ID used to generate instant invites from the public widget. */
   widget_room_id?: Snowflake;
-  /** Room ID where birthday announcements are posted. */
+  /** Room ID where automated member birthday announcements are posted. */
   birthday_channel_id?: Snowflake;
-  /** Custom birthday announcement template message. */
+  /** Custom template string used for birthday announcements in `birthday_channel_id`. */
   birthday_message?: string;
-  /** Enabled space feature strings. */
+  /** Feature capability flags enabled on this space. */
   features?: string[];
-  /** Roles defined in the space. */
+  /** Roles configured in this space, including the `@everyone` role. */
   roles?: Role[];
-  /** Rooms belonging to the space. */
+  /** Rooms belonging to this space when hydrated in `READY` or `GET /spaces/:spaceId`. */
   rooms?: Room[];
   /** ISO-8601 creation timestamp. */
   created_at?: string;
