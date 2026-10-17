@@ -7,17 +7,56 @@ const collection_1 = require("@strafe-js/collection");
 const rest_1 = require("@strafe-js/rest");
 const ws_1 = require("@strafe-js/ws");
 const CommandHandler_js_1 = require("./commands/CommandHandler.js");
+/**
+ * High-level Strafe bot client combining the {@link REST} HTTP client, {@link Gateway} WebSocket manager,
+ * live entity caches (`spaces`, `rooms`, `spaceRooms`, `members`), the 6-stage Equinox permission resolver,
+ * and the prefix {@link CommandHandler}.
+ *
+ * @example
+ * ```ts
+ * import { Client, command } from '@strafe-js/strafebot';
+ *
+ * const client = new Client({
+ *   apiBase: 'https://app.strafe.chat/api',
+ *   gatewayUrl: 'wss://app.strafe.chat/gateway/events',
+ *   prefix: '!',
+ * });
+ *
+ * client.commands.register(
+ *   command({
+ *     name: 'ping',
+ *     async run(ctx) {
+ *       await ctx.reply('Pong!');
+ *     },
+ *   }),
+ * );
+ *
+ * await client.login(process.env.BOT_TOKEN!);
+ * ```
+ */
 class Client extends node_events_1.EventEmitter {
+    /** Underlying HTTP client for direct Strafe REST API calls. */
     rest;
+    /** Underlying WebSocket gateway connection (initialized when {@link Client.login} is called). */
     gateway;
+    /** Built-in prefix command registry and message dispatcher. */
     commands;
+    /** Authenticated bot {@link User} profile populated once the `ready` event fires (`null` before ready). */
     user = null;
+    /** Live cache of spaces keyed by `spaceId`. */
     spaces = new collection_1.Collection();
+    /** Live cache of rooms across all spaces and DMs keyed by `roomId`. */
     rooms = new collection_1.Collection();
+    /** Live cache of space rooms grouped by `spaceId -> Collection<roomId, Room>`. */
     spaceRooms = new collection_1.Collection();
+    /** Live cache of space members grouped by `spaceId -> Collection<userId, SpaceMember>`. */
     members = new collection_1.Collection();
     opts;
     _fetchingMembers = new Map();
+    /**
+     * Initializes the REST client and command handler without opening a network connection.
+     * Call {@link Client.login} to connect to the Gateway.
+     */
     constructor(opts) {
         super();
         this.opts = opts;
@@ -33,6 +72,12 @@ class Client extends node_events_1.EventEmitter {
             ...opts.commands,
         });
     }
+    /**
+     * Configures the bot token on the REST client, attaches the command handler,
+     * and opens the WebSocket connection to `gatewayUrl`.
+     *
+     * @throws {Error} When neither `token` nor `ClientOptions.token` is provided.
+     */
     async login(token) {
         const tok = token ?? this.opts.token;
         if (!tok)
@@ -51,13 +96,25 @@ class Client extends node_events_1.EventEmitter {
         this.gateway.connect();
         return this;
     }
+    /**
+     * Alias for {@link Client.login}.
+     */
     connect(token) {
         return this.login(token);
     }
+    /**
+     * Closes the active Gateway WebSocket connection (`1000`), stops automatic reconnection,
+     * and removes all registered event listeners from this `Client`.
+     */
     destroy() {
         this.gateway?.disconnect();
         this.removeAllListeners();
     }
+    /**
+     * Fetches all members of `spaceId` via `GET /spaces/:spaceId/members`, normalizes `role_ids`,
+     * and populates `client.members.get(spaceId)`.
+     * Call this on `ready` for spaces where `resolveMemberPermissions` needs member role data.
+     */
     async fetchMembers(spaceId) {
         const list = await this.rest.getSpaceMembers(spaceId);
         let col = this.members.get(spaceId);
@@ -72,6 +129,10 @@ class Client extends node_events_1.EventEmitter {
         }
         return col;
     }
+    /**
+     * Fetches a single member via `GET /spaces/:spaceId/members/:userId` with in-flight request deduplication,
+     * caches the result in `client.members`, and returns `null` if the user is not in the space.
+     */
     async fetchMember(spaceId, userId) {
         const key = `${spaceId}:${userId}`;
         const existing = this._fetchingMembers.get(key);
@@ -100,21 +161,34 @@ class Client extends node_events_1.EventEmitter {
         this._fetchingMembers.set(key, promise);
         return promise;
     }
+    /**
+     * Returns a cached {@link SpaceMember} from `client.members` without making a network request.
+     */
     getMember(spaceId, userId) {
         return this.members.get(spaceId)?.get(userId);
     }
+    /**
+     * Computes the effective 28-bit permission bitmask for `userId` in `spaceId` (and optionally `roomId`)
+     * using the 6-stage Equinox permission cascade:
+     * 1. Space owner receives {@link ALL_PERMISSIONS}.
+     * 2. Base permissions combine `@everyone` (`space.everyone_role_id`) and assigned member roles.
+     * 3. `Permission.Administrator` short-circuits to {@link ALL_PERMISSIONS}.
+     * 4. Room overrides apply in order: `@everyone` override -> bitwise union of role overrides -> individual user override.
+     * 5. Missing `Permission.ViewRoom` zeroes out the entire room bitmask (`0`).
+     * 6. Missing `Permission.SendMessages` clears `AttachFiles` and `MentionEveryone`.
+     *
+     * Returns `0` if `spaceId` is omitted or not present in `client.spaces`.
+     */
     resolveMemberPermissions(userId, spaceId, roomId) {
         if (!spaceId)
             return 0;
         const space = this.spaces.get(spaceId);
         if (!space)
             return 0;
-        // 1. Space Owner Check
         if (space.owner_id === userId)
             return util_1.ALL_PERMISSIONS;
         const member = this.getMember(spaceId, userId);
         const rolesById = new Map((space.roles ?? []).map((r) => [r.id, r]));
-        // 2. Base Permissions (@everyone + Member Roles)
         let mask = 0;
         if (space.everyone_role_id) {
             const ev = rolesById.get(space.everyone_role_id);
@@ -129,17 +203,14 @@ class Client extends node_events_1.EventEmitter {
                     mask |= role.permissions;
             }
         }
-        // 3. Administrator Check
         if ((mask & util_1.Permission.Administrator) === util_1.Permission.Administrator) {
             return util_1.ALL_PERMISSIONS;
         }
-        // 4. Room Permission Overrides
         if (roomId) {
             const room = this.rooms.get(roomId);
             const roleOverrides = room?.permission_overrides ?? [];
             const userOverrides = room?.user_overrides ?? [];
             if (roleOverrides.length > 0) {
-                // Step 4a: @everyone room override
                 if (space.everyone_role_id) {
                     const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
                     if (everyoneOv) {
@@ -147,7 +218,6 @@ class Client extends node_events_1.EventEmitter {
                         mask |= everyoneOv.allow;
                     }
                 }
-                // Step 4b: Aggregated Member Role overrides
                 if (member) {
                     let aggregatedAllow = 0;
                     let aggregatedDeny = 0;
@@ -161,7 +231,6 @@ class Client extends node_events_1.EventEmitter {
                     mask &= ~aggregatedDeny;
                     mask |= aggregatedAllow;
                 }
-                // Step 4c: Individual User override (in permission_overrides or user_overrides)
                 const userOv = userOverrides.find((o) => o.user_id === userId) ??
                     roleOverrides.find((o) => o.user_id === userId);
                 if (userOv) {
@@ -177,11 +246,9 @@ class Client extends node_events_1.EventEmitter {
                 }
             }
         }
-        // 5. Implicit ViewRoom Denial: Without ViewRoom, user has 0 permissions in that room
         if ((mask & util_1.Permission.ViewRoom) === 0) {
             return 0;
         }
-        // 6. Dependent Permissions: Without SendMessages, revoke dependent sending permissions
         if ((mask & util_1.Permission.SendMessages) === 0) {
             mask &= ~(util_1.Permission.AttachFiles | util_1.Permission.MentionEveryone);
         }
@@ -240,7 +307,6 @@ class Client extends node_events_1.EventEmitter {
             const name = eventType
                 .toLowerCase()
                 .replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-            // Keep caches in sync
             const d = (isNested ? rawD.d : frame.d);
             const envelopeSpaceId = (isNested ? rawD.space_id : frame.space_id);
             if (name === 'spaceCreate' || name === 'spaceUpdate') {

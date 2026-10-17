@@ -7,6 +7,29 @@ exports.Gateway = void 0;
 const node_events_1 = require("node:events");
 const ws_1 = __importDefault(require("ws"));
 const util_1 = require("@strafe-js/util");
+/**
+ * Real-time WebSocket client for the Strafe Gateway protocol (`op: 0..8`).
+ * Manages authentication via handshake headers, periodic heartbeat pings (`op: 6`),
+ * exponential backoff reconnection with random jitter, and automatic normalization
+ * of `SNAKE_CASE` server event names into `camelCase` {@link GatewayEvents}.
+ *
+ * @example
+ * ```ts
+ * import { Gateway } from '@strafe-js/ws';
+ *
+ * const ws = new Gateway({
+ *   url: 'wss://app.strafe.chat/ws',
+ *   token: process.env.STRAFE_BOT_TOKEN!,
+ * });
+ *
+ * ws.on('ready', ({ user, spaces }) => {
+ *   console.log(`Connected as ${user.username}`);
+ *   for (const space of spaces) ws.subscribe(space.id);
+ * });
+ *
+ * ws.connect();
+ * ```
+ */
 class Gateway extends node_events_1.EventEmitter {
     url;
     token;
@@ -19,6 +42,10 @@ class Gateway extends node_events_1.EventEmitter {
     ws;
     hbTimer;
     reconnectTimer;
+    /**
+     * Creates a new {@link Gateway} client instance without opening the connection.
+     * Call {@link Gateway.connect} to establish the WebSocket session.
+     */
     constructor(opts) {
         super();
         this.url = opts.url;
@@ -29,6 +56,10 @@ class Gateway extends node_events_1.EventEmitter {
         this.reconnectDelay = opts.reconnectDelay ?? 2_500;
         this.maxReconnectDelay = opts.maxReconnectDelay ?? 60_000;
     }
+    /**
+     * Opens (or re-opens) the WebSocket connection to `url` with the configured `Authorization` header
+     * and starts the heartbeat timer once the socket opens.
+     */
     connect() {
         this._clearTimers();
         if (this.ws) {
@@ -74,6 +105,10 @@ class Gateway extends node_events_1.EventEmitter {
             this.emit('error', err);
         });
     }
+    /**
+     * Disables automatic reconnection, clears active heartbeat/reconnect timers,
+     * and closes the WebSocket connection with code `1000` (`client disconnect`).
+     */
     disconnect() {
         this.shouldReconnect = false;
         this._clearTimers();
@@ -83,21 +118,38 @@ class Gateway extends node_events_1.EventEmitter {
             this.ws = undefined;
         }
     }
+    /**
+     * Sends a heartbeat ping frame (`op: 6`) to the gateway.
+     * The gateway responds with `op: 7`, triggering the `pong` event.
+     */
     ping() {
         this.send(util_1.GatewayOp.Ping);
     }
+    /**
+     * Serializes and sends a raw gateway frame `{ op, d, ...extra }` if the socket is `OPEN`.
+     * Silently drops the frame if the socket is not currently open.
+     */
     send(op, d, extra) {
         if (!this.ws || this.ws.readyState !== ws_1.default.OPEN)
             return;
         const payload = JSON.stringify({ op, d, ...extra });
         this.ws.send(payload);
     }
+    /**
+     * Subscribes the session to real-time events for a space or room (`op: 1`, `{ space_id }`).
+     */
     subscribe(spaceOrRoomId) {
         this.send(util_1.GatewayOp.Subscribe, { space_id: spaceOrRoomId });
     }
+    /**
+     * Unsubscribes the session from real-time events for a space or room (`op: 5`, `{ space_id }`).
+     */
     unsubscribe(spaceOrRoomId) {
         this.send(util_1.GatewayOp.Unsubscribe, { space_id: spaceOrRoomId });
     }
+    /**
+     * Sends a real-time typing frame over the gateway (`op: 2`, `{ space_id: roomId, type: 'typing', room_id: roomId }`).
+     */
     sendTyping(roomId) {
         this.send(util_1.GatewayOp.Send, { space_id: roomId, type: 'typing', room_id: roomId });
     }

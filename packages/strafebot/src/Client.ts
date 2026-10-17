@@ -15,44 +15,106 @@ import { REST, RESTOptions } from '@strafe-js/rest';
 import { Gateway, GatewayOptions, GatewayEvents } from '@strafe-js/ws';
 import { CommandHandler, CommandHandlerOptions, CommandEvents } from './commands/CommandHandler.js';
 
+/**
+ * Configuration options for {@link Client}.
+ */
 export interface ClientOptions {
+  /** Base URL for the Strafe REST API (for example `'https://app.strafe.chat/api'`). */
   apiBase: string;
+  /** Full WebSocket URL for the Strafe Gateway (for example `'wss://app.strafe.chat/gateway/events'`). */
   gatewayUrl: string;
+  /** Bot authentication token. Can also be supplied later via {@link Client.login}. */
   token?: string;
+  /** Authorization header prefix (`'Bot'` or `'Bearer'`). Defaults to `'Bot'`. */
   authScheme?: 'Bot' | 'Bearer';
+  /** Single prefix string or array of prefixes matched by {@link CommandHandler}. Defaults to `'!'`. */
   prefix?: string | string[];
+  /** Bot owner user Snowflake IDs allowed to execute `botOwnerOnly` commands. */
   owners?: Snowflake[];
+  /** Whether to automatically send `GatewayOp.Subscribe` (`op: 1`) for every space on `READY` and `SPACE_CREATE`. Defaults to `true`. */
   autoSubscribeSpaces?: boolean;
+  /** Interval in milliseconds between gateway heartbeat pings (`op: 6`). Defaults to `45000`. */
   heartbeatIntervalMs?: number;
+  /** Additional overrides forwarded to the underlying {@link REST} constructor. */
   rest?: Partial<RESTOptions>;
+  /** Additional overrides forwarded to the underlying {@link Gateway} constructor. */
   gateway?: Partial<GatewayOptions>;
+  /** Additional overrides forwarded to the underlying {@link CommandHandler} constructor. */
   commands?: Partial<CommandHandlerOptions>;
 }
 
+/**
+ * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents} and {@link CommandEvents}.
+ */
 export type ClientEvents = GatewayEvents & CommandEvents;
 
 export declare interface Client {
+  /** Registers a typed listener for a {@link ClientEvents} event. */
   on<E extends keyof ClientEvents>(event: E, listener: ClientEvents[E]): this;
+  /** Registers a listener for a custom or unmapped event name. */
   on(event: string, listener: (...args: any[]) => void): this;
+  /** Registers a one-time typed listener for a {@link ClientEvents} event. */
   once<E extends keyof ClientEvents>(event: E, listener: ClientEvents[E]): this;
+  /** Registers a one-time listener for a custom or unmapped event name. */
   once(event: string, listener: (...args: any[]) => void): this;
+  /** Emits a typed {@link ClientEvents} event to all registered listeners. */
   emit<E extends keyof ClientEvents>(event: E, ...args: Parameters<ClientEvents[E]>): boolean;
+  /** Emits a custom event to all registered listeners. */
   emit(event: string, ...args: any[]): boolean;
 }
 
+/**
+ * High-level Strafe bot client combining the {@link REST} HTTP client, {@link Gateway} WebSocket manager,
+ * live entity caches (`spaces`, `rooms`, `spaceRooms`, `members`), the 6-stage Equinox permission resolver,
+ * and the prefix {@link CommandHandler}.
+ *
+ * @example
+ * ```ts
+ * import { Client, command } from '@strafe-js/strafebot';
+ *
+ * const client = new Client({
+ *   apiBase: 'https://app.strafe.chat/api',
+ *   gatewayUrl: 'wss://app.strafe.chat/gateway/events',
+ *   prefix: '!',
+ * });
+ *
+ * client.commands.register(
+ *   command({
+ *     name: 'ping',
+ *     async run(ctx) {
+ *       await ctx.reply('Pong!');
+ *     },
+ *   }),
+ * );
+ *
+ * await client.login(process.env.BOT_TOKEN!);
+ * ```
+ */
 export class Client extends EventEmitter {
+  /** Underlying HTTP client for direct Strafe REST API calls. */
   readonly rest: REST;
+  /** Underlying WebSocket gateway connection (initialized when {@link Client.login} is called). */
   gateway!: Gateway;
+  /** Built-in prefix command registry and message dispatcher. */
   readonly commands: CommandHandler;
+  /** Authenticated bot {@link User} profile populated once the `ready` event fires (`null` before ready). */
   user: User | null = null;
+  /** Live cache of spaces keyed by `spaceId`. */
   readonly spaces = new Collection<Snowflake, Space>();
+  /** Live cache of rooms across all spaces and DMs keyed by `roomId`. */
   readonly rooms = new Collection<Snowflake, Room>();
+  /** Live cache of space rooms grouped by `spaceId -> Collection<roomId, Room>`. */
   readonly spaceRooms = new Collection<Snowflake, Collection<Snowflake, Room>>();
+  /** Live cache of space members grouped by `spaceId -> Collection<userId, SpaceMember>`. */
   readonly members = new Collection<Snowflake, Collection<Snowflake, SpaceMember>>();
 
   private opts: ClientOptions;
   private _fetchingMembers = new Map<string, Promise<SpaceMember | null>>();
 
+  /**
+   * Initializes the REST client and command handler without opening a network connection.
+   * Call {@link Client.login} to connect to the Gateway.
+   */
   constructor(opts: ClientOptions) {
     super();
     this.opts = opts;
@@ -69,6 +131,12 @@ export class Client extends EventEmitter {
     });
   }
 
+  /**
+   * Configures the bot token on the REST client, attaches the command handler,
+   * and opens the WebSocket connection to `gatewayUrl`.
+   *
+   * @throws {Error} When neither `token` nor `ClientOptions.token` is provided.
+   */
   async login(token?: string): Promise<this> {
     const tok = token ?? this.opts.token;
     if (!tok) throw new Error('Bot token required to login');
@@ -89,15 +157,27 @@ export class Client extends EventEmitter {
     return this;
   }
 
+  /**
+   * Alias for {@link Client.login}.
+   */
   connect(token?: string): Promise<this> {
     return this.login(token);
   }
 
+  /**
+   * Closes the active Gateway WebSocket connection (`1000`), stops automatic reconnection,
+   * and removes all registered event listeners from this `Client`.
+   */
   destroy(): void {
     this.gateway?.disconnect();
     this.removeAllListeners();
   }
 
+  /**
+   * Fetches all members of `spaceId` via `GET /spaces/:spaceId/members`, normalizes `role_ids`,
+   * and populates `client.members.get(spaceId)`.
+   * Call this on `ready` for spaces where `resolveMemberPermissions` needs member role data.
+   */
   async fetchMembers(spaceId: Snowflake): Promise<Collection<Snowflake, SpaceMember>> {
     const list = await this.rest.getSpaceMembers(spaceId);
     let col = this.members.get(spaceId);
@@ -112,6 +192,10 @@ export class Client extends EventEmitter {
     return col;
   }
 
+  /**
+   * Fetches a single member via `GET /spaces/:spaceId/members/:userId` with in-flight request deduplication,
+   * caches the result in `client.members`, and returns `null` if the user is not in the space.
+   */
   async fetchMember(spaceId: Snowflake, userId: Snowflake): Promise<SpaceMember | null> {
     const key = `${spaceId}:${userId}`;
     const existing = this._fetchingMembers.get(key);
@@ -139,10 +223,25 @@ export class Client extends EventEmitter {
     return promise;
   }
 
+  /**
+   * Returns a cached {@link SpaceMember} from `client.members` without making a network request.
+   */
   getMember(spaceId: Snowflake, userId: Snowflake): SpaceMember | undefined {
     return this.members.get(spaceId)?.get(userId);
   }
 
+  /**
+   * Computes the effective 28-bit permission bitmask for `userId` in `spaceId` (and optionally `roomId`)
+   * using the 6-stage Equinox permission cascade:
+   * 1. Space owner receives {@link ALL_PERMISSIONS}.
+   * 2. Base permissions combine `@everyone` (`space.everyone_role_id`) and assigned member roles.
+   * 3. `Permission.Administrator` short-circuits to {@link ALL_PERMISSIONS}.
+   * 4. Room overrides apply in order: `@everyone` override -> bitwise union of role overrides -> individual user override.
+   * 5. Missing `Permission.ViewRoom` zeroes out the entire room bitmask (`0`).
+   * 6. Missing `Permission.SendMessages` clears `AttachFiles` and `MentionEveryone`.
+   *
+   * Returns `0` if `spaceId` is omitted or not present in `client.spaces`.
+   */
   resolveMemberPermissions(
     userId: Snowflake,
     spaceId?: Snowflake | null,
@@ -152,13 +251,11 @@ export class Client extends EventEmitter {
     const space = this.spaces.get(spaceId);
     if (!space) return 0;
 
-    // 1. Space Owner Check
     if (space.owner_id === userId) return ALL_PERMISSIONS;
 
     const member = this.getMember(spaceId, userId);
     const rolesById = new Map((space.roles ?? []).map((r) => [r.id, r]));
 
-    // 2. Base Permissions (@everyone + Member Roles)
     let mask = 0;
     if (space.everyone_role_id) {
       const ev = rolesById.get(space.everyone_role_id);
@@ -173,19 +270,16 @@ export class Client extends EventEmitter {
       }
     }
 
-    // 3. Administrator Check
     if ((mask & Permission.Administrator) === Permission.Administrator) {
       return ALL_PERMISSIONS;
     }
 
-    // 4. Room Permission Overrides
     if (roomId) {
       const room = this.rooms.get(roomId);
       const roleOverrides = room?.permission_overrides ?? [];
       const userOverrides = room?.user_overrides ?? [];
 
       if (roleOverrides.length > 0) {
-        // Step 4a: @everyone room override
         if (space.everyone_role_id) {
           const everyoneOv = roleOverrides.find((o) => o.role_id === space.everyone_role_id);
           if (everyoneOv) {
@@ -194,7 +288,6 @@ export class Client extends EventEmitter {
           }
         }
 
-        // Step 4b: Aggregated Member Role overrides
         if (member) {
           let aggregatedAllow = 0;
           let aggregatedDeny = 0;
@@ -209,7 +302,6 @@ export class Client extends EventEmitter {
           mask |= aggregatedAllow;
         }
 
-        // Step 4c: Individual User override (in permission_overrides or user_overrides)
         const userOv =
           userOverrides.find((o) => o.user_id === userId) ??
           roleOverrides.find((o) => o.user_id === userId);
@@ -226,12 +318,10 @@ export class Client extends EventEmitter {
       }
     }
 
-    // 5. Implicit ViewRoom Denial: Without ViewRoom, user has 0 permissions in that room
     if ((mask & Permission.ViewRoom) === 0) {
       return 0;
     }
 
-    // 6. Dependent Permissions: Without SendMessages, revoke dependent sending permissions
     if ((mask & Permission.SendMessages) === 0) {
       mask &= ~(Permission.AttachFiles | Permission.MentionEveryone);
     }
@@ -295,7 +385,6 @@ export class Client extends EventEmitter {
         .toLowerCase()
         .replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 
-      // Keep caches in sync
       const d = (isNested ? rawD.d : frame.d) as Record<string, unknown> | undefined;
       const envelopeSpaceId = (isNested ? rawD.space_id : frame.space_id) as Snowflake | undefined;
 

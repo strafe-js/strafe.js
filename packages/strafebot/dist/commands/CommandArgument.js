@@ -3,11 +3,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParsedArguments = exports.ArgumentValidationError = void 0;
 exports.tokenizeArguments = tokenizeArguments;
 exports.parseAndValidateArguments = parseAndValidateArguments;
+/**
+ * Structured error thrown by {@link parseAndValidateArguments} and emitted via the `commandArgumentError`
+ * event when a user's command invocation fails schema validation.
+ */
 class ArgumentValidationError extends Error {
+    /** Name of the argument key in {@link CommandArgumentsSchema} that failed validation. */
     argumentName;
+    /** Machine-readable validation failure reason code. */
     code;
+    /** Human-readable description of the expected type, range, or choice set. */
     expected;
+    /** Raw token or parsed value that triggered the validation failure. */
     value;
+    /**
+     * Creates a new {@link ArgumentValidationError}.
+     */
     constructor(argumentName, code, message, expected, value) {
         super(message);
         this.name = 'ArgumentValidationError';
@@ -18,19 +29,39 @@ class ArgumentValidationError extends Error {
     }
 }
 exports.ArgumentValidationError = ArgumentValidationError;
+/**
+ * Typed container holding validated command arguments accessible via `ctx.arguments` (or `ctx.parsedArguments`).
+ */
 class ParsedArguments {
     values = new Map();
+    /**
+     * Initializes the container from a plain record of parsed argument values.
+     */
     constructor(parsedValues = {}) {
         for (const [k, v] of Object.entries(parsedValues)) {
             this.values.set(k, v);
         }
     }
+    /**
+     * Retrieves the validated value for `name` with its type inferred from `Schema[K]`.
+     *
+     * @example
+     * ```ts
+     * const count = ctx.arguments.get('count');
+     * ```
+     */
     get(name) {
         return this.values.get(name);
     }
+    /**
+     * Retrieves a parsed argument value by untyped string key.
+     */
     getRaw(name) {
         return this.values.get(name);
     }
+    /**
+     * Returns a shallow plain-object copy of all parsed `{ [argumentName]: value }` pairs.
+     */
     toObject() {
         const obj = {};
         for (const [k, v] of this.values.entries()) {
@@ -41,7 +72,14 @@ class ParsedArguments {
 }
 exports.ParsedArguments = ParsedArguments;
 /**
- * Tokenizes command argument string supporting quotes ("hello world") and escaping (\").
+ * Splits a raw command argument string on whitespace while preserving double-quoted segments
+ * (`"hello world"`) as single tokens and honoring backslash escapes (`\"`, `\\`).
+ *
+ * @example
+ * ```ts
+ * tokenizeArguments('ban 123456789012345678 "spamming links"');
+ * // ['ban', '123456789012345678', 'spamming links']
+ * ```
  */
 function tokenizeArguments(input) {
     const tokens = [];
@@ -77,6 +115,11 @@ function tokenizeArguments(input) {
     }
     return tokens;
 }
+/**
+ * Parses and validates tokenized command arguments and message attachments against `schema` in key order.
+ *
+ * @throws {ArgumentValidationError} When a required argument is missing, fails type coercion, violates `choices`, or falls outside `[min, max]`.
+ */
 function parseAndValidateArguments(schema, tokens, attachments = []) {
     const result = {};
     const entries = Object.entries(schema);
@@ -102,7 +145,6 @@ function parseAndValidateArguments(schema, tokens, attachments = []) {
             result[name] = opt.default ?? undefined;
             continue;
         }
-        // Token present -> consume
         tokenIndex++;
         let parsedVal;
         switch (opt.type) {
@@ -112,7 +154,6 @@ function parseAndValidateArguments(schema, tokens, attachments = []) {
             }
             case 'user':
             case 'snowflake': {
-                // Strip mentions like <@123456789012345678>
                 const match = /^<@!?(\d{16,20})>$/.exec(rawToken);
                 parsedVal = match ? match[1] : rawToken;
                 break;

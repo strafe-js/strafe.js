@@ -19,11 +19,8 @@
  */
 export class Collection<K, V> extends Map<K, V> {
   /**
-   * Returns the first value in the collection that satisfies the testing predicate,
-   * or `undefined` if no entry matches.
+   * Returns the first value in insertion order that satisfies `fn`, or `undefined` if no entry matches.
    *
-   * @param fn - Predicate function invoked for each `(value, key, collection)` entry.
-   * @returns The first matching value, or `undefined`.
    * @example
    * ```ts
    * const room = client.rooms.find((r) => r.name === 'general');
@@ -37,10 +34,8 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   /**
-   * Returns a new `Collection<K, V>` containing all key-value pairs for which the predicate returns `true`.
+   * Returns a new `Collection<K, V>` containing only entries for which `fn` returns `true`.
    *
-   * @param fn - Filter predicate function invoked for each `(value, key, collection)` entry.
-   * @returns A new `Collection` containing only matching entries.
    * @example
    * ```ts
    * const textRooms = client.rooms.filter((r) => r.type === 3);
@@ -55,10 +50,8 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   /**
-   * Maps each entry in the collection to a new value and returns the resulting array.
+   * Projects each entry in insertion order through `fn` into a new array.
    *
-   * @param fn - Mapping function invoked for each `(value, key, collection)` entry.
-   * @returns Array of mapped results.
    * @example
    * ```ts
    * const spaceNames = client.spaces.map((s) => s.name);
@@ -71,10 +64,8 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   /**
-   * Tests whether at least one entry in the collection passes the predicate.
+   * Short-circuits and returns `true` on the first entry that satisfies `fn`, or `false` if none match.
    *
-   * @param fn - Predicate function invoked for each `(value, key, collection)` entry.
-   * @returns `true` if any entry matches, otherwise `false`.
    * @example
    * ```ts
    * const hasVoiceRoom = client.rooms.some((r) => r.type === 4);
@@ -88,10 +79,8 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   /**
-   * Tests whether all entries in the collection pass the predicate.
+   * Short-circuits and returns `false` on the first entry that fails `fn`, or `true` if all entries pass.
    *
-   * @param fn - Predicate function invoked for each `(value, key, collection)` entry.
-   * @returns `true` if every entry matches, otherwise `false`.
    * @example
    * ```ts
    * const allHaveNames = client.rooms.every((r) => Boolean(r.name));
@@ -114,9 +103,8 @@ export class Collection<K, V> extends Map<K, V> {
    */
   first(): V | undefined;
   /**
-   * Returns an array of the first `count` values in insertion order.
+   * Returns up to `count` values from the start of the collection in insertion order.
    *
-   * @param count - Number of values to return.
    * @example
    * ```ts
    * const firstThreeSpaces = client.spaces.first(3);
@@ -134,7 +122,7 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   /**
-   * Spreads all values in the collection into a standard JavaScript array (`V[]`).
+   * Copies all values in insertion order into a plain array (`[...this.values()]`).
    *
    * @example
    * ```ts
@@ -146,7 +134,7 @@ export class Collection<K, V> extends Map<K, V> {
   }
 
   /**
-   * Spreads all keys in the collection into a standard JavaScript array (`K[]`).
+   * Copies all keys in insertion order into a plain array (`[...this.keys()]`).
    *
    * @example
    * ```ts
