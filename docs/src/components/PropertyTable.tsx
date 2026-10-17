@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Badge } from './Badge';
+import { CodeWindow } from './CodeWindow';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export interface PropertyItem {
@@ -68,12 +69,12 @@ export function PropertyTable({ title = 'Properties Overview', properties }: Pro
                 <div className="mx-3.5 mb-3.5 p-3 rounded-lg bg-[#0d0f12] border border-[#262b33] space-y-2">
                   {prop.details && <p className="text-xs text-[#9ba5b4]">{prop.details}</p>}
                   {prop.example && (
-                    <div>
-                      <span className="font-semibold text-[#6db888] text-[11px] block uppercase mb-1">Example</span>
-                      <pre className="p-2.5 rounded-md bg-[#15181d] text-[#6db888] font-mono text-[11px] overflow-x-auto">
-                        <code>{prop.example}</code>
-                      </pre>
-                    </div>
+                    <CodeWindow
+                      title={prop.name}
+                      lang="ts"
+                      code={prop.example}
+                      showLineNumbers={false}
+                    />
                   )}
                 </div>
               )}

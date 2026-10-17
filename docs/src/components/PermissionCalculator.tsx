@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, Check, Shield, Binary, Hash, Code2 } from 'lucide-react';
+import { Shield, Binary, Hash, Code2 } from 'lucide-react';
+import { CodeWindow } from './CodeWindow';
 
 export const PERMISSION_LIST = [
   { name: 'ViewRoom', bit: 1 << 0, group: 'General', desc: 'Allows members to view channels/rooms' },
@@ -121,10 +122,12 @@ export function PermissionCalculator() {
           <div className="p-3 rounded-xl bg-[#17191c] border border-[#2f3237] flex items-center justify-between"><span className="text-[#aeb6c2] flex items-center gap-1.5"><Binary className="w-3.5 h-3.5 text-[#509b6b]" /> Active Bits</span><span className="font-bold text-[#509b6b] text-sm">{selectedNames.length} / 28</span></div>
         </div>
 
-        <div className="relative group">
-          <button onClick={copyCode} className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-[#26282c] text-[#f3f5f7] hover:bg-[#2e2e2e] transition-colors text-xs flex items-center gap-1.5 z-10">{copied ? <Check className="w-3.5 h-3.5 text-[#509b6b]" /> : <Copy className="w-3.5 h-3.5" />}<span>{copied ? 'Copied Code' : 'Copy Snippet'}</span></button>
-          <pre className="p-4 rounded-xl bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto leading-relaxed"><code>{codeSnippet}</code></pre>
-        </div>
+        <CodeWindow
+          title="permissions.ts"
+          lang="ts"
+          code={codeSnippet}
+          showLineNumbers
+        />
       </div>
     </div>
   );

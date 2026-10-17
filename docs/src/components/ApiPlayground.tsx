@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send, Radio, Code2, Check, Copy, RefreshCw } from 'lucide-react';
+import { Send, Radio, RefreshCw } from 'lucide-react';
+import { CodeWindow } from './CodeWindow';
 
 export function ApiPlayground() {
   const [activeTab, setActiveTab] = useState<'rest' | 'ws'>('rest');
@@ -173,14 +174,18 @@ export function ApiPlayground() {
         </div>
 
         <div className="p-6 bg-[#101114] text-[#f3f5f7] flex flex-col justify-between space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2"><span className="font-mono text-xs text-[#509b6b] font-bold uppercase tracking-wider flex items-center gap-1.5"><Code2 className="w-4 h-4" /> SDK Code</span><button onClick={copySnippet} className="px-2 py-1 rounded bg-[#26282c] text-[#f3f5f7] text-[11px] flex items-center gap-1">{copied ? <Check className="w-3 h-3 text-[#509b6b]" /> : <Copy className="w-3 h-3" />}<span>{copied ? 'Copied' : 'Copy'}</span></button></div>
-            <pre className="p-3 rounded bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto"><code>{getCodeSnippet()}</code></pre>
-          </div>
-          <div>
-            <span className="font-mono text-xs text-[#509b6b] font-bold uppercase tracking-wider block mb-2">Response Payload</span>
-            <pre className="p-3 rounded bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto min-h-[100px]"><code>{response ? JSON.stringify(response, null, 2) : '// Response output'}</code></pre>
-          </div>
+          <CodeWindow
+            title={activeTab === 'rest' ? `rest.${method}.ts` : 'gateway.connect.ts'}
+            lang="ts"
+            code={getCodeSnippet()}
+            showLineNumbers
+          />
+          <CodeWindow
+            title="Response Payload"
+            lang={response ? 'json' : 'ts'}
+            code={response ? JSON.stringify(response, null, 2) : '// Click "Simulate Call" to inspect the response payload'}
+            showLineNumbers={false}
+          />
         </div>
       </div>
     </div>

@@ -90,11 +90,10 @@
   border-right-color: #2a2f39;
 }
 
-/* Brand Header Logo matching https://app.strafe.chat/docs/ */
 .strafe-brand {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0;
+  align-items: center;
+  gap: 8px;
   font-weight: 800;
   font-size: 18px;
   letter-spacing: -0.02em;
@@ -119,7 +118,6 @@
   letter-spacing: 0.12em;
 }
 
-/* Official Strafe Docs Hero & Card Aesthetics */
 .strafe-hero {
   padding: 28px;
   border-radius: 12px;
@@ -140,19 +138,128 @@
   background: #1e222a;
 }
 
-/* Code & Table Refinements matching Strafe Docs */
-.dark pre {
-  background-color: #0b0d11 !important;
-  border-color: #2a2f39 !important;
+/* IDE Strafe Dark Code Blocks (Fumadocs figure.shiki & custom CodeWindow) */
+figure.shiki,
+.nd-codeblock {
+  position: relative;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 12px !important;
+  border: 1px solid #2a2f39 !important;
+  background: linear-gradient(180deg, #0e1117 0%, #090b0f 100%) !important;
+  box-shadow:
+    0 12px 28px -8px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(80, 155, 107, 0.06) inset !important;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+figure.shiki:hover,
+.nd-codeblock:hover {
+  border-color: rgba(80, 155, 107, 0.45) !important;
+  box-shadow:
+    0 14px 32px -8px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(80, 155, 107, 0.14) inset !important;
+}
+
+figure.shiki > div:first-child:not(:only-child),
+figure.shiki figcaption {
+  background: linear-gradient(90deg, #141820 0%, #101319 100%) !important;
+  border-bottom: 1px solid #262b35 !important;
+  color: #cfd5e0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.55rem 0.95rem !important;
+}
+
+.dark pre,
+figure.shiki pre {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0.95rem 1.1rem !important;
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.68 !important;
+  tab-size: 2;
+}
+
+figure.shiki pre code {
+  display: grid;
+  min-width: 100%;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+}
+
+figure.shiki pre code .line {
+  padding-left: 0.25rem;
+  padding-right: 0.75rem;
+  border-left: 2px solid transparent;
+  transition: background-color 0.12s ease;
+}
+
+figure.shiki pre code .line:hover {
+  background-color: rgba(80, 155, 107, 0.06);
+}
+
+figure.shiki pre code .line[data-highlighted-line] {
+  background-color: rgba(80, 155, 107, 0.14) !important;
+  border-left-color: #509b6b !important;
+}
+
+/* Copy button inside Fumadocs code blocks */
+figure.shiki button[aria-label*="Copy"],
+figure.shiki button[title*="Copy"] {
+  background-color: rgba(23, 26, 32, 0.85) !important;
+  border: 1px solid #2a2f39 !important;
+  color: #b4bac6 !important;
+  border-radius: 7px !important;
+  transition: all 0.15s ease;
+}
+
+figure.shiki button[aria-label*="Copy"]:hover,
+figure.shiki button[title*="Copy"]:hover {
+  border-color: #509b6b !important;
+  color: #6ab585 !important;
+  background-color: rgba(80, 155, 107, 0.15) !important;
+}
+
+/* Custom Scrollbar for Code Blocks */
+figure.shiki pre::-webkit-scrollbar,
+.strafe-code-scroll::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+}
+
+figure.shiki pre::-webkit-scrollbar-track,
+.strafe-code-scroll::-webkit-scrollbar-track {
+  background: #090b0f;
+}
+
+figure.shiki pre::-webkit-scrollbar-thumb,
+.strafe-code-scroll::-webkit-scrollbar-thumb {
+  background: #262b35;
+  border-radius: 9999px;
+}
+
+figure.shiki pre::-webkit-scrollbar-thumb:hover,
+.strafe-code-scroll::-webkit-scrollbar-thumb:hover {
+  background: #509b6b;
+}
+
+/* Inline Code Badge Styling */
 .dark :not(pre) > code {
-  background-color: #1e222a;
-  border: 1px solid #2a2f39;
-  color: #e6e8ec;
-  padding: 1px 6px;
-  border-radius: 5px;
-  font-size: 0.85em;
+  background: rgba(30, 34, 42, 0.9);
+  border: 1px solid #2d3340;
+  color: #7fd19c;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.84em;
+  font-weight: 500;
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .dark table {

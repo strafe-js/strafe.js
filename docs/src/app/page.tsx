@@ -12,6 +12,7 @@ import {
   Layers,
   ExternalLink,
 } from 'lucide-react';
+import { CodeWindow } from '@/components/CodeWindow';
 
 const DOC_SECTIONS = [
   {
@@ -49,6 +50,12 @@ const DOC_SECTIONS = [
     desc: 'Explore @strafe-js/builders, @strafe-js/formatters, @strafe-js/collection, @strafe-js/util, and create-strafebot.',
     href: '/docs/packages/builders',
     badge: 'Ecosystem',
+  },
+  {
+    title: 'OAuth2 & Bot Invite Generator',
+    desc: 'Build /oauth2/authorize consent and bot installation links with permission presets and scopes.',
+    href: '/docs/tools/oauth2-generator',
+    badge: 'Tool',
   },
 ];
 
@@ -254,13 +261,12 @@ export default function HomePage() {
         <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
           Quick Example
         </h2>
-        <div className="rounded-[10px] border border-[#2a2f39] bg-[#0b0d11] overflow-hidden mb-10">
-          <div className="px-4 py-2.5 bg-[#171a20] border-b border-[#2a2f39] flex items-center justify-between text-xs text-[#7f8797] font-mono">
-            <span>src/index.ts - @strafe-js/strafebot v1.2.0</span>
-            <span className="text-[#6ab585]">TypeScript ESM</span>
-          </div>
-          <pre className="p-4 text-[13px] leading-[1.55] font-mono text-[#e6e8ec] overflow-x-auto bg-[#0b0d11]">
-            <code>{`import { Client, command } from '@strafe-js/strafebot';
+        <div className="mb-10">
+          <CodeWindow
+            title="src/index.ts - @strafe-js/strafebot v1.2.0"
+            lang="ts"
+            showLineNumbers
+            code={`import { Client, command } from '@strafe-js/strafebot';
 
 const client = new Client({
   apiBase: 'https://app.strafe.chat/api',
@@ -291,8 +297,8 @@ client.commands.register(
   }),
 );
 
-await client.login(process.env.BOT_TOKEN!);`}</code>
-          </pre>
+await client.login(process.env.BOT_TOKEN!);`}
+          />
         </div>
 
         {/* Monorepo Packages Table / Cards */}
