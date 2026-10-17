@@ -1,12 +1,15 @@
 <div align="center">
 	<br />
+	<a href="https://app.strafe.chat/docs/">
+		<img src="https://app.strafe.chat/icons/icon-192.png" width="64" height="64" alt="Strafe" />
+	</a>
 	<h1>@strafe-js/collection</h1>
 	<p>
 		<strong>Extended Map&lt;K, V&gt; Data Structure with Functional Array-Like Query Methods</strong>
 	</p>
 	<p>
-		<a href="https://www.npmjs.com/package/@strafe-js/collection"><img src="https://img.shields.io/npm/v/@strafe-js/collection.svg?maxAge=3600" alt="npm version" /></a>
-		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js" alt="License" /></a>
+		<a href="https://www.npmjs.com/package/@strafe-js/collection"><img src="https://img.shields.io/npm/v/@strafe-js/collection.svg?color=509b6b" alt="npm version" /></a>
+		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js?color=509b6b" alt="License" /></a>
 	</p>
 </div>
 

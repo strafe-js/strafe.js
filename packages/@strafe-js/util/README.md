@@ -1,12 +1,15 @@
 <div align="center">
 	<br />
+	<a href="https://app.strafe.chat/docs/permissions/">
+		<img src="https://app.strafe.chat/icons/icon-192.png" width="64" height="64" alt="Strafe" />
+	</a>
 	<h1>@strafe-js/util</h1>
 	<p>
 		<strong>Shared TypeScript Models, Permission Bitflags, BitField & Error Classes for Strafe.js</strong>
 	</p>
 	<p>
-		<a href="https://www.npmjs.com/package/@strafe-js/util"><img src="https://img.shields.io/npm/v/@strafe-js/util.svg?maxAge=3600" alt="npm version" /></a>
-		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js" alt="License" /></a>
+		<a href="https://www.npmjs.com/package/@strafe-js/util"><img src="https://img.shields.io/npm/v/@strafe-js/util.svg?color=509b6b" alt="npm version" /></a>
+		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js?color=509b6b" alt="License" /></a>
 	</p>
 </div>
 
@@ -95,7 +98,7 @@ Matches the official [Strafe Permissions Bit Table](https://app.strafe.chat/docs
 ```ts
 import { isSnowflake, sleep, RoomType, GatewayOp } from '@strafe-js/util';
 
-isSnowflake('123456789012345678'); // true (16–20 digits)
+isSnowflake('123456789012345678'); // true (16..20 digits)
 await sleep(1000); // 1 second delay
 
 console.log(RoomType.Text); // 3
