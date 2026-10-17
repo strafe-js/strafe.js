@@ -1,15 +1,15 @@
 ---
 title: Introduction to Strafe.js
-description: Complete TypeScript & JavaScript SDK suite for the Strafe Chat REST API and WebSocket Gateway.
+description: TypeScript and JavaScript SDK suite for the Strafe Chat REST API and Stargate WebSocket Gateway.
 ---
 
-Welcome to the official **Strafe.js** documentation. Strafe.js is a modular, strictly-typed TypeScript monorepo designed for building resilient bots and real-time integrations on **Strafe Chat** (`https://app.strafe.chat`).
+Welcome to the official **Strafe.js** documentation. Strafe.js is a modular, strictly-typed TypeScript monorepo for building bots, OAuth2 integrations, and real-time clients on **Strafe Chat** (`https://app.strafe.chat`).
 
 <Cards>
-  <Card title="Quickstart Guide" href="/docs/guides/getting-started" description="Create and launch your first Strafe Chat bot in under 2 minutes." />
-  <Card title="StrafeBot Client" href="/docs/strafebot/client" description="Explore state caching, event listeners, and member resolution." />
-  <Card title="Command Framework" href="/docs/commands/overview" description="Build commands with typed argument schemas, cooldowns, and guards." />
-  <Card title="Permission Calculator" href="/docs/tools/permission-calculator" description="Interactive bitmask calculator for all 28 Strafe permissions." />
+  <Card title="Quickstart Guide" href="/docs/guides/getting-started" description="Scaffold, configure, and launch your first Strafe Chat bot in under 2 minutes." />
+  <Card title="OAuth2 & Install Links" href="/docs/guides/oauth2" description="Generate bot invite URLs, exchange OAuth2 codes, and add users with spaces.join." />
+  <Card title="E2EE & Web Push" href="/docs/guides/e2ee-and-push" description="Handle end-to-end encrypted rooms, dynamic space joins, and Web Push subscriptions." />
+  <Card title="OAuth2 & Invite Generator" href="/docs/tools/oauth2-generator" description="Interactive builder for /oauth2/authorize URLs and permission bitmasks." />
 </Cards>
 
 ## Ecosystem Architecture
@@ -19,33 +19,55 @@ Strafe.js is organized as a layered monorepo so you can install the all-in-one `
 | Package | Description | Runtime Dependencies |
 | :--- | :--- | :--- |
 | `@strafe-js/strafebot` | High-level Bot `Client`, state caches, Equinox permission engine, and `CommandHandler` | `@strafe-js/*` |
-| `@strafe-js/rest` | HTTP REST client with automatic `429 Retry-After` backoff and `FormData` uploads | `@strafe-js/util` |
-| `@strafe-js/ws` | Persistent WebSocket Gateway client with heartbeating and exponential jitter backoff | `@strafe-js/util`, `ws` |
-| `@strafe-js/builders` | Fluent `MessageBuilder` and permission bitmask factories | `@strafe-js/util` |
+| `@strafe-js/rest` | HTTP REST client with automatic `429 Retry-After` backoff, OAuth2, and `FormData` uploads | `@strafe-js/util` |
+| `@strafe-js/ws` | Persistent Stargate WebSocket Gateway client with heartbeating and exponential jitter backoff | `@strafe-js/util`, `ws` |
+| `@strafe-js/builders` | Fluent `MessageBuilder`, permission bitmask helpers, and OAuth2 URL generators | `@strafe-js/util` |
 | `@strafe-js/formatters` | Mention (`<@id>`, `<@&id>`, `<#id>`), custom emoji, and Markdown escaping helpers | `@strafe-js/util` |
 | `@strafe-js/collection` | Extended `Map<K, V>` subclass with functional query methods (`find`, `filter`, `map`) | None |
-| `@strafe-js/util` | Core TypeScript interfaces, `Permission` flags, `BitField`, and error classes | None |
+| `@strafe-js/util` | Core TypeScript interfaces, `Permission` flags, `BitField`, E2EE helpers, and error classes | None |
 | `create-strafebot` | Interactive CLI tool to scaffold new bot projects and generate command files | Node.js built-ins |
 
 ## Quick Installation
 
-Scaffold a complete TypeScript bot project interactively:
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab value="npm">
+    ```bash title="Terminal"
+    # Scaffold a complete TypeScript bot project interactively
+    npm create strafebot@latest my-bot
 
-```bash
-npm create strafebot@latest my-bot
-cd my-bot
-npm run dev
-```
+    # Or install into an existing project
+    npm install @strafe-js/strafebot
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash title="Terminal"
+    pnpm create strafebot my-bot
 
-Or install `@strafe-js/strafebot` into an existing Node.js (`>= 18`) project:
+    # Or install into an existing project
+    pnpm add @strafe-js/strafebot
+    ```
+  </Tab>
+  <Tab value="yarn">
+    ```bash title="Terminal"
+    yarn create strafebot my-bot
 
-```bash
-npm install @strafe-js/strafebot
-```
+    # Or install into an existing project
+    yarn add @strafe-js/strafebot
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash title="Terminal"
+    bun create strafebot my-bot
+
+    # Or install into an existing project
+    bun add @strafe-js/strafebot
+    ```
+  </Tab>
+</Tabs>
 
 ## Minimal Example
 
-```ts
+```ts title="src/index.ts"
 import { Client, command } from '@strafe-js/strafebot';
 
 const client = new Client({
@@ -56,6 +78,12 @@ const client = new Client({
 
 client.on('ready', (data) => {
   console.log(`Logged in as ${data.user.username} (${data.spaces.length} spaces)`);
+  console.log(
+    'Invite URL:',
+    client.generateInviteUrl({
+      permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory'],
+    }),
+  );
 });
 
 client.commands.register(
@@ -65,7 +93,7 @@ client.commands.register(
     async run(ctx) {
       await ctx.reply('Pong! 🏓');
     },
-  })
+  }),
 );
 
 await client.login(process.env.BOT_TOKEN!);

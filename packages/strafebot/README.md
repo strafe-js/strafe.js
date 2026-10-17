@@ -1,13 +1,17 @@
 <div align="center">
 	<br />
+	<a href="https://app.strafe.chat/docs/">
+		<img src="https://app.strafe.chat/icons/icon-192.png" width="64" height="64" alt="Strafe" />
+	</a>
 	<h1>@strafe-js/strafebot</h1>
 	<p>
 		<strong>High-level TypeScript Bot Client, State Cache, Permission Engine & Command Framework for Strafe Chat</strong>
 	</p>
 	<p>
-		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/v/@strafe-js/strafebot.svg?maxAge=3600" alt="npm version" /></a>
-		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/dt/@strafe-js/strafebot.svg?maxAge=3600" alt="npm downloads" /></a>
-		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js" alt="License" /></a>
+		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/v/@strafe-js/strafebot.svg?color=509b6b" alt="npm version" /></a>
+		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/dt/@strafe-js/strafebot.svg?color=509b6b" alt="npm downloads" /></a>
+		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js?color=509b6b" alt="License" /></a>
+		<a href="https://app.strafe.chat/docs/"><img src="https://img.shields.io/badge/Strafe.chat-Developers-509b6b" alt="Strafe Developer Docs" /></a>
 	</p>
 </div>
 
@@ -56,7 +60,7 @@ client.commands.register(
     description: 'Check if the bot is responsive',
     cooldown: 3000,
     async run(ctx) {
-      await ctx.reply('Pong! 🏓');
+      await ctx.reply('Pong!');
     },
   }),
 );
@@ -90,14 +94,14 @@ await client.login(process.env.BOT_TOKEN!);
 
 ### Properties & State Caches
 
-- `client.rest: REST` — Underlying HTTP REST client.
-- `client.gateway: Gateway` — Underlying WebSocket Gateway client.
-- `client.commands: CommandHandler` — Built-in command registry and dispatcher.
-- `client.user: User | null` — Authenticated bot user (populated on `ready`).
-- `client.spaces: Collection<Snowflake, Space>` — Cached spaces.
-- `client.rooms: Collection<Snowflake, Room>` — Cached rooms by room ID.
-- `client.spaceRooms: Collection<Snowflake, Collection<Snowflake, Room>>` — Rooms grouped by space ID.
-- `client.members: Collection<Snowflake, Collection<Snowflake, SpaceMember>>` — Members grouped by space ID.
+- `client.rest: REST`: Underlying HTTP REST client.
+- `client.gateway: Gateway`: Underlying WebSocket Gateway client.
+- `client.commands: CommandHandler`: Built-in command registry and dispatcher.
+- `client.user: User | null`: Authenticated bot user (populated on `ready`).
+- `client.spaces: Collection<Snowflake, Space>`: Cached spaces.
+- `client.rooms: Collection<Snowflake, Room>`: Cached rooms by room ID.
+- `client.spaceRooms: Collection<Snowflake, Collection<Snowflake, Room>>`: Rooms grouped by space ID.
+- `client.members: Collection<Snowflake, Collection<Snowflake, SpaceMember>>`: Members grouped by space ID.
 
 ### Methods
 
@@ -133,32 +137,32 @@ export const slowmodeCommand = command({
     const sides = ctx.arguments.get('sides'); // number
     const label = ctx.arguments.get('label'); // string
     const rolled = Math.floor(Math.random() * sides) + 1;
-    await ctx.reply(`🎲 **${label}**: rolled **${rolled}** (1–${sides})`);
+    await ctx.reply(`**${label}**: rolled **${rolled}** (1..${sides})`);
   },
 });
 ```
 
 Supported argument types:
-- `'string'` (`string`) — supports `min`/`max` length, `choices`, `rest: true`
-- `'integer'` (`number`) — whole integers, supports `min`/`max` value, `choices`
-- `'number'` (`number`) — floating-point numbers, supports `min`/`max` value, `choices`
-- `'boolean'` (`boolean`) — accepts `true/false`, `yes/no`, `1/0`, `on/off`
-- `'user'` (`Snowflake`) — accepts `<@id>`, `<@!id>`, or raw 16–20 digit Snowflake IDs
-- `'snowflake'` (`Snowflake`) — validates 16–20 digit Snowflake IDs
-- `'attachment'` (`Attachment`) — consumes uploaded files from `ctx.message.attachments`
+- `'string'` (`string`): supports `choices`
+- `'integer'` (`number`): whole integers, supports `min`/`max` value, `choices`
+- `'number'` (`number`): floating-point numbers, supports `min`/`max` value, `choices`
+- `'boolean'` (`boolean`): accepts `true/false`, `yes/no`, `1/0`, `y/n`
+- `'user'` (`Snowflake`): accepts `<@id>`, `<@!id>`, or raw 16..20 digit Snowflake IDs
+- `'snowflake'` (`Snowflake`): validates 16..20 digit Snowflake IDs
+- `'attachment'` (`Attachment`): consumes uploaded files from `ctx.message.attachments`
 
 ### `Context` Helpers
 
 Inside `run(ctx)`:
-- `ctx.arguments.get(name)` — Retrieve a validated schema argument.
-- `ctx.args` — Raw tokenized string arguments (`string[]`).
+- `ctx.arguments.get(name)`: Retrieve a validated schema argument.
+- `ctx.args`: Raw tokenized string arguments (`string[]`).
 - `ctx.authorId`, `ctx.author`, `ctx.roomId`, `ctx.spaceId`, `ctx.member`, `ctx.botMember`.
-- `await ctx.reply(content, extra?)` — Reply directly to the command message.
-- `await ctx.send(content, extra?)` — Send a message to the same room without a reply reference.
-- `await ctx.react(emoji)` — React to the command message.
-- `await ctx.typing()` — Trigger typing indicator in the room.
-- `ctx.hasPermissions(required)` / `ctx.hasBotPermissions(required)` — Check caller or bot permissions in the current room.
-- `ctx.isBotOwner()` / `ctx.isSpaceOwner()` — Check ownership status.
+- `await ctx.reply(content, extra?)`: Reply directly to the command message.
+- `await ctx.send(content, extra?)`: Send a message to the same room without a reply reference.
+- `await ctx.react(emoji)`: React to the command message.
+- `await ctx.typing()`: Trigger typing indicator in the room.
+- `ctx.hasPermissions(required)` / `ctx.hasBotPermissions(required)`: Check caller or bot permissions in the current room.
+- `ctx.isBotOwner()` / `ctx.isSpaceOwner()`: Check ownership status.
 
 ### Command Guard Events
 

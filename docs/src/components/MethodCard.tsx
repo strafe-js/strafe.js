@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { Badge } from './Badge';
-import { ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
+import { CodeWindow } from './CodeWindow';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export interface ParamDef {
   name: string;
@@ -35,15 +36,7 @@ export function MethodCard({
   notes,
 }: MethodCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'example'>('details');
-
-  const copyExample = () => {
-    if (!example) return;
-    navigator.clipboard.writeText(example);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <div className="my-4 rounded-xl border border-[#262b33] bg-[#15181d] shadow-sm overflow-hidden transition-all duration-200 hover:border-[#509b6b]/50">
@@ -145,18 +138,12 @@ export function MethodCard({
           )}
 
           {activeTab === 'example' && example && (
-            <div className="relative group">
-              <button
-                onClick={copyExample}
-                className="absolute top-2 right-2 p-1.5 rounded-md bg-zinc-800 text-zinc-300 hover:text-white transition-colors text-xs flex items-center gap-1 z-10"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
-              <pre className="p-4 rounded-lg bg-zinc-950 text-zinc-100 font-mono text-xs overflow-x-auto leading-relaxed">
-                <code>{example}</code>
-              </pre>
-            </div>
+            <CodeWindow
+              title={`${name}.ts`}
+              lang="ts"
+              code={example}
+              showLineNumbers
+            />
           )}
         </div>
       )}

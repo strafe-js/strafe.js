@@ -138,9 +138,18 @@ import { RoomType, GatewayOp } from '@strafe-js/util';
   signature="(id: unknown) => id is Snowflake"
   returnType="boolean"
   isAsync={false}
-  description="Type guard that checks whether a value is a valid 16–20 digit numeric Snowflake string."
+  description="Type guard that checks whether a value is a valid 16-20 digit numeric Snowflake string."
   parameters={[
     { name: 'id', type: 'unknown', required: true, description: 'Value to validate.' },
   ]}
   example={`isSnowflake('123456789012345678'); // true`}
+/>
+
+<MethodCard
+  name="isEncryptedRoom / isEncryptedMessage / isSystemMessage"
+  signature="(roomOrMsg) => boolean"
+  returnType="boolean"
+  isAsync={false}
+  description="Checks whether a Room has E2EE enabled (room.e2ee_enabled), whether a Message contains ciphertext without plaintext, or whether a Message is a server system event (sender_id === '0' or system_type)."
+  example={`if (isEncryptedRoom(room) || isEncryptedMessage(msg)) {\n  // Bots cannot read or send plaintext in E2EE rooms\n}`}
 />

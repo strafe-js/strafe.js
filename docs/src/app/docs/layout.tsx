@@ -12,10 +12,19 @@ export default function Layout({ children }: { children: ReactNode }) {
       }}
       nav={{
         title: (
-          <span className="strafe-brand">
-            <span className="strafe-brand-mark">Strafe</span>
-            <span className="strafe-brand-dot">.js</span>
-            <span className="strafe-brand-docs">DOCS</span>
+          <span className="strafe-brand inline-flex items-center gap-2">
+            <img
+              src="https://app.strafe.chat/icons/icon-192.png"
+              alt="Strafe"
+              width={22}
+              height={22}
+              className="w-[22px] h-[22px] rounded-md"
+            />
+            <span>
+              <span className="strafe-brand-mark">Strafe</span>
+              <span className="strafe-brand-dot">.js</span>
+              <span className="strafe-brand-docs">DOCS</span>
+            </span>
           </span>
         ),
         url: '/',
@@ -26,6 +35,10 @@ export default function Layout({ children }: { children: ReactNode }) {
           text: 'Permission Calculator',
           url: '/docs/tools/permission-calculator',
           icon: <Shield className="w-4 h-4 text-[#509b6b]" />,
+        },
+        {
+          text: 'OAuth2 Generator',
+          url: '/docs/tools/oauth2-generator',
         },
         {
           text: 'Command Builder',

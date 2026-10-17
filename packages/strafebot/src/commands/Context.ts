@@ -1,4 +1,5 @@
 import {
+  isEncryptedRoom,
   Permission,
   resolvePermission,
   type Message,
@@ -140,6 +141,13 @@ export class Context<Schema extends CommandArgumentsSchema = CommandArgumentsSch
    */
   get content(): string {
     return this.message.plaintext ?? '';
+  }
+
+  /**
+   * Whether the room where the command was invoked has end-to-end encryption (`e2ee_enabled`) enabled.
+   */
+  get isEncryptedRoom(): boolean {
+    return isEncryptedRoom(this.room);
   }
 
   /**

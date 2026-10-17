@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { Room, Snowflake, Space, SpaceMember, User } from '@strafe-js/util';
+import { BotInviteUrlOptions, Message, Room, Snowflake, Space, SpaceMember, User } from '@strafe-js/util';
 import { Collection } from '@strafe-js/collection';
 import { REST, RESTOptions } from '@strafe-js/rest';
 import { Gateway, GatewayOptions, GatewayEvents } from '@strafe-js/ws';
@@ -32,9 +32,13 @@ export interface ClientOptions {
     commands?: Partial<CommandHandlerOptions>;
 }
 /**
- * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents} and {@link CommandEvents}.
+ * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents}, {@link CommandEvents},
+ * and E2EE room notifications.
  */
-export type ClientEvents = GatewayEvents & CommandEvents;
+export type ClientEvents = GatewayEvents & CommandEvents & {
+    /** Emitted when a `MESSAGE_CREATE` frame arrives from an end-to-end encrypted room (`ciphertext` without `plaintext`). */
+    encryptedMessageCreate: (message: Message) => void;
+};
 export declare interface Client {
     /** Registers a typed listener for a {@link ClientEvents} event. */
     on<E extends keyof ClientEvents>(event: E, listener: ClientEvents[E]): this;
@@ -131,6 +135,27 @@ export declare class Client extends EventEmitter {
      * Returns a cached {@link SpaceMember} from `client.members` without making a network request.
      */
     getMember(spaceId: Snowflake, userId: Snowflake): SpaceMember | undefined;
+    /**
+     * Checks whether a cached room has end-to-end encryption (`e2ee_enabled`) enabled.
+     * Bots cannot read or post plaintext messages in encrypted rooms.
+     */
+    isRoomEncrypted(roomId: Snowflake): boolean;
+    /**
+     * Generates an OAuth2 bot installation link (`/oauth2/authorize?scope=bot...`) for this bot.
+     * Defaults `clientId` to `client.user.id` and `baseUrl` to `ClientOptions.apiBase`.
+     *
+     * @throws {Error} When neither `opts.clientId` nor `client.user.id` is available.
+     * @example
+     * ```ts
+     * const url = client.generateInviteUrl({
+     *   permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory', 'ManageMessages'],
+     * });
+     * ```
+     */
+    generateInviteUrl(opts?: Omit<BotInviteUrlOptions, 'clientId' | 'baseUrl'> & {
+        clientId?: Snowflake;
+        baseUrl?: string;
+    }): string;
     /**
      * Computes the effective 28-bit permission bitmask for `userId` in `spaceId` (and optionally `roomId`)
      * using the 6-stage Equinox permission cascade:

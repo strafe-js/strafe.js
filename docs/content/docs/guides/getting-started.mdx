@@ -6,43 +6,88 @@ description: Step-by-step guide to scaffolding, configuring, and running your fi
 ## Prerequisites
 
 - **Node.js 18+** (Node.js 20 or 22 LTS recommended)
-- A **Strafe Bot Token** obtained from the Strafe Developer Portal
+- A **Strafe Bot Token** (`strf_bot_...`) obtained from the Strafe Developer Portal (`Settings -> Developer Portal`)
+
+<Callout title="Keep Your Bot Token Secret" type="warn">
+  Strafe returns your `strf_bot_...` token only once when the bot is created or when `resetApplicationBotToken` is called. Store it in `.env` and never commit it to version control.
+</Callout>
 
 ## Option 1: Using the CLI Scaffolder (Recommended)
 
-The fastest way to bootstrap a new bot is with `create-strafebot`:
+<Steps>
+<Step>
+### Run the Interactive Scaffolder
 
-```bash
+```bash title="Terminal"
 npx create-strafebot my-strafe-bot
 ```
 
-The interactive wizard will prompt you for:
-1. **Project directory** (e.g. `my-strafe-bot`)
-2. **Bot token** (written to `.env`)
-3. **Command prefix** (default: `!`)
-4. **Owner User IDs** (comma-separated Snowflake IDs)
-5. **Starter template** (`Full Command Bot` or `Minimal Event Bot`)
+The wizard prompts you for your project directory, bot token, command prefix (default `!`), owner Snowflake IDs, and starter template (`Full Command Bot` or `Minimal Event Bot`).
+</Step>
 
-Once generated, start your bot in watch mode:
+<Step>
+### Inspect the Generated Project Layout
 
-```bash
+<Files>
+  <Folder name="my-strafe-bot" defaultOpen>
+    <Folder name="src" defaultOpen>
+      <Folder name="commands" defaultOpen>
+        <File name="ping.ts" />
+        <File name="kick.ts" />
+      </Folder>
+      <File name="index.ts" />
+    </Folder>
+    <File name=".env" />
+    <File name=".env.example" />
+    <File name="package.json" />
+    <File name="tsconfig.json" />
+  </Folder>
+</Files>
+</Step>
+
+<Step>
+### Start the Bot in Watch Mode
+
+```bash title="Terminal"
 cd my-strafe-bot
 npm run dev
 ```
+</Step>
+</Steps>
 
 ## Option 2: Manual Setup
 
-Install `@strafe-js/strafebot` and TypeScript development tools:
-
-```bash
-npm install @strafe-js/strafebot dotenv
-npm install -D typescript tsx @types/node
-```
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab value="npm">
+    ```bash title="Terminal"
+    npm install @strafe-js/strafebot dotenv
+    npm install -D typescript tsx @types/node
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash title="Terminal"
+    pnpm add @strafe-js/strafebot dotenv
+    pnpm add -D typescript tsx @types/node
+    ```
+  </Tab>
+  <Tab value="yarn">
+    ```bash title="Terminal"
+    yarn add @strafe-js/strafebot dotenv
+    yarn add -D typescript tsx @types/node
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash title="Terminal"
+    bun add @strafe-js/strafebot dotenv
+    bun add -D typescript @types/node
+    ```
+  </Tab>
+</Tabs>
 
 Create a `.env` file in your project root:
 
-```ini
-BOT_TOKEN=your_bot_token_here
+```ini title=".env"
+BOT_TOKEN=strf_bot_your_token_here
 STRAFE_API=https://app.strafe.chat/api
 STRAFE_GATEWAY=wss://app.strafe.chat/gateway/events
 PREFIX=!
@@ -51,7 +96,7 @@ OWNERS=123456789012345678
 
 Create `src/index.ts`:
 
-```ts
+```ts title="src/index.ts"
 import 'dotenv/config';
 import { Client, command } from '@strafe-js/strafebot';
 import { userMention } from '@strafe-js/formatters';
@@ -65,6 +110,12 @@ const client = new Client({
 
 client.on('ready', (info) => {
   console.log(`Ready as ${info.user.username} (${info.user.id})`);
+  console.log(
+    'Install URL:',
+    client.generateInviteUrl({
+      permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory'],
+    }),
+  );
 });
 
 client.commands.register(
@@ -75,7 +126,7 @@ client.commands.register(
     async run(ctx) {
       await ctx.reply(`Hello ${userMention(ctx.authorId)}!`);
     },
-  })
+  }),
 );
 
 await client.login(process.env.BOT_TOKEN!);

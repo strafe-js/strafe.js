@@ -1,12 +1,15 @@
 <div align="center">
 	<br />
+	<a href="https://app.strafe.chat/docs/">
+		<img src="https://app.strafe.chat/icons/icon-192.png" width="64" height="64" alt="Strafe" />
+	</a>
 	<h1>create-strafebot</h1>
 	<p>
 		<strong>Interactive CLI Project Scaffolder & Command Generator for Strafe.js Bots</strong>
 	</p>
 	<p>
-		<a href="https://www.npmjs.com/package/create-strafebot"><img src="https://img.shields.io/npm/v/create-strafebot.svg?maxAge=3600" alt="npm version" /></a>
-		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js" alt="License" /></a>
+		<a href="https://www.npmjs.com/package/create-strafebot"><img src="https://img.shields.io/npm/v/create-strafebot.svg?color=509b6b" alt="npm version" /></a>
+		<a href="https://github.com/strafe-js/strafe.js"><img src="https://img.shields.io/github/license/strafe-js/strafe.js?color=509b6b" alt="License" /></a>
 	</p>
 </div>
 
@@ -33,13 +36,13 @@ npx create-strafebot my-bot
 
 ### Interactive Prompts
 
-1. **Project folder** — Target directory name (default: `my-strafe-bot`).
-2. **Bot token** — Optional token written directly into `.env` (`BOT_TOKEN`).
-3. **Command prefix** — Default command prefix (default: `!`).
-4. **Owner user IDs** — Comma-separated Snowflake IDs for `botOwnerOnly` commands.
+1. **Project folder**: Target directory name (default: `my-strafe-bot`).
+2. **Bot token**: Optional token written directly into `.env` (`BOT_TOKEN`).
+3. **Command prefix**: Default command prefix (default: `!`).
+4. **Owner user IDs**: Comma-separated Snowflake IDs for `botOwnerOnly` commands.
 5. **Template selection**:
-   - **1) Full Command Bot** — Includes `CommandHandler`, `src/commands/ping.ts`, and `src/commands/kick.ts`.
-   - **2) Minimal Event Bot** — Lightweight `messageCreate` listener setup without command files.
+   - **1) Full Command Bot**: Includes `CommandHandler`, `src/commands/ping.ts`, and `src/commands/kick.ts`.
+   - **2) Minimal Event Bot**: Lightweight `messageCreate` listener setup without command files.
 
 ### Generated Directory Structure
 

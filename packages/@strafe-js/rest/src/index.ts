@@ -3,6 +3,15 @@ import {
   CreateMessageBody,
   EditMessageBody,
   Message,
+  OAuth2Application,
+  OAuth2ApplicationPublic,
+  OAuth2Grant,
+  OAuth2TokenInfo,
+  OAuth2TokenResponse,
+  PermissionOverride,
+  PushPreferences,
+  PushSubscriptionInput,
+  PushSubscriptionRecord,
   RateLimitError,
   Role,
   Room,
@@ -48,6 +57,8 @@ export interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
   /** Additional HTTP headers merged onto the request. */
   headers?: Record<string, string>;
+  /** When `false`, omits the default `Authorization` header even if a token is configured on the client. */
+  auth?: boolean;
 }
 
 /**
@@ -157,7 +168,9 @@ export class REST {
       Accept: 'application/json',
       ...(opts.headers ?? {}),
     };
-    if (this.token) headers['Authorization'] = `${this.authScheme} ${this.token}`;
+    if (this.token && opts.auth !== false && !headers['Authorization']) {
+      headers['Authorization'] = `${this.authScheme} ${this.token}`;
+    }
 
     const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
     let body: BodyInit | undefined;
@@ -205,13 +218,21 @@ export class REST {
       }
 
       if (!res.ok) {
-        const msg =
+        const errField =
           typeof data === 'object' && data && 'error' in data
             ? String((data as { error: unknown }).error)
-            : `HTTP ${res.status} ${res.statusText}`;
+            : undefined;
+        const errDesc =
+          typeof data === 'object' && data && 'error_description' in data
+            ? String((data as { error_description: unknown }).error_description)
+            : undefined;
+        const msg =
+          errDesc ?? errField ?? `HTTP ${res.status} ${res.statusText}`;
         const code =
           typeof data === 'object' && data && 'code' in data
             ? String((data as { code: unknown }).code)
+            : errDesc && errField
+            ? errField
             : undefined;
         throw new StrafeError(msg, res.status, code, data);
       }
@@ -286,6 +307,18 @@ export class REST {
     presence?: { status: 'online' | 'idle' | 'dnd' | 'invisible'; custom_status?: string };
   }): Promise<User> {
     return this.patch<User>('/users/@me', body);
+  }
+  /**
+   * Uploads a new profile avatar image for the authenticated account via `POST /users/@me/avatar` (`multipart/form-data`).
+   */
+  uploadAvatar(file: Blob | Buffer, filename = 'avatar.png'): Promise<User> {
+    return this._uploadMultipartFile<User>('/users/@me/avatar', file, filename);
+  }
+  /**
+   * Uploads a new profile banner image for the authenticated account via `POST /users/@me/banner` (`multipart/form-data`).
+   */
+  uploadBanner(file: Blob | Buffer, filename = 'banner.png'): Promise<User> {
+    return this._uploadMultipartFile<User>('/users/@me/banner', file, filename);
   }
   /**
    * Lists all spaces the authenticated user belongs to via `GET /users/@me/spaces`.
@@ -468,6 +501,26 @@ export class REST {
     return this.put<void>(`/spaces/${spaceId}/members/${userId}/roles`, { role_ids: roleIds });
   }
   /**
+   * Adds a user who authorized the application with the `spaces.join` OAuth2 scope to `spaceId`
+   * via `PUT /spaces/:spaceId/members/:userId`.
+   * Requires `Permission.CreateInvite` (or `ManageSpace` / `Administrator`) on the calling bot.
+   * Returns `{ space_id, user_id }` on `201 Created`, or `undefined` on `204 No Content` if already a member.
+   *
+   * @example
+   * ```ts
+   * await client.rest.addSpaceMemberWithToken(spaceId, userId, userOAuthAccessToken);
+   * ```
+   */
+  addSpaceMemberWithToken(
+    spaceId: Snowflake,
+    userId: Snowflake,
+    accessToken: string,
+  ): Promise<{ space_id: Snowflake; user_id: Snowflake } | undefined> {
+    return this.put(`/spaces/${spaceId}/members/${userId}`, {
+      access_token: accessToken,
+    });
+  }
+  /**
    * Kicks a member from a space via `DELETE /spaces/:spaceId/members/:userId`.
    * Requires `Permission.KickMembers`.
    */
@@ -547,6 +600,86 @@ export class REST {
    */
   deleteRole(spaceId: Snowflake, roleId: Snowflake): Promise<void> {
     return this.delete<void>(`/spaces/${spaceId}/roles/${roleId}`);
+  }
+  /**
+   * Lists all role permission overrides configured on `roomId` via `GET /spaces/:spaceId/rooms/:roomId/overrides`.
+   * Requires `Permission.ManageRoles`.
+   */
+  getRoomRoleOverrides(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+  ): Promise<PermissionOverride[]> {
+    return this.get<PermissionOverride[]>(
+      `/spaces/${spaceId}/rooms/${roomId}/overrides`,
+    );
+  }
+  /**
+   * Sets or updates a role permission override on `roomId` via `PUT /spaces/:spaceId/rooms/:roomId/overrides/:roleId`.
+   * Only room-scoped permission bits are accepted. Requires `Permission.ManageRoles`.
+   */
+  setRoomRoleOverride(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+    roleId: Snowflake,
+    body: { allow: number; deny: number },
+  ): Promise<PermissionOverride> {
+    return this.put<PermissionOverride>(
+      `/spaces/${spaceId}/rooms/${roomId}/overrides/${roleId}`,
+      body,
+    );
+  }
+  /**
+   * Deletes a role permission override from `roomId` via `DELETE /spaces/:spaceId/rooms/:roomId/overrides/:roleId`.
+   * Requires `Permission.ManageRoles`.
+   */
+  deleteRoomRoleOverride(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+    roleId: Snowflake,
+  ): Promise<void> {
+    return this.delete<void>(
+      `/spaces/${spaceId}/rooms/${roomId}/overrides/${roleId}`,
+    );
+  }
+  /**
+   * Lists all member-specific permission overrides configured on `roomId` via
+   * `GET /spaces/:spaceId/rooms/:roomId/overrides/users`. Requires `Permission.ManageRoles`.
+   */
+  getRoomUserOverrides(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+  ): Promise<PermissionOverride[]> {
+    return this.get<PermissionOverride[]>(
+      `/spaces/${spaceId}/rooms/${roomId}/overrides/users`,
+    );
+  }
+  /**
+   * Sets or updates a member-specific permission override on `roomId` via
+   * `PUT /spaces/:spaceId/rooms/:roomId/overrides/users/:userId`. Requires `Permission.ManageRoles`.
+   */
+  setRoomUserOverride(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+    userId: Snowflake,
+    body: { allow: number; deny: number },
+  ): Promise<PermissionOverride> {
+    return this.put<PermissionOverride>(
+      `/spaces/${spaceId}/rooms/${roomId}/overrides/users/${userId}`,
+      body,
+    );
+  }
+  /**
+   * Deletes a member-specific permission override from `roomId` via
+   * `DELETE /spaces/:spaceId/rooms/:roomId/overrides/users/:userId`. Requires `Permission.ManageRoles`.
+   */
+  deleteRoomUserOverride(
+    spaceId: Snowflake,
+    roomId: Snowflake,
+    userId: Snowflake,
+  ): Promise<void> {
+    return this.delete<void>(
+      `/spaces/${spaceId}/rooms/${roomId}/overrides/users/${userId}`,
+    );
   }
 
   /**
@@ -853,10 +986,347 @@ export class REST {
     return this.delete<void>(`/spaces/${spaceId}/invites/${code}`);
   }
   /**
-   * Resolves public preview information for an invite code via `GET /spaces/invites/:code`.
+   * Resolves public preview information for an invite code via `GET /spaces/invites/:code` (no authentication required).
    */
   getInvite(code: string): Promise<{ space: Partial<Space>; inviter_display_name?: string }> {
     return this.get(`/spaces/invites/${code}`);
+  }
+  /**
+   * Redeems an invite code to join its space via `POST /spaces/invites/:code/join`.
+   */
+  joinInvite(code: string): Promise<Space> {
+    return this.post<Space>(`/spaces/invites/${code}/join`);
+  }
+
+  /**
+   * Exchanges a single-use OAuth2 authorization `code` (valid for 10 minutes) for a 7-day Bearer `access_token`
+   * and `refresh_token` via `POST /oauth2/token` (`grant_type: 'authorization_code'`).
+   *
+   * @example
+   * ```ts
+   * const tokens = await rest.exchangeOAuth2Code({
+   *   clientId: '2104652899186380800',
+   *   clientSecret: process.env.STRAFE_CLIENT_SECRET!,
+   *   code: req.query.code,
+   *   redirectUri: 'https://app.example.com/callback',
+   * });
+   * ```
+   */
+  exchangeOAuth2Code(
+    params:
+      | {
+          clientId: Snowflake;
+          clientSecret: string;
+          code: string;
+          redirectUri: string;
+        }
+      | {
+          client_id: Snowflake;
+          client_secret: string;
+          code: string;
+          redirect_uri: string;
+        },
+  ): Promise<OAuth2TokenResponse> {
+    return this.request<OAuth2TokenResponse>({
+      method: 'POST',
+      path: '/oauth2/token',
+      auth: false,
+      body: {
+        grant_type: 'authorization_code',
+        client_id: 'clientId' in params ? params.clientId : params.client_id,
+        client_secret:
+          'clientSecret' in params ? params.clientSecret : params.client_secret,
+        code: params.code,
+        redirect_uri:
+          'redirectUri' in params ? params.redirectUri : params.redirect_uri,
+      },
+    });
+  }
+
+  /**
+   * Exchanges a `refresh_token` for a new OAuth2 token pair via `POST /oauth2/token` (`grant_type: 'refresh_token'`).
+   * Invalidates the previous token pair immediately upon issuance.
+   */
+  refreshOAuth2Token(
+    params:
+      | {
+          clientId: Snowflake;
+          clientSecret: string;
+          refreshToken: string;
+        }
+      | {
+          client_id: Snowflake;
+          client_secret: string;
+          refresh_token: string;
+        },
+  ): Promise<OAuth2TokenResponse> {
+    return this.request<OAuth2TokenResponse>({
+      method: 'POST',
+      path: '/oauth2/token',
+      auth: false,
+      body: {
+        grant_type: 'refresh_token',
+        client_id: 'clientId' in params ? params.clientId : params.client_id,
+        client_secret:
+          'clientSecret' in params ? params.clientSecret : params.client_secret,
+        refresh_token:
+          'refreshToken' in params ? params.refreshToken : params.refresh_token,
+      },
+    });
+  }
+
+  /**
+   * Revokes an OAuth2 access or refresh token and removes the user's grant via `POST /oauth2/token/revoke` (RFC 7009).
+   */
+  revokeOAuth2Token(
+    params:
+      | {
+          clientId: Snowflake;
+          clientSecret: string;
+          token: string;
+        }
+      | {
+          client_id: Snowflake;
+          client_secret: string;
+          token: string;
+        },
+  ): Promise<Record<string, never>> {
+    return this.request<Record<string, never>>({
+      method: 'POST',
+      path: '/oauth2/token/revoke',
+      auth: false,
+      body: {
+        client_id: 'clientId' in params ? params.clientId : params.client_id,
+        client_secret:
+          'clientSecret' in params ? params.clientSecret : params.client_secret,
+        token: params.token,
+      },
+    });
+  }
+
+  /**
+   * Inspects an OAuth2 access token via `GET /oauth2/@me`, returning the owning application, granted scopes,
+   * expiration timestamp, and (when `'identify'` or `'email'` is granted) the user profile.
+   * Pass `accessToken` to inspect a specific Bearer token without mutating `this.token`.
+   */
+  getOAuth2Me(accessToken?: string): Promise<OAuth2TokenInfo> {
+    return this.request<OAuth2TokenInfo>({
+      method: 'GET',
+      path: '/oauth2/@me',
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
+  }
+
+  /**
+   * Lists all applications authorized by the current user session via `GET /oauth2/@me/grants` (session token only).
+   */
+  getOAuth2Grants(): Promise<OAuth2Grant[]> {
+    return this.get<OAuth2Grant[]>('/oauth2/@me/grants');
+  }
+
+  /**
+   * Revokes an application's OAuth2 grant for the current user session via `DELETE /oauth2/@me/grants/:appId` (session token only).
+   */
+  revokeOAuth2Grant(appId: Snowflake): Promise<void> {
+    return this.delete<void>(`/oauth2/@me/grants/${appId}`);
+  }
+
+  /**
+   * Fetches the public profile of any developer application via `GET /applications/:appId/public`.
+   */
+  getApplicationPublic(appId: Snowflake): Promise<OAuth2ApplicationPublic> {
+    return this.get<OAuth2ApplicationPublic>(`/applications/${appId}/public`);
+  }
+
+  /**
+   * Lists all developer applications owned by the signed-in session via `GET /applications` (session token only).
+   */
+  getApplications(): Promise<OAuth2Application[]> {
+    return this.get<OAuth2Application[]>('/applications');
+  }
+
+  /**
+   * Creates a new developer application via `POST /applications` (session token only).
+   * Returns the created application with `client_secret` populated once.
+   */
+  createApplication(name: string): Promise<OAuth2Application> {
+    return this.post<OAuth2Application>('/applications', { name });
+  }
+
+  /**
+   * Fetches a developer application owned by the signed-in session via `GET /applications/:appId` (session token only).
+   */
+  getApplication(appId: Snowflake): Promise<OAuth2Application> {
+    return this.get<OAuth2Application>(`/applications/${appId}`);
+  }
+
+  /**
+   * Updates application settings (`name`, `description`, `icon`, `redirect_uris`, `bot_public`)
+   * via `PATCH /applications/:appId` (session token only).
+   */
+  editApplication(
+    appId: Snowflake,
+    body: {
+      name?: string;
+      description?: string;
+      icon?: string;
+      redirect_uris?: string[];
+      bot_public?: boolean;
+    },
+  ): Promise<OAuth2Application> {
+    return this.patch<OAuth2Application>(`/applications/${appId}`, body);
+  }
+
+  /**
+   * Deletes a developer application, its client secret, and its bot token via `DELETE /applications/:appId` (session token only).
+   */
+  deleteApplication(appId: Snowflake): Promise<void> {
+    return this.delete<void>(`/applications/${appId}`);
+  }
+
+  /**
+   * Mints a new `client_secret` (shown once) for `appId` via `POST /applications/:appId/secret` (session token only).
+   */
+  resetApplicationSecret(appId: Snowflake): Promise<{ client_secret: string }> {
+    return this.post<{ client_secret: string }>(`/applications/${appId}/secret`);
+  }
+
+  /**
+   * Attaches a bot account to `appId` and returns its initial `token` (shown once) via
+   * `POST /applications/:appId/bot` (session token only).
+   */
+  createApplicationBot(appId: Snowflake): Promise<{ bot: User; token: string }> {
+    return this.post<{ bot: User; token: string }>(`/applications/${appId}/bot`);
+  }
+
+  /**
+   * Updates the bot's profile fields (`display_name`, `about_me`, `bio`, `accent_color`) via
+   * `PATCH /applications/:appId/bot` (session token only).
+   */
+  editApplicationBot(
+    appId: Snowflake,
+    body: {
+      display_name?: string;
+      about_me?: string;
+      bio?: string;
+      accent_color?: string;
+    },
+  ): Promise<User> {
+    return this.patch<User>(`/applications/${appId}/bot`, body);
+  }
+
+  /**
+   * Uploads a new avatar image for the application's bot via `POST /applications/:appId/bot/avatar` (session token only).
+   */
+  uploadApplicationBotAvatar(
+    appId: Snowflake,
+    file: Blob | Buffer,
+    filename = 'avatar.png',
+  ): Promise<User> {
+    return this._uploadMultipartFile<User>(
+      `/applications/${appId}/bot/avatar`,
+      file,
+      filename,
+    );
+  }
+
+  /**
+   * Uploads a new banner image for the application's bot via `POST /applications/:appId/bot/banner` (session token only).
+   */
+  uploadApplicationBotBanner(
+    appId: Snowflake,
+    file: Blob | Buffer,
+    filename = 'banner.png',
+  ): Promise<User> {
+    return this._uploadMultipartFile<User>(
+      `/applications/${appId}/bot/banner`,
+      file,
+      filename,
+    );
+  }
+
+  /**
+   * Resets the bot's authentication token (shown once) and disconnects active gateway sessions with `SESSION_REVOKED`
+   * via `POST /applications/:appId/bot/token` (session token only).
+   */
+  resetApplicationBotToken(appId: Snowflake): Promise<{ token: string }> {
+    return this.post<{ token: string }>(`/applications/${appId}/bot/token`);
+  }
+
+  /**
+   * Fetches the instance's uncompressed P-256 VAPID public key (base64url) via `GET /push/vapid-key` (no authentication required).
+   */
+  getPushVapidKey(): Promise<{ public_key: string }> {
+    return this.get<{ public_key: string }>('/push/vapid-key');
+  }
+
+  /**
+   * Registers or replaces the Web Push subscription for the current session via `PUT /users/@me/push` (session token only).
+   */
+  putPushSubscription(
+    body: PushSubscriptionInput,
+  ): Promise<{ subscription: PushSubscriptionRecord }> {
+    return this.put<{ subscription: PushSubscriptionRecord }>(
+      '/users/@me/push',
+      body,
+    );
+  }
+
+  /**
+   * Updates notification delivery preferences for the current session's Web Push subscription
+   * via `PATCH /users/@me/push` (session token only).
+   */
+  patchPushSubscription(
+    prefs: PushPreferences,
+  ): Promise<{ subscription: PushSubscriptionRecord }> {
+    return this.patch<{ subscription: PushSubscriptionRecord }>(
+      '/users/@me/push',
+      { prefs },
+    );
+  }
+
+  /**
+   * Fetches the active Web Push subscription metadata for the current session via `GET /users/@me/push` (session token only).
+   */
+  getPushSubscription(): Promise<{ subscription: PushSubscriptionRecord }> {
+    return this.get<{ subscription: PushSubscriptionRecord }>('/users/@me/push');
+  }
+
+  /**
+   * Deletes the active Web Push subscription for the current session via `DELETE /users/@me/push` (session token only).
+   */
+  deletePushSubscription(): Promise<void> {
+    return this.delete<void>('/users/@me/push');
+  }
+
+  /**
+   * Dispatches an immediate `test` Web Push notification to the current session's endpoint
+   * via `POST /users/@me/push/test` (session token only).
+   */
+  testPushSubscription(): Promise<{
+    delivered: boolean;
+    status?: number;
+    error?: string;
+  }> {
+    return this.post('/users/@me/push/test');
+  }
+
+  private _uploadMultipartFile<T>(
+    path: string,
+    file: Blob | Buffer,
+    filename: string,
+  ): Promise<T> {
+    const form = new FormData();
+    const blob =
+      file instanceof Blob
+        ? file
+        : new Blob([new Uint8Array(file as Buffer)]);
+    form.append('file', blob, filename);
+    return this.request<T>({
+      method: 'POST',
+      path,
+      body: form,
+    });
   }
 
   /**

@@ -1,20 +1,39 @@
 import { source } from '@/lib/source';
 import { DocsPage, DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
 import { notFound } from 'next/navigation';
 import { ApiPlayground } from '@/components/ApiPlayground';
 import { Badge } from '@/components/Badge';
+import { CodeWindow } from '@/components/CodeWindow';
 import { CommandBuilder } from '@/components/CommandBuilder';
 import { MethodCard } from '@/components/MethodCard';
+import { OAuth2Generator } from '@/components/OAuth2Generator';
 import { PermissionCalculator } from '@/components/PermissionCalculator';
 import { PropertyTable } from '@/components/PropertyTable';
 
 const mdxComponents = {
   ...defaultMdxComponents,
+  Tab,
+  Tabs,
+  Step,
+  Steps,
+  Callout,
+  Accordion,
+  Accordions,
+  File,
+  Folder,
+  Files,
   ApiPlayground,
   Badge,
+  CodeWindow,
   CommandBuilder,
   MethodCard,
+  OAuth2Generator,
   PermissionCalculator,
   PropertyTable,
 };
@@ -54,7 +73,7 @@ export async function generateMetadata(props: {
   const title = page.data.title;
   const description =
     page.data.description ||
-    'Complete TypeScript & JavaScript SDK suite for the Strafe Chat REST API and WebSocket Gateway.';
+    'TypeScript and JavaScript SDK suite for the Strafe Chat REST API and Stargate WebSocket Gateway.';
   const pageTitle = `${title} | Strafe.js`;
   const strafeIcon512 = 'https://app.strafe.chat/icons/icon-512.png';
 

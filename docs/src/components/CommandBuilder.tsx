@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, Check, Terminal, Plus, Trash2, Play, Sparkles } from 'lucide-react';
+import { Terminal, Plus, Trash2, Play, Sparkles } from 'lucide-react';
+import { CodeWindow } from './CodeWindow';
 
 interface ArgSchema {
   id: string;
@@ -252,23 +253,12 @@ ${runBodyString}
         </div>
 
         <div className="p-6 bg-[#101114] text-[#f3f5f7] flex flex-col justify-between space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs text-[#509b6b] font-bold uppercase tracking-wider">
-                Generated Code
-              </span>
-              <button
-                onClick={copyCode}
-                className="px-2.5 py-1 rounded bg-[#26282c] text-[#f3f5f7] hover:bg-[#2e2e2e] transition-colors text-xs flex items-center gap-1.5"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-[#509b6b]" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
-            </div>
-            <pre className="p-4 rounded-xl bg-[#17191c] border border-[#2f3237] font-mono text-xs text-[#6db888] overflow-x-auto leading-relaxed">
-              <code>{codeSnippet}</code>
-            </pre>
-          </div>
+          <CodeWindow
+            title={`src/commands/${name || 'command'}.ts`}
+            lang="ts"
+            code={codeSnippet}
+            showLineNumbers
+          />
 
           <div className="space-y-3 pt-4 border-t border-[#2f3237]">
             <span className="font-mono text-xs text-[#509b6b] font-bold uppercase tracking-wider flex items-center gap-2">

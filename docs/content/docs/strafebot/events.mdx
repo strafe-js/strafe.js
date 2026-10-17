@@ -35,9 +35,11 @@ description: Complete catalog of events emitted by Client and CommandHandler wit
 
 | Event Name | Gateway Type (`t`) | Payload Type | Description |
 | :--- | :--- | :--- | :--- |
-| `'messageCreate'` | `MESSAGE_CREATE` | `Message` | Emitted when a new message is posted in a subscribed room or DM. Also triggers `client.commands`. |
+| `'messageCreate'` | `MESSAGE_CREATE` | `Message` | Emitted when a new message is posted in a subscribed room or DM. Also triggers `client.commands` for plaintext messages. |
+| `'encryptedMessageCreate'` | `MESSAGE_CREATE` | `Message` | Emitted when an end-to-end encrypted message (`ciphertext` without `plaintext`) is received. |
 | `'messageUpdate'` | `MESSAGE_UPDATE` | `Message` | Emitted when a message is edited. |
 | `'messageDelete'` | `MESSAGE_DELETE` | `{ id: Snowflake; room_id: Snowflake; space_id?: Snowflake }` | Emitted when a message is deleted. |
+| `'sessionRevoked'` | `SESSION_REVOKED` | `{ reason: string }` | Emitted when the bot token or session is revoked; disables automatic Gateway reconnection. |
 
 ## Command Framework Events
 
@@ -51,7 +53,7 @@ description: Complete catalog of events emitted by Client and CommandHandler wit
 
 ## Example: Listening to Multiple Events
 
-```ts
+```ts title="src/events.ts"
 client.on('ready', (payload) => {
   console.log(`Connected as ${payload.user.username} in ${payload.spaces.length} spaces`);
 });

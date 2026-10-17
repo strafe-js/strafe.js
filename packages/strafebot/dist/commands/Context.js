@@ -93,6 +93,12 @@ class Context {
         return this.message.plaintext ?? '';
     }
     /**
+     * Whether the room where the command was invoked has end-to-end encryption (`e2ee_enabled`) enabled.
+     */
+    get isEncryptedRoom() {
+        return (0, util_1.isEncryptedRoom)(this.room);
+    }
+    /**
      * Cached {@link SpaceMember} record for the caller in the current space, or `null` in DMs / if uncached.
      */
     get member() {

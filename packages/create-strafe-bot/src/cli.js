@@ -304,7 +304,7 @@ export default command({
   aliases: ['commands'],
   async run(ctx) {
     const list = [...ctx.client.commands.commands.values()]
-      .map((c) => \`\${ctx.prefix}\${c.name}\${c.description ? ' – ' + c.description : ''}\`)
+      .map((c) => \`\${ctx.prefix}\${c.name}\${c.description ? ' - ' + c.description : ''}\`)
       .join('\\n');
     await ctx.reply(list || 'no commands');
   },

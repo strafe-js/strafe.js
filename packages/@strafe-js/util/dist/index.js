@@ -1,8 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sleep = exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.Permission = void 0;
+exports.sleep = exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.ALL_ROOM_PERMISSIONS = exports.DEFAULT_EVERYONE_PERMISSIONS = exports.READ_AND_POST_PERMISSIONS = exports.Permission = void 0;
 exports.resolvePermission = resolvePermission;
 exports.isSnowflake = isSnowflake;
+exports.isEncryptedRoom = isEncryptedRoom;
+exports.isEncryptedMessage = isEncryptedMessage;
+exports.isSystemMessage = isSystemMessage;
 /**
  * Official 28-bit Strafe permission bitflags matching the Equinox permission model.
  *
@@ -83,6 +86,37 @@ exports.Permission = {
     EmbedLinks: 1 << 4,
 };
 /**
+ * Bitmask for basic text room reading and posting (`Permission.ViewRoom | Permission.SendMessages | Permission.ReadMessageHistory` = `7`).
+ */
+exports.READ_AND_POST_PERMISSIONS = exports.Permission.ViewRoom | exports.Permission.SendMessages | exports.Permission.ReadMessageHistory;
+/**
+ * Default `@everyone` permission bitmask in a newly created space (`10723359`).
+ */
+exports.DEFAULT_EVERYONE_PERMISSIONS = 10723359;
+/**
+ * Bitmask combining all room-scoped permission bits (`0..6` and `15..27`).
+ */
+exports.ALL_ROOM_PERMISSIONS = exports.Permission.ViewRoom |
+    exports.Permission.SendMessages |
+    exports.Permission.ReadMessageHistory |
+    exports.Permission.AddReactions |
+    exports.Permission.UseExternalEmojis |
+    exports.Permission.MentionEveryone |
+    exports.Permission.ManageMessages |
+    exports.Permission.Connect |
+    exports.Permission.Speak |
+    exports.Permission.Video |
+    exports.Permission.MuteMembers |
+    exports.Permission.DeafenMembers |
+    exports.Permission.MoveMembers |
+    exports.Permission.UseVoiceActivity |
+    exports.Permission.PrioritySpeaker |
+    exports.Permission.AttachFiles |
+    exports.Permission.CreatePublicThreads |
+    exports.Permission.CreatePrivateThreads |
+    exports.Permission.SendMessagesInThreads |
+    exports.Permission.ManageThreads;
+/**
  * Bitwise OR combination of all 28 Strafe permissions (`0x0FFFFFFF` / `268435455`).
  * Automatically granted to Space Owners and members with `Permission.Administrator`.
  */
@@ -106,10 +140,16 @@ exports.RoomType = {
     GroupPM: 2,
     /** `(3)` Standard Space text room. */
     Text: 3,
+    /** `(3)` Alias for `RoomType.Text`. */
+    SpaceText: 3,
     /** `(4)` Space voice and video room. */
     Voice: 4,
+    /** `(4)` Alias for `RoomType.Voice`. */
+    SpaceVoice: 4,
     /** `(5)` Collapsible category/section header room. */
     Section: 5,
+    /** `(5)` Alias for `RoomType.Section`. */
+    SpaceSection: 5,
     /** `(6)` Discussion thread room attached to a parent text room. */
     Thread: 6,
 };
@@ -382,4 +422,33 @@ function isSnowflake(id) {
  */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 exports.sleep = sleep;
+/**
+ * Checks whether a {@link Room} has end-to-end encryption (`e2ee_enabled`) turned on.
+ * Bots cannot read or send plaintext messages in encrypted rooms (`https://app.strafe.chat/docs/bots/#encryption-and-what-a-bot-can-see`).
+ *
+ * @example
+ * ```ts
+ * if (isEncryptedRoom(room)) return;
+ * ```
+ */
+function isEncryptedRoom(room) {
+    return Boolean(room?.e2ee_enabled);
+}
+/**
+ * Checks whether a {@link Message} was sent in an end-to-end encrypted room (`ciphertext` present without `plaintext`).
+ *
+ * @example
+ * ```ts
+ * if (isEncryptedMessage(msg)) return;
+ * ```
+ */
+function isEncryptedMessage(msg) {
+    return Boolean(msg && Boolean(msg.ciphertext) && !msg.plaintext);
+}
+/**
+ * Checks whether a {@link Message} is a server-generated system notice (`sender_id === "0"` or `system_type` set).
+ */
+function isSystemMessage(msg) {
+    return Boolean(msg && (msg.sender_id === '0' || Boolean(msg.system_type)));
+}
 //# sourceMappingURL=index.js.map

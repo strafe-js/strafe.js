@@ -7,33 +7,53 @@ description: Scaffold new Strafe Chat bot projects and generate typed command mo
 
 ## Scaffolding a New Bot Project
 
-```bash
-npm create strafebot@latest my-bot
-# or
-npx create-strafebot my-bot
-```
+<Tabs items={['npm', 'npx', 'pnpm', 'bun']}>
+  <Tab value="npm">
+    ```bash title="Terminal"
+    npm create strafebot@latest my-bot
+    ```
+  </Tab>
+  <Tab value="npx">
+    ```bash title="Terminal"
+    npx create-strafebot my-bot
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash title="Terminal"
+    pnpm create strafebot my-bot
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash title="Terminal"
+    bun create strafebot my-bot
+    ```
+  </Tab>
+</Tabs>
 
 ### Generated Project Structure
 
-```text
-my-bot/
-├── .env                  # Pre-populated with your BOT_TOKEN, PREFIX, and OWNERS
-├── .env.example          # Safe template for version control
-├── .gitignore
-├── package.json          # Scripts: dev (tsx watch), build (tsc), start
-├── tsconfig.json         # Strict ES2022 + NodeNext configuration
-└── src/
-    ├── index.ts          # Client setup, event logging, and command registration
-    └── commands/
-        ├── ping.ts       # Basic latency check command
-        └── kick.ts       # Moderation command example
-```
+<Files>
+  <Folder name="my-bot" defaultOpen>
+    <Folder name="src" defaultOpen>
+      <Folder name="commands" defaultOpen>
+        <File name="ping.ts" />
+        <File name="kick.ts" />
+      </Folder>
+      <File name="index.ts" />
+    </Folder>
+    <File name=".env" />
+    <File name=".env.example" />
+    <File name=".gitignore" />
+    <File name="package.json" />
+    <File name="tsconfig.json" />
+  </Folder>
+</Files>
 
 ## Generating Command Modules
 
 Inside an existing bot project, use the `command` (or `cmd` / `g`) subcommand to generate a new command file in `src/commands/<name>.ts`:
 
-```bash
+```bash title="Terminal"
 # Generate a standard user command
 npx create-strafebot command userinfo
 

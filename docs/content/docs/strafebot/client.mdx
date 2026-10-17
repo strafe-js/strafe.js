@@ -149,16 +149,37 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
 
 <MethodCard
   name="client.resolveMemberPermissions"
-  signature="(userId: Snowflake, spaceId?: Snowflake, roomId?: Snowflake) => BitField"
-  returnType="BitField"
+  signature="(userId: Snowflake, spaceId?: Snowflake, roomId?: Snowflake) => number"
+  returnType="number"
   isAsync={false}
-  description="Computes effective permissions for a member using the 6-stage Equinox permission cascade."
+  description="Computes the effective 28-bit permission bitmask for a member using the 6-stage Equinox permission cascade (including parent room override inheritance for threads)."
   parameters={[
     { name: 'userId', type: 'Snowflake', required: true, description: 'User ID to evaluate.' },
     { name: 'spaceId', type: 'Snowflake', required: false, description: 'Space ID.' },
-    { name: 'roomId', type: 'Snowflake', required: false, description: 'Optional Room ID for room override evaluation.' },
+    { name: 'roomId', type: 'Snowflake', required: false, description: 'Optional Room or Thread ID for override evaluation.' },
   ]}
-  example={`const perms = client.resolveMemberPermissions(userId, spaceId, roomId);\nif (perms.has('ManageMessages')) {\n  // Allowed\n}`}
+  example={`const mask = client.resolveMemberPermissions(userId, spaceId, roomId);\nif ((mask & Permission.ManageMessages) !== 0) {\n  // Allowed\n}`}
+/>
+
+<MethodCard
+  name="client.isRoomEncrypted"
+  signature="(roomId: Snowflake) => boolean"
+  returnType="boolean"
+  isAsync={false}
+  description="Returns true if the cached room has end-to-end encryption (e2ee_enabled) enabled. Bots cannot read or post plaintext in E2EE rooms."
+  parameters={[
+    { name: 'roomId', type: 'Snowflake', required: true, description: 'Room ID to inspect.' },
+  ]}
+  example={`if (client.isRoomEncrypted(roomId)) return;`}
+/>
+
+<MethodCard
+  name="client.generateInviteUrl"
+  signature="(opts?: Partial<BotInviteUrlOptions>) => string"
+  returnType="string"
+  isAsync={false}
+  description="Generates an OAuth2 bot installation URL (/oauth2/authorize?scope=bot...) defaulting clientId to client.user.id."
+  example={`const inviteUrl = client.generateInviteUrl({\n  permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory'],\n});`}
 />
 
 <MethodCard

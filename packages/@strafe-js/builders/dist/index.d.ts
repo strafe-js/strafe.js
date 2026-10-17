@@ -1,4 +1,4 @@
-import { type CreateMessageBody, type PermissionName, type PermissionResolvable, type Snowflake } from '@strafe-js/util';
+import { type BotInviteUrlOptions, type CreateMessageBody, type OAuth2UrlOptions, type PermissionName, type PermissionResolvable, type Snowflake } from '@strafe-js/util';
 /**
  * Fluent builder for constructing {@link CreateMessageBody} payloads to send via `client.rest.createMessage()`
  * or `ctx.send()` / `ctx.reply()`.
@@ -112,4 +112,32 @@ export declare function permissions(list: PermissionName[]): number;
  * ```
  */
 export declare function permissionMask(...bits: PermissionResolvable[]): number;
+/**
+ * Builds a Strafe OAuth2 authorization URL (`/oauth2/authorize`) with `response_type=code`.
+ * Automatically strips any trailing `/api` suffix from `baseUrl` so the consent page resolves on the web client origin.
+ *
+ * @example
+ * ```ts
+ * const authUrl = generateOAuth2Url({
+ *   clientId: '2104652899186380800',
+ *   scopes: ['identify', 'email'],
+ *   redirectUri: 'https://app.example.com/callback',
+ *   state: 'b1f3c0a9',
+ * });
+ * ```
+ */
+export declare function generateOAuth2Url(opts: OAuth2UrlOptions): string;
+/**
+ * Builds a Strafe bot installation link (`/oauth2/authorize?response_type=code&client_id=...&scope=bot...`).
+ * Resolves `opts.permissions` into the integer bitmask assigned to the bot's managed role upon approval.
+ *
+ * @example
+ * ```ts
+ * const installUrl = generateBotInviteUrl({
+ *   clientId: '2105141069376131072',
+ *   permissions: ['ViewRoom', 'SendMessages', 'ReadMessageHistory', 'ManageMessages'],
+ * });
+ * ```
+ */
+export declare function generateBotInviteUrl(opts: BotInviteUrlOptions): string;
 //# sourceMappingURL=index.d.ts.map

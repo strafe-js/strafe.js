@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { GatewayFrame, ReadyPayload, Snowflake, Message, Space, Room, SpaceMember } from '@strafe-js/util';
+import { GatewayFrame, Message, PermissionOverride, ReadyPayload, Role, Room, Snowflake, Space, SpaceMember, User } from '@strafe-js/util';
 /**
  * Configuration options for the {@link Gateway} WebSocket client.
  */
@@ -121,6 +121,56 @@ export interface GatewayEvents {
         room_id: Snowflake;
         parent_id?: Snowflake;
     }) => void;
+    /** Emitted when members are added to or removed from a thread (`THREAD_MEMBERS_UPDATE`). */
+    threadMembersUpdate: (data: {
+        room_id: Snowflake;
+        added_members?: {
+            user_id: Snowflake;
+            joined_at: string;
+        }[];
+        removed_member_ids?: Snowflake[];
+        member_count?: number;
+    }) => void;
+    /** Emitted when the authenticated account's membership in a thread changes (`THREAD_MEMBER_UPDATE`). */
+    threadMemberUpdate: (data: {
+        room_id: Snowflake;
+        joined: boolean;
+    }) => void;
+    /** Emitted when a role permission override is updated on a space room (`SPACE_ROOM_OVERRIDE_UPDATE`). */
+    spaceRoomOverrideUpdate: (data: PermissionOverride & {
+        room_id?: Snowflake;
+        space_id?: Snowflake;
+    }) => void;
+    /** Emitted when a role permission override is deleted from a space room (`SPACE_ROOM_OVERRIDE_DELETE`). */
+    spaceRoomOverrideDelete: (data: {
+        role_id: Snowflake;
+        room_id?: Snowflake;
+        space_id?: Snowflake;
+    }) => void;
+    /** Emitted when a user permission override is updated on a space room (`SPACE_ROOM_USER_OVERRIDE_UPDATE`). */
+    spaceRoomUserOverrideUpdate: (data: PermissionOverride & {
+        room_id?: Snowflake;
+        space_id?: Snowflake;
+    }) => void;
+    /** Emitted when a user permission override is deleted from a space room (`SPACE_ROOM_USER_OVERRIDE_DELETE`). */
+    spaceRoomUserOverrideDelete: (data: {
+        user_id: Snowflake;
+        room_id?: Snowflake;
+        space_id?: Snowflake;
+    }) => void;
+    /** Emitted when the account leaves a PM or group PM room (`ROOM_LEAVE`). */
+    roomLeave: (data: {
+        room_id: Snowflake;
+    }) => void;
+    /** Emitted when a room is marked as read up to a message (`MESSAGE_ACK`). */
+    messageAck: (data: {
+        room_id: Snowflake;
+        message_id: Snowflake;
+    }) => void;
+    /** Emitted when mention counters for the account change (`MESSAGE_MENTION_UPDATE`). */
+    messageMentionUpdate: (data: Record<string, unknown>) => void;
+    /** Emitted when room notification settings for the account change (`ROOM_NOTIFY_SETTINGS_UPDATE`). */
+    roomNotifySettingsUpdate: (data: Record<string, unknown>) => void;
     /** Emitted when a user joins a space (`SPACE_MEMBER_ADD`). */
     spaceMemberAdd: (member: SpaceMember & {
         space_id?: Snowflake;
@@ -141,9 +191,13 @@ export interface GatewayEvents {
         members?: SpaceMember[];
     }) => void;
     /** Emitted when a role is created in a space (`SPACE_ROLE_CREATE`). */
-    spaceRoleCreate: (role: unknown) => void;
+    spaceRoleCreate: (role: Role & {
+        space_id?: Snowflake;
+    }) => void;
     /** Emitted when a role is updated in a space (`SPACE_ROLE_UPDATE`). */
-    spaceRoleUpdate: (role: unknown) => void;
+    spaceRoleUpdate: (role: Role & {
+        space_id?: Snowflake;
+    }) => void;
     /** Emitted when a role is deleted from a space (`SPACE_ROLE_DELETE`). */
     spaceRoleDelete: (data: {
         role_id: Snowflake;
@@ -156,6 +210,10 @@ export interface GatewayEvents {
         presence?: {
             status: string;
         };
+    }) => void;
+    /** Emitted when a user's profile (display name, avatar, pronouns) changes (`USER_UPDATE`). */
+    userUpdate: (data: Partial<User> & {
+        user_id: Snowflake;
     }) => void;
     /** Emitted when the current authentication session is revoked (`SESSION_REVOKED`). */
     sessionRevoked: (data: {
