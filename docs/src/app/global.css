@@ -404,8 +404,7 @@ figure.shiki:hover,
     0 0 0 1px rgba(80, 155, 107, 0.14) inset !important;
 }
 
-figure.shiki > div:first-child:not(:only-child),
-figure.shiki figcaption {
+figure.shiki > div:first-child:not(:only-child) {
   background: linear-gradient(90deg, #141820 0%, #101319 100%) !important;
   border-bottom: 1px solid #262b35 !important;
   color: #cfd5e0 !important;
@@ -414,6 +413,51 @@ figure.shiki figcaption {
   font-weight: 600;
   letter-spacing: 0.01em;
   padding: 0.55rem 0.95rem !important;
+}
+
+figure.shiki figcaption {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #cfd5e0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px !important;
+  font-weight: 600;
+}
+
+div:has(> [role="tablist"]) {
+  border-radius: 12px !important;
+  border: 1px solid #2a2f39 !important;
+  background: #12161d !important;
+  box-shadow:
+    0 12px 28px -8px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(80, 155, 107, 0.06) inset !important;
+  overflow: hidden;
+}
+
+div:has(> [role="tablist"]) > [role="tablist"] {
+  background: linear-gradient(90deg, #141820 0%, #101319 100%) !important;
+  border-bottom: 1px solid #262b35 !important;
+}
+
+[role="tabpanel"] {
+  border-radius: 0 !important;
+  background: #0b0d11 !important;
+}
+
+[role="tabpanel"] > figure.shiki:only-child,
+[role="tabpanel"] > .nd-codeblock:only-child {
+  margin: -1rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+[role="tabpanel"] > figure.shiki:only-child:hover,
+[role="tabpanel"] > .nd-codeblock:only-child:hover {
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .dark pre,
