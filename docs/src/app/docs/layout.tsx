@@ -1,6 +1,7 @@
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import type { ReactNode } from 'react';
 import { source } from '@/lib/source';
+import { SDK_VERSION_TAG } from '@/lib/version';
 
 function BitIcon() {
   return (
@@ -59,7 +60,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <span>
               <span className="strafe-brand-mark">Strafe</span>
               <span className="strafe-brand-dot">.js</span>
-              <span className="strafe-brand-docs">DOCS</span>
+              <span className="strafe-brand-docs">{SDK_VERSION_TAG}</span>
             </span>
           </span>
         ),

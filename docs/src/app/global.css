@@ -548,6 +548,10 @@ figure.shiki pre::-webkit-scrollbar-thumb:hover,
   font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.dark table :not(pre) > code {
+  white-space: nowrap;
+}
+
 .dark table {
   border-color: #2a2f39;
 }

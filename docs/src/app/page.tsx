@@ -8,6 +8,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { CodeWindow } from '@/components/CodeWindow';
+import { PACKAGE_VERSIONS, SDK_VERSION_TAG } from '@/lib/version';
 
 const DOC_SECTIONS = [
   {
@@ -57,49 +58,49 @@ const DOC_SECTIONS = [
 const PACKAGES = [
   {
     name: '@strafe-js/strafebot',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/strafebot']}`,
     desc: 'High-level Bot Client, state caches (spaces, rooms, spaceRooms, members), Equinox permission engine, and typed Command Framework.',
     href: '/docs/strafebot/client',
   },
   {
     name: '@strafe-js/rest',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/rest']}`,
     desc: 'Fetch-based HTTP REST client with automatic 429 Retry-After backoff, threads, reactions, pins, search, and multipart uploads.',
     href: '/docs/rest/overview',
   },
   {
     name: '@strafe-js/ws',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/ws']}`,
     desc: 'Stargate WebSocket Gateway client supporting nested & flat op:3 event envelopes, heartbeats, and jittered reconnects.',
     href: '/docs/ws/overview',
   },
   {
     name: '@strafe-js/builders',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/builders']}`,
     desc: 'Fluent MessageBuilder and permission bitmask factories for clean payload construction.',
     href: '/docs/packages/builders',
   },
   {
     name: '@strafe-js/formatters',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/formatters']}`,
     desc: 'Markdown, mention (<@id>, <#id>, <@&id>), custom emoji (<:name:id>, custom:id), and codeblock formatters.',
     href: '/docs/packages/formatters',
   },
   {
     name: '@strafe-js/collection',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/collection']}`,
     desc: 'Extended Map<K, V> data structure with functional query helpers (find, filter, map, first).',
     href: '/docs/packages/collection',
   },
   {
     name: '@strafe-js/util',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['@strafe-js/util']}`,
     desc: '28-bit Strafe Permission flags, BitField class, GatewayOp & RoomType constants, error classes, and TypeScript interfaces.',
     href: '/docs/packages/util',
   },
   {
     name: 'create-strafebot',
-    version: 'v1.2.0',
+    version: `v${PACKAGE_VERSIONS['create-strafebot']}`,
     desc: 'Interactive CLI tool to scaffold new TypeScript bots and generate command modules.',
     href: '/docs/cli/overview',
   },
@@ -147,7 +148,7 @@ export default function HomePage() {
 
           <div className="flex items-center gap-2.5 text-xs">
             <span className="hidden sm:inline-flex strafe-version-pill">
-              v1.2.0
+              {SDK_VERSION_TAG}
             </span>
             <a
               href="https://app.strafe.chat/docs/"
@@ -170,12 +171,10 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Main Content Container inspired by https://app.strafe.chat/docs/ */}
       <main className="max-w-[960px] mx-auto w-full px-6 py-11 flex-1">
-        {/* Hero Box */}
         <div className="strafe-hero mb-9">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-[#509b6b]/15 text-[#6ab585] border border-[#509b6b]/30 mb-3">
-            @strafe-js/strafebot • v1.2.0
+            @strafe-js/strafebot • {SDK_VERSION_TAG}
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-[#e6e8ec] leading-tight">
             Strafe.js Developer Documentation
@@ -240,7 +239,7 @@ export default function HomePage() {
         </h2>
         <div className="mb-10">
           <CodeWindow
-            title="src/index.ts - @strafe-js/strafebot v1.2.0"
+            title="src/index.ts"
             lang="ts"
             showLineNumbers
             code={`import { Client, command } from '@strafe-js/strafebot';
@@ -279,7 +278,7 @@ await client.login(process.env.BOT_TOKEN!);`}
         </div>
 
         <h2 className="strafe-section-heading">
-          Monorepo Packages (v1.2.0)
+          Monorepo Packages ({SDK_VERSION_TAG})
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-10">
           {PACKAGES.map((pkg) => (
@@ -340,9 +339,8 @@ await client.login(process.env.BOT_TOKEN!);`}
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="py-6 border-t border-[#2a2f39] text-center text-xs text-[#7f8797]">
-        Strafe.js v1.2.0 • Apache-2.0 License • Built for{' '}
+        Strafe.js {SDK_VERSION_TAG} • Apache-2.0 License • Built for{' '}
         <a
           href="https://app.strafe.chat/docs/"
           target="_blank"

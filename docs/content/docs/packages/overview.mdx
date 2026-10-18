@@ -32,15 +32,17 @@ Beyond the main `@strafe-js/strafebot` client, `@strafe-js/rest`, and `@strafe-j
 
 | Package | Version | Internal Dependencies | External Dependencies | Re-exported by `@strafe-js/strafebot`? |
 | :--- | :--- | :--- | :--- | :--- |
-| `@strafe-js/util` | `1.0.5` | None | None | Yes |
-| `@strafe-js/collection` | `1.0.5` | None | None | Yes |
-| `@strafe-js/formatters` | `1.0.5` | `@strafe-js/util` | None | No (install or import directly) |
-| `@strafe-js/builders` | `1.0.5` | `@strafe-js/util` | None | No (install or import directly) |
-| `@strafe-js/rest` | `1.0.5` | `@strafe-js/util` | None | Yes |
-| `@strafe-js/ws` | `1.0.5` | `@strafe-js/util` | `ws` | Yes |
+| `@strafe-js/util` | <SdkVersion pkg="@strafe-js/util" code /> | None | None | Yes |
+| `@strafe-js/collection` | <SdkVersion pkg="@strafe-js/collection" code /> | None | None | Yes |
+| `@strafe-js/formatters` | <SdkVersion pkg="@strafe-js/formatters" code /> | `@strafe-js/util` | None | No (install or import directly) |
+| `@strafe-js/builders` | <SdkVersion pkg="@strafe-js/builders" code /> | `@strafe-js/util` | None | No (install or import directly) |
+| `@strafe-js/rest` | <SdkVersion pkg="@strafe-js/rest" code /> | `@strafe-js/util` | None | Yes |
+| `@strafe-js/ws` | <SdkVersion pkg="@strafe-js/ws" code /> | `@strafe-js/util` | `ws` | Yes |
+| `@strafe-js/strafebot` | <SdkVersion pkg="@strafe-js/strafebot" code /> | All 6 `@strafe-js/*` packages | None | Main SDK entry point |
+| `create-strafebot` | <SdkVersion pkg="create-strafebot" code /> | Scaffolds `@strafe-js/strafebot` | None | Standalone CLI |
 
 ## Installing All Ecosystem Packages
 
-```bash
+```bash title="Terminal"
 npm install @strafe-js/strafebot @strafe-js/builders @strafe-js/formatters @strafe-js/collection @strafe-js/util
 ```
