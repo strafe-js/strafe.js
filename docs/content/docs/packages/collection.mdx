@@ -118,3 +118,30 @@ In addition to all standard `Map<K, V>` properties and methods (`size`, `get`, `
   description="Spreads all values (array()) or keys (keyArray()) into a standard JavaScript array."
   example={`const roomsArray = client.rooms.array();\nconst roomIds = client.rooms.keyArray();`}
 />
+
+<MethodCard
+  name="collection.last / collection.random"
+  signature="(count?: number) => V | undefined | V[]"
+  returnType="V | undefined | V[]"
+  isAsync={false}
+  description="Returns the last item(s) in insertion order or uniformly sampled random item(s) without replacement."
+  example={`const newest = client.rooms.last();\nconst randomThree = members.random(3);`}
+/>
+
+<MethodCard
+  name="collection.partition / collection.reduce / collection.sweep"
+  signature="partition(fn) / reduce(fn, initial) / sweep(fn)"
+  returnType="[Collection, Collection] / T / number"
+  isAsync={false}
+  description="Partitions entries into [matching, nonMatching] collections, folds entries into an accumulator, or sweeps matching entries from cache in place."
+  example={`const [bots, humans] = members.partition((m) => Boolean(m.bot));\nconst removed = members.sweep((m) => Boolean(m.bot));`}
+/>
+
+<MethodCard
+  name="collection.clone / collection.concat / collection.tap"
+  signature="clone() / concat(...cols) / tap(fn)"
+  returnType="Collection<K, V> / this"
+  isAsync={false}
+  description="Clones a collection, merges multiple collections into a new instance, or runs a side-effect callback in a method chain."
+  example={`const copy = client.spaces.clone();\nconst merged = colA.concat(colB);`}
+/>

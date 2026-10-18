@@ -156,6 +156,45 @@ class Context {
         return null;
     }
     /**
+     * Deletes the triggering message via `DELETE /rooms/:roomId/messages/:messageId`.
+     */
+    async deleteMessage() {
+        await this.client.rest.deleteMessage(this.roomId, this.message.id);
+        return null;
+    }
+    /**
+     * Returns the caller's {@link SpaceMember} from cache or fetches it via `GET /spaces/:spaceId/members/:userId`.
+     * Returns `null` in Direct Messages or if the member is not found.
+     */
+    async fetchMember() {
+        if (!this.spaceId)
+            return null;
+        return this.member ?? this.client.fetchMember(this.spaceId, this.authorId);
+    }
+    /**
+     * Collects subsequent messages in the current room via {@link Client.awaitMessages}.
+     *
+     * @example
+     * ```ts
+     * await ctx.reply('Type "confirm" within 10 seconds:');
+     * const replies = await ctx.awaitMessages({
+     *   filter: (m) => m.sender_id === ctx.authorId && m.plaintext === 'confirm',
+     *   max: 1,
+     *   timeoutMs: 10_000,
+     * });
+     * ```
+     */
+    awaitMessages(opts = {}) {
+        return this.client.awaitMessages(this.roomId, opts);
+    }
+    /**
+     * Collects reactions on `messageId` (defaults to the triggering message `this.message.id`) in the current room
+     * via {@link Client.awaitReactions}.
+     */
+    awaitReactions(opts = {}, messageId = this.message.id) {
+        return this.client.awaitReactions(this.roomId, messageId, opts);
+    }
+    /**
      * Checks whether the caller has all permissions specified in `required` within the current room.
      * If `this.memberPermissions` was not precomputed by a command guard, resolves permissions on demand.
      */

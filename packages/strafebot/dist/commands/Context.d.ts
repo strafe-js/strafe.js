@@ -1,5 +1,6 @@
 import { Permission, type Message, type Space, type Room, type CreateMessageBody, type PermissionResolvable, type Snowflake, type User, type SpaceMember } from '@strafe-js/util';
-import type { Client } from '../Client.js';
+import type { Client, AwaitMessagesOptions, AwaitReactionsOptions, ReactionEventPayload } from '../Client.js';
+import type { Collection } from '@strafe-js/collection';
 import type { Command } from './Command.js';
 import { ParsedArguments, type CommandArgumentsSchema } from './CommandArgument.js';
 /**
@@ -127,6 +128,34 @@ export declare class Context<Schema extends CommandArgumentsSchema = CommandArgu
      * Adds an emoji reaction to the triggering message (`PUT /rooms/:roomId/messages/:messageId/reactions/:emoji`).
      */
     react(emoji: string): Promise<null>;
+    /**
+     * Deletes the triggering message via `DELETE /rooms/:roomId/messages/:messageId`.
+     */
+    deleteMessage(): Promise<null>;
+    /**
+     * Returns the caller's {@link SpaceMember} from cache or fetches it via `GET /spaces/:spaceId/members/:userId`.
+     * Returns `null` in Direct Messages or if the member is not found.
+     */
+    fetchMember(): Promise<SpaceMember | null>;
+    /**
+     * Collects subsequent messages in the current room via {@link Client.awaitMessages}.
+     *
+     * @example
+     * ```ts
+     * await ctx.reply('Type "confirm" within 10 seconds:');
+     * const replies = await ctx.awaitMessages({
+     *   filter: (m) => m.sender_id === ctx.authorId && m.plaintext === 'confirm',
+     *   max: 1,
+     *   timeoutMs: 10_000,
+     * });
+     * ```
+     */
+    awaitMessages(opts?: AwaitMessagesOptions): Promise<Collection<Snowflake, Message>>;
+    /**
+     * Collects reactions on `messageId` (defaults to the triggering message `this.message.id`) in the current room
+     * via {@link Client.awaitReactions}.
+     */
+    awaitReactions(opts?: AwaitReactionsOptions, messageId?: Snowflake): Promise<ReactionEventPayload[]>;
     /**
      * Checks whether the caller has all permissions specified in `required` within the current room.
      * If `this.memberPermissions` was not precomputed by a command guard, resolves permissions on demand.

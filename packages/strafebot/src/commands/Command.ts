@@ -12,6 +12,10 @@ export interface CommandOptions<Schema extends CommandArgumentsSchema = CommandA
   aliases?: string[];
   /** Human-readable summary shown in help commands. */
   description?: string;
+  /** Logical category label used to group commands in help output (defaults to `'general'`). */
+  category?: string;
+  /** When `true`, omits the command from general help listings unless queried directly by name. */
+  hidden?: boolean;
   /** Usage syntax string appended when `minArgs` fails (for example `'<user> [reason]'`). */
   usage?: string;
   /** Required caller permissions in the room (`PermissionName[]`). Evaluated via `client.resolveMemberPermissions`. */
@@ -70,6 +74,10 @@ export class Command<Schema extends CommandArgumentsSchema = CommandArgumentsSch
   readonly aliases: string[];
   /** Human-readable command description. */
   readonly description: string;
+  /** Logical category label used to group commands in help listings (`'general'` by default). */
+  readonly category: string;
+  /** Whether the command is hidden from general help listings. */
+  readonly hidden: boolean;
   /** Usage string displayed when `minArgs` validation fails. */
   readonly usage: string;
   /** Required caller permission names. */
@@ -119,6 +127,8 @@ export class Command<Schema extends CommandArgumentsSchema = CommandArgumentsSch
     this.name = name;
     this.aliases = (opts.aliases ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean);
     this.description = opts.description ?? '';
+    this.category = (opts.category ?? 'general').trim() || 'general';
+    this.hidden = !!opts.hidden;
     this.usage = opts.usage ?? '';
     this.permissions = opts.permissions ?? [];
     this.permissionMask = opts.permissionMask ?? 0;
@@ -144,6 +154,24 @@ export class Command<Schema extends CommandArgumentsSchema = CommandArgumentsSch
    */
   get names(): string[] {
     return [this.name, ...this.aliases];
+  }
+
+  /**
+   * Human-readable argument signature generated from `this.usage` or `this.argumentsSchema`
+   * (for example `'<target:user> [reason...:string]'`).
+   */
+  get usageSignature(): string {
+    if (this.usage) return this.usage;
+    if (!this.argumentsSchema) return '';
+    return Object.entries(this.argumentsSchema)
+      .map(([argName, opt]) => {
+        const restMark = opt.rest ? '...' : '';
+        const typeLabel = opt.choices?.length ? opt.choices.join('|') : opt.type;
+        return opt.required
+          ? `<${argName}${restMark}:${typeLabel}>`
+          : `[${argName}${restMark}:${typeLabel}]`;
+      })
+      .join(' ');
   }
 }
 

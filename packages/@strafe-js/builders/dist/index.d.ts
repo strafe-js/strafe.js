@@ -1,4 +1,4 @@
-import { type BotInviteUrlOptions, type CreateMessageBody, type OAuth2UrlOptions, type PermissionName, type PermissionResolvable, type Snowflake } from '@strafe-js/util';
+import { type BotInviteUrlOptions, type CreateMessageBody, type OAuth2UrlOptions, type PermissionName, type PermissionOverride, type PermissionResolvable, type Snowflake } from '@strafe-js/util';
 /**
  * Fluent builder for constructing {@link CreateMessageBody} payloads to send via `client.rest.createMessage()`
  * or `ctx.send()` / `ctx.reply()`.
@@ -75,6 +75,42 @@ export declare class MessageBuilder {
      */
     setAttachments(ids: Snowflake[]): this;
     /**
+     * Appends `text` to the existing `plaintext` content separated by `separator` (defaults to `''`).
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Line 1').appendContent('Line 2', '\n').toJSON();
+     * ```
+     */
+    appendContent(text: string, separator?: string): this;
+    /**
+     * Appends one or more unique User {@link Snowflake} IDs to `mentions`.
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Hello!').addUserMention('123456789012345678').toJSON();
+     * ```
+     */
+    addUserMention(...userIds: Snowflake[]): this;
+    /**
+     * Appends one or more unique Role {@link Snowflake} IDs to `mention_roles`.
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Alert!').addRoleMention('234567890123456789').toJSON();
+     * ```
+     */
+    addRoleMention(...roleIds: Snowflake[]): this;
+    /**
+     * Appends one or more unique Attachment {@link Snowflake} IDs to `attachments`.
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Files:').addAttachment(att1.id, att2.id).toJSON();
+     * ```
+     */
+    addAttachment(...attachmentIds: Snowflake[]): this;
+    /**
      * Returns a shallow clone of the built {@link CreateMessageBody} payload.
      *
      * @example
@@ -93,6 +129,60 @@ export declare class MessageBuilder {
  * ```
  */
 export declare function message(): MessageBuilder;
+/**
+ * Fluent builder for constructing a room-level {@link PermissionOverride} entry (`allow` and `deny` bitmasks
+ * for a target `role_id` or `user_id`). Allowing a permission automatically clears it from `deny`, and vice versa.
+ *
+ * @example
+ * ```ts
+ * import { permissionOverwrite } from '@strafe-js/builders';
+ *
+ * const override = permissionOverwrite()
+ *   .setRole('234567890123456789')
+ *   .allow('ViewRoom', 'ReadMessageHistory')
+ *   .deny('SendMessages', 'AddReactions')
+ *   .toJSON();
+ * ```
+ */
+export declare class PermissionOverwriteBuilder {
+    private roleId?;
+    private userId?;
+    private allowBits;
+    private denyBits;
+    /**
+     * Sets the target `role_id` for this override and clears any previously set `user_id`.
+     */
+    setRole(roleId: Snowflake): this;
+    /**
+     * Sets the target `user_id` for this override and clears any previously set `role_id`.
+     */
+    setUser(userId: Snowflake): this;
+    /**
+     * Adds the resolved permissions to `allow` and removes them from `deny`.
+     */
+    allow(...perms: PermissionResolvable[]): this;
+    /**
+     * Adds the resolved permissions to `deny` and removes them from `allow`.
+     */
+    deny(...perms: PermissionResolvable[]): this;
+    /**
+     * Clears the resolved permissions from both `allow` and `deny` so they inherit from space roles.
+     */
+    clear(...perms: PermissionResolvable[]): this;
+    /**
+     * Serializes the builder state into a {@link PermissionOverride} object.
+     */
+    toJSON(): PermissionOverride;
+}
+/**
+ * Creates a new {@link PermissionOverwriteBuilder} instance.
+ *
+ * @example
+ * ```ts
+ * const override = permissionOverwrite().setUser('123456789012345678').deny('SendMessages').toJSON();
+ * ```
+ */
+export declare function permissionOverwrite(): PermissionOverwriteBuilder;
 /**
  * Combines an array of {@link PermissionName} strings into a single numeric bitmask via {@link resolvePermission}.
  *

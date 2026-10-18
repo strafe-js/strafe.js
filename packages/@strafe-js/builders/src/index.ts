@@ -6,6 +6,7 @@ import {
   type OAuth2Scope,
   type OAuth2UrlOptions,
   type PermissionName,
+  type PermissionOverride,
   type PermissionResolvable,
   type Snowflake,
 } from '@strafe-js/util';
@@ -111,6 +112,66 @@ export class MessageBuilder {
   }
 
   /**
+   * Appends `text` to the existing `plaintext` content separated by `separator` (defaults to `''`).
+   *
+   * @example
+   * ```ts
+   * const body = message().setContent('Line 1').appendContent('Line 2', '\n').toJSON();
+   * ```
+   */
+  appendContent(text: string, separator = ''): this {
+    this.data.plaintext = this.data.plaintext
+      ? `${this.data.plaintext}${separator}${text}`
+      : text;
+    return this;
+  }
+
+  /**
+   * Appends one or more unique User {@link Snowflake} IDs to `mentions`.
+   *
+   * @example
+   * ```ts
+   * const body = message().setContent('Hello!').addUserMention('123456789012345678').toJSON();
+   * ```
+   */
+  addUserMention(...userIds: Snowflake[]): this {
+    const set = new Set(this.data.mentions ?? []);
+    for (const id of userIds) set.add(id);
+    this.data.mentions = [...set];
+    return this;
+  }
+
+  /**
+   * Appends one or more unique Role {@link Snowflake} IDs to `mention_roles`.
+   *
+   * @example
+   * ```ts
+   * const body = message().setContent('Alert!').addRoleMention('234567890123456789').toJSON();
+   * ```
+   */
+  addRoleMention(...roleIds: Snowflake[]): this {
+    const set = new Set(this.data.mention_roles ?? []);
+    for (const id of roleIds) set.add(id);
+    this.data.mention_roles = [...set];
+    return this;
+  }
+
+  /**
+   * Appends one or more unique Attachment {@link Snowflake} IDs to `attachments`.
+   *
+   * @example
+   * ```ts
+   * const body = message().setContent('Files:').addAttachment(att1.id, att2.id).toJSON();
+   * ```
+   */
+  addAttachment(...attachmentIds: Snowflake[]): this {
+    const set = new Set(this.data.attachments ?? []);
+    for (const id of attachmentIds) set.add(id);
+    this.data.attachments = [...set];
+    return this;
+  }
+
+  /**
    * Returns a shallow clone of the built {@link CreateMessageBody} payload.
    *
    * @example
@@ -119,7 +180,12 @@ export class MessageBuilder {
    * ```
    */
   toJSON(): CreateMessageBody {
-    return { ...this.data };
+    return {
+      ...this.data,
+      ...(this.data.mentions ? { mentions: [...this.data.mentions] } : {}),
+      ...(this.data.mention_roles ? { mention_roles: [...this.data.mention_roles] } : {}),
+      ...(this.data.attachments ? { attachments: [...this.data.attachments] } : {}),
+    };
   }
 }
 
@@ -133,6 +199,101 @@ export class MessageBuilder {
  */
 export function message(): MessageBuilder {
   return new MessageBuilder();
+}
+
+/**
+ * Fluent builder for constructing a room-level {@link PermissionOverride} entry (`allow` and `deny` bitmasks
+ * for a target `role_id` or `user_id`). Allowing a permission automatically clears it from `deny`, and vice versa.
+ *
+ * @example
+ * ```ts
+ * import { permissionOverwrite } from '@strafe-js/builders';
+ *
+ * const override = permissionOverwrite()
+ *   .setRole('234567890123456789')
+ *   .allow('ViewRoom', 'ReadMessageHistory')
+ *   .deny('SendMessages', 'AddReactions')
+ *   .toJSON();
+ * ```
+ */
+export class PermissionOverwriteBuilder {
+  private roleId?: Snowflake;
+  private userId?: Snowflake;
+  private allowBits = 0;
+  private denyBits = 0;
+
+  /**
+   * Sets the target `role_id` for this override and clears any previously set `user_id`.
+   */
+  setRole(roleId: Snowflake): this {
+    this.roleId = roleId;
+    this.userId = undefined;
+    return this;
+  }
+
+  /**
+   * Sets the target `user_id` for this override and clears any previously set `role_id`.
+   */
+  setUser(userId: Snowflake): this {
+    this.userId = userId;
+    this.roleId = undefined;
+    return this;
+  }
+
+  /**
+   * Adds the resolved permissions to `allow` and removes them from `deny`.
+   */
+  allow(...perms: PermissionResolvable[]): this {
+    const mask = resolvePermission(perms);
+    this.allowBits |= mask;
+    this.denyBits &= ~mask;
+    return this;
+  }
+
+  /**
+   * Adds the resolved permissions to `deny` and removes them from `allow`.
+   */
+  deny(...perms: PermissionResolvable[]): this {
+    const mask = resolvePermission(perms);
+    this.denyBits |= mask;
+    this.allowBits &= ~mask;
+    return this;
+  }
+
+  /**
+   * Clears the resolved permissions from both `allow` and `deny` so they inherit from space roles.
+   */
+  clear(...perms: PermissionResolvable[]): this {
+    const mask = resolvePermission(perms);
+    this.allowBits &= ~mask;
+    this.denyBits &= ~mask;
+    return this;
+  }
+
+  /**
+   * Serializes the builder state into a {@link PermissionOverride} object.
+   */
+  toJSON(): PermissionOverride {
+    const out: PermissionOverride = {
+      allow: this.allowBits,
+      deny: this.denyBits,
+    };
+    if (this.roleId !== undefined) out.role_id = this.roleId;
+    if (this.userId !== undefined) out.user_id = this.userId;
+    return out;
+  }
+}
+
+/**
+ * Creates a new {@link PermissionOverwriteBuilder} instance.
+ *
+ * @example
+ * ```ts
+ * const override = permissionOverwrite().setUser('123456789012345678').deny('SendMessages').toJSON();
+ * ```
+ */
+export function permissionOverwrite(): PermissionOverwriteBuilder {
+  return new PermissionOverwriteBuilder();
 }
 
 /**

@@ -38,38 +38,59 @@ export const rollCommand = command({
 
 | Type | Parsed TypeScript Type | Validation & Features |
 | :--- | :--- | :--- |
-| `'string'` | `string` | Supports `min` / `max` length, `choices`, and `rest: true` (captures remaining tokens) |
+| `'string'` | `string` | Supports `minLength` / `maxLength`, `choices`, and `rest: true` (captures remaining tokens) |
 | `'integer'` | `number` | Rejects decimals; supports `min` / `max` numeric bounds and `choices` |
 | `'number'` | `number` | Floating-point or integer numbers; supports `min` / `max` bounds and `choices` |
-| `'boolean'` | `boolean` | Accepts `true/false`, `yes/no`, `1/0`, `on/off` |
+| `'boolean'` | `boolean` | Accepts `true/false`, `yes/no`, `1/0`, `y/n` |
 | `'user'` | `Snowflake` | Accepts raw 16-20 digit Snowflake IDs or `<@id>` / `<@!id>` user mentions |
-| `'snowflake'` | `Snowflake` | Validates 16-20 digit Snowflake IDs |
+| `'room'` | `Snowflake` | Accepts raw 16-20 digit Snowflake IDs or `<#id>` room mentions |
+| `'role'` | `Snowflake` | Accepts raw 16-20 digit Snowflake IDs or `<@&id>` role mentions |
+| `'snowflake'` | `Snowflake` | Extracts 16-20 digit Snowflake IDs from `<@id>`, `<#id>`, `<@&id>`, or raw strings |
 | `'attachment'` | `Attachment` | Consumes uploaded message attachments from `message.attachments` |
+
+## Built-In Help Command & Middleware
+
+Register a category-grouped `!help [command]` command with `createHelpCommand()` and attach logging or rate-limit hooks via `client.commands.use()`:
+
+```ts title="src/index.ts"
+import { createHelpCommand } from '@strafe-js/strafebot';
+
+client.commands.use(async (ctx, next) => {
+  console.log(`[CMD] ${ctx.commandName} by ${ctx.authorId}`);
+  await next();
+});
+
+client.commands.register(
+  createHelpCommand({ title: '**Bot Commands**' }),
+);
+```
 
 ## Command Guard Events
 
 `CommandHandler` emits lifecycle and guard rejection events on `Client`:
 
-- `commandPermissionDenied`: `(ctx, command)` - Caller lacks required `permissions`
-- `commandBotPermissionDenied`: `(ctx, command, missingBitField)` - Bot lacks required `botPermissions`
-- `commandCooldown`: `(ctx, command, remainingMs)` - User is on cooldown
-- `commandInvalidArguments`: `(ctx, command, error)` - Schema or `minArgs`/`maxArgs` validation failed
-- `commandError`: `(error, ctx, command)` - Unhandled error thrown inside `command.run(ctx)`
+- `commandCooldown`: `(remainingMs, message, command)` - User is on cooldown
+- `commandArgumentError`: `(error, message, command)` - Schema validation failed with `ArgumentValidationError`
+- `commandError`: `(error, ctx)` - Unhandled error thrown inside `command.run(ctx)`
 
 ## Context (`ctx`) Helpers
 
 <PropertyTable
   title="Context Properties & Methods"
   properties={[
-    { name: 'ctx.arguments', type: 'ParsedArguments<Schema>', readonly: true, description: 'Type-safe map of validated arguments (.get(name), .raw).' },
+    { name: 'ctx.arguments', type: 'ParsedArguments<Schema>', readonly: true, description: 'Type-safe map of validated arguments (.get(name), .getRaw(name), .toObject()).' },
     { name: 'ctx.authorId', type: 'Snowflake', readonly: true, description: 'ID of the user who sent the message.' },
     { name: 'ctx.roomId', type: 'Snowflake', readonly: true, description: 'ID of the room where the command was invoked.' },
-    { name: 'ctx.spaceId', type: 'Snowflake | undefined', readonly: true, description: 'ID of the space (undefined in DMs).' },
-    { name: 'ctx.member', type: 'SpaceMember | undefined', readonly: true, description: 'Cached SpaceMember of the command author.' },
-    { name: 'ctx.isEncryptedRoom', type: 'boolean', readonly: true, description: 'True when the message was sent in an end-to-end encrypted room (e2ee_enabled or ciphertext).' },
+    { name: 'ctx.spaceId', type: 'Snowflake | null', readonly: true, description: 'ID of the space (null in DMs).' },
+    { name: 'ctx.member', type: 'SpaceMember | null', readonly: true, description: 'Cached SpaceMember of the command author.' },
+    { name: 'ctx.isEncryptedRoom', type: 'boolean', readonly: true, description: 'True when the message was sent in an end-to-end encrypted room.' },
     { name: 'ctx.reply(content, extra?)', type: 'Promise<Message>', description: 'Replies directly to the triggering message.' },
     { name: 'ctx.send(content, extra?)', type: 'Promise<Message>', description: 'Sends a message in the current room without a reply reference.' },
-    { name: 'ctx.react(emoji)', type: 'Promise<void>', description: 'Adds an emoji reaction to the triggering message.' },
-    { name: 'ctx.typing()', type: 'Promise<void>', description: 'Triggers the typing indicator in the current room.' },
+    { name: 'ctx.react(emoji)', type: 'Promise<null>', description: 'Adds an emoji reaction to the triggering message.' },
+    { name: 'ctx.deleteMessage()', type: 'Promise<null>', description: 'Deletes the triggering message.' },
+    { name: 'ctx.fetchMember()', type: 'Promise<SpaceMember | null>', description: 'Returns the caller SpaceMember from cache or fetches it via REST.' },
+    { name: 'ctx.awaitMessages(opts?)', type: 'Promise<Collection<Snowflake, Message>>', description: 'Collects subsequent messages in the current room matching filter/max/timeoutMs.' },
+    { name: 'ctx.awaitReactions(opts?, messageId?)', type: 'Promise<ReactionEventPayload[]>', description: 'Collects reactions on a message in the current room.' },
+    { name: 'ctx.typing()', type: 'Promise<null>', description: 'Triggers the typing indicator in the current room.' },
   ]}
 />

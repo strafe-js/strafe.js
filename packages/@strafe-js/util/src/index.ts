@@ -466,6 +466,75 @@ export function isSnowflake(id: unknown): id is Snowflake {
 }
 
 /**
+ * Default epoch in milliseconds UNIX (`2024-01-01T00:00:00.000Z`) used to decode Snowflake timestamps.
+ */
+export const STRAFE_EPOCH = 1704067200000n;
+
+/**
+ * Decoded components extracted from a 64-bit {@link Snowflake} ID.
+ */
+export interface DeconstructedSnowflake {
+  /** Original Snowflake string. */
+  id: Snowflake;
+  /** Creation timestamp in UNIX milliseconds (`Number((BigInt(id) >> 22n) + epoch)`). */
+  timestamp: number;
+  /** `Date` instance constructed from `timestamp`. */
+  date: Date;
+  /** 5-bit internal worker ID (`Number((BigInt(id) >> 17n) & 0x1fn)`). */
+  workerId: number;
+  /** 5-bit internal process ID (`Number((BigInt(id) >> 12n) & 0x1fn)`). */
+  processId: number;
+  /** 12-bit per-millisecond sequence counter (`Number(BigInt(id) & 0xfffn)`). */
+  increment: number;
+}
+
+/**
+ * Extracts the UNIX millisecond timestamp, `Date`, worker ID, process ID, and sequence increment
+ * from a 64-bit {@link Snowflake} string.
+ *
+ * @throws {Error} When `id` is not a numeric string.
+ * @example
+ * ```ts
+ * const info = deconstructSnowflake('2104652899186380800');
+ * console.log(info.date.toISOString());
+ * ```
+ */
+export function deconstructSnowflake(
+  id: Snowflake,
+  epoch: bigint = STRAFE_EPOCH,
+): DeconstructedSnowflake {
+  if (typeof id !== 'string' || !/^\d+$/.test(id)) {
+    throw new Error(`Invalid Snowflake ID: ${String(id)}`);
+  }
+  const big = BigInt(id);
+  const timestamp = Number((big >> 22n) + epoch);
+  return {
+    id,
+    timestamp,
+    date: new Date(timestamp),
+    workerId: Number((big >> 17n) & 0x1fn),
+    processId: Number((big >> 12n) & 0x1fn),
+    increment: Number(big & 0xfffn),
+  };
+}
+
+/**
+ * Computes the creation timestamp in UNIX milliseconds from a 64-bit {@link Snowflake} string.
+ *
+ * @throws {Error} When `id` is not a numeric string.
+ * @example
+ * ```ts
+ * const createdAtMs = snowflakeTimestamp('2104652899186380800');
+ * ```
+ */
+export function snowflakeTimestamp(
+  id: Snowflake,
+  epoch: bigint = STRAFE_EPOCH,
+): number {
+  return deconstructSnowflake(id, epoch).timestamp;
+}
+
+/**
  * Resolves after `ms` milliseconds using `setTimeout`.
  *
  * @example

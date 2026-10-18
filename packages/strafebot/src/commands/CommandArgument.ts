@@ -7,7 +7,9 @@ import type { Snowflake, Attachment } from '@strafe-js/util';
  * - `'number'`: Floating-point number parsed via `parseFloat(token)`.
  * - `'boolean'`: Accepts `'true' | '1' | 'yes' | 'y'` (`true`) or `'false' | '0' | 'no' | 'n'` (`false`).
  * - `'user'`: Extracts the Snowflake ID from `<@id>` / `<@!id>` user mentions or passes a raw ID string.
- * - `'snowflake'`: Extracts the Snowflake ID from `<@id>` / `<@!id>` or passes a raw ID string.
+ * - `'room'`: Extracts the Snowflake ID from `<#id>` room mentions or passes a raw 16 to 20 digit ID string.
+ * - `'role'`: Extracts the Snowflake ID from `<@&id>` role mentions or passes a raw 16 to 20 digit ID string.
+ * - `'snowflake'`: Extracts the Snowflake ID from `<@id>` / `<@!id>` / `<#id>` / `<@&id>` or passes a raw ID string.
  * - `'attachment'`: Consumes `message.attachments[0]` without advancing the text token cursor.
  */
 export type ArgumentType =
@@ -16,6 +18,8 @@ export type ArgumentType =
   | 'number'
   | 'boolean'
   | 'user'
+  | 'room'
+  | 'role'
   | 'snowflake'
   | 'attachment';
 
@@ -35,6 +39,12 @@ export interface CommandArgumentOption<T extends ArgumentType = ArgumentType> {
   min?: number;
   /** Maximum inclusive numeric bound for `'integer'` and `'number'` arguments (`code: 'OUT_OF_RANGE'`). */
   max?: number;
+  /** Minimum inclusive character length for `'string'` arguments (`code: 'OUT_OF_RANGE'`). */
+  minLength?: number;
+  /** Maximum inclusive character length for `'string'` arguments (`code: 'OUT_OF_RANGE'`). */
+  maxLength?: number;
+  /** When `true` on a `'string'` argument, joins all remaining unconsumed tokens with `' '`. */
+  rest?: boolean;
   /** Fallback value returned by `ctx.arguments.get(name)` when an optional argument is omitted. */
   default?: unknown;
 }
@@ -49,7 +59,7 @@ export type CommandArgumentsSchema = Record<string, CommandArgumentOption>;
  * Maps a single {@link CommandArgumentOption} to its resolved TypeScript value type.
  */
 export type InferArgumentType<Opt extends CommandArgumentOption> =
-  Opt['type'] extends 'string' | 'user' | 'snowflake'
+  Opt['type'] extends 'string' | 'user' | 'room' | 'role' | 'snowflake'
     ? Opt['choices'] extends Array<infer C>
       ? C
       : string
@@ -255,7 +265,12 @@ export function parseAndValidateArguments<Schema extends CommandArgumentsSchema>
       continue;
     }
 
-    tokenIndex++;
+    if (opt.type === 'string' && opt.rest) {
+      rawToken = tokens.slice(tokenIndex).join(' ');
+      tokenIndex = tokens.length;
+    } else {
+      tokenIndex++;
+    }
 
     let parsedVal: unknown;
     switch (opt.type) {
@@ -263,9 +278,47 @@ export function parseAndValidateArguments<Schema extends CommandArgumentsSchema>
         parsedVal = rawToken;
         break;
       }
-      case 'user':
-      case 'snowflake': {
+      case 'user': {
         const match = /^<@!?(\d{16,20})>$/.exec(rawToken);
+        parsedVal = match ? match[1] : rawToken;
+        break;
+      }
+      case 'room': {
+        const match = /^<#(\d{16,20})>$/.exec(rawToken);
+        if (match) {
+          parsedVal = match[1];
+        } else if (/^\d{16,20}$/.test(rawToken)) {
+          parsedVal = rawToken;
+        } else {
+          throw new ArgumentValidationError(
+            name,
+            'INVALID_TYPE',
+            `Argument "${name}" must be a room mention (<#id>) or Snowflake ID`,
+            'room',
+            rawToken,
+          );
+        }
+        break;
+      }
+      case 'role': {
+        const match = /^<@&(\d{16,20})>$/.exec(rawToken);
+        if (match) {
+          parsedVal = match[1];
+        } else if (/^\d{16,20}$/.test(rawToken)) {
+          parsedVal = rawToken;
+        } else {
+          throw new ArgumentValidationError(
+            name,
+            'INVALID_TYPE',
+            `Argument "${name}" must be a role mention (<@&id>) or Snowflake ID`,
+            'role',
+            rawToken,
+          );
+        }
+        break;
+      }
+      case 'snowflake': {
+        const match = /^<(?:@!?|@&|#)(\d{16,20})>$/.exec(rawToken);
         parsedVal = match ? match[1] : rawToken;
         break;
       }
@@ -346,6 +399,27 @@ export function parseAndValidateArguments<Schema extends CommandArgumentsSchema>
           'OUT_OF_RANGE',
           `Argument "${name}" must be at most ${opt.max}`,
           `<= ${opt.max}`,
+          parsedVal,
+        );
+      }
+    }
+
+    if (typeof parsedVal === 'string') {
+      if (opt.minLength !== undefined && parsedVal.length < opt.minLength) {
+        throw new ArgumentValidationError(
+          name,
+          'OUT_OF_RANGE',
+          `Argument "${name}" must be at least ${opt.minLength} characters long`,
+          `length >= ${opt.minLength}`,
+          parsedVal,
+        );
+      }
+      if (opt.maxLength !== undefined && parsedVal.length > opt.maxLength) {
+        throw new ArgumentValidationError(
+          name,
+          'OUT_OF_RANGE',
+          `Argument "${name}" must be at most ${opt.maxLength} characters long`,
+          `length <= ${opt.maxLength}`,
           parsedVal,
         );
       }

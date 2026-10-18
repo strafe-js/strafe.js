@@ -44,10 +44,10 @@ if (cmd === 'command') {
   }
 
   const perms = args.includes('--mod')
-    ? `  permissions: ['ManageMessages'],\n`
+    ? `  category: 'moderation',\n  permissions: ['ManageMessages'],\n`
     : args.includes('--admin')
-      ? `  permissions: ['Administrator'],\n`
-      : '';
+      ? `  category: 'admin',\n  permissions: ['Administrator'],\n`
+      : `  category: 'general',\n`;
 
   writeFileSync(
     file,
@@ -56,7 +56,6 @@ if (cmd === 'command') {
 export default command({
   name: '${name}',
   description: '${name} command',
-  usage: '',
   aliases: [],
 ${perms}  cooldown: 0,
   async run(ctx) {
@@ -286,6 +285,7 @@ writeFileSync(
 export default command({
   name: 'ping',
   description: 'latency check',
+  category: 'utility',
   aliases: ['p'],
   async run(ctx) {
     await ctx.reply('pong');
@@ -296,39 +296,35 @@ export default command({
 
 writeFileSync(
   join(root, 'src/commands/help.ts'),
-  `import { command } from '@strafe-js/strafebot';
+  `import { createHelpCommand } from '@strafe-js/strafebot';
 
-export default command({
-  name: 'help',
-  description: 'list commands',
-  aliases: ['commands'],
-  async run(ctx) {
-    const list = [...ctx.client.commands.commands.values()]
-      .map((c) => \`\${ctx.prefix}\${c.name}\${c.description ? ' - ' + c.description : ''}\`)
-      .join('\\n');
-    await ctx.reply(list || 'no commands');
-  },
+export default createHelpCommand({
+  title: '**Available Bot Commands**',
 });
 `,
 );
 
 writeFileSync(
   join(root, 'src/commands/kick.ts'),
-  `import { command } from '@strafe-js/strafebot';
+  `import { command, userMention } from '@strafe-js/strafebot';
 
 export default command({
   name: 'kick',
-  description: 'kick a member by id',
-  usage: '<user_id> [reason]',
+  description: 'kick a member from the space',
+  category: 'moderation',
   permissions: ['KickMembers'],
+  botPermissions: ['KickMembers'],
   guildOnly: true,
-  minArgs: 1,
+  arguments: {
+    target: { type: 'user', required: true, description: 'Member ID or @mention' },
+    reason: { type: 'string', rest: true, default: 'No reason provided' },
+  },
   async run(ctx) {
-    const target = ctx.args[0]!;
-    const reason = ctx.args.slice(1).join(' ') || undefined;
+    const target = ctx.arguments.get('target');
+    const reason = ctx.arguments.get('reason');
     try {
-      await ctx.client.rest.kickMember(ctx.space!.id, target);
-      await ctx.reply(\`kicked \${target}\${reason ? \`: \${reason}\` : ''}\`);
+      await ctx.client.rest.kickMember(ctx.spaceId!, target);
+      await ctx.reply(\`kicked \${userMention(target)} (reason: \${reason})\`);
     } catch (err) {
       await ctx.reply(\`failed: \${(err as Error).message}\`);
     }

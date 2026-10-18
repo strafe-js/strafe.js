@@ -6,10 +6,12 @@ import type { Attachment } from '@strafe-js/util';
  * - `'number'`: Floating-point number parsed via `parseFloat(token)`.
  * - `'boolean'`: Accepts `'true' | '1' | 'yes' | 'y'` (`true`) or `'false' | '0' | 'no' | 'n'` (`false`).
  * - `'user'`: Extracts the Snowflake ID from `<@id>` / `<@!id>` user mentions or passes a raw ID string.
- * - `'snowflake'`: Extracts the Snowflake ID from `<@id>` / `<@!id>` or passes a raw ID string.
+ * - `'room'`: Extracts the Snowflake ID from `<#id>` room mentions or passes a raw 16 to 20 digit ID string.
+ * - `'role'`: Extracts the Snowflake ID from `<@&id>` role mentions or passes a raw 16 to 20 digit ID string.
+ * - `'snowflake'`: Extracts the Snowflake ID from `<@id>` / `<@!id>` / `<#id>` / `<@&id>` or passes a raw ID string.
  * - `'attachment'`: Consumes `message.attachments[0]` without advancing the text token cursor.
  */
-export type ArgumentType = 'string' | 'integer' | 'number' | 'boolean' | 'user' | 'snowflake' | 'attachment';
+export type ArgumentType = 'string' | 'integer' | 'number' | 'boolean' | 'user' | 'room' | 'role' | 'snowflake' | 'attachment';
 /**
  * Validation and parsing specification for a single command argument in a {@link CommandArgumentsSchema}.
  */
@@ -26,6 +28,12 @@ export interface CommandArgumentOption<T extends ArgumentType = ArgumentType> {
     min?: number;
     /** Maximum inclusive numeric bound for `'integer'` and `'number'` arguments (`code: 'OUT_OF_RANGE'`). */
     max?: number;
+    /** Minimum inclusive character length for `'string'` arguments (`code: 'OUT_OF_RANGE'`). */
+    minLength?: number;
+    /** Maximum inclusive character length for `'string'` arguments (`code: 'OUT_OF_RANGE'`). */
+    maxLength?: number;
+    /** When `true` on a `'string'` argument, joins all remaining unconsumed tokens with `' '`. */
+    rest?: boolean;
     /** Fallback value returned by `ctx.arguments.get(name)` when an optional argument is omitted. */
     default?: unknown;
 }
@@ -37,7 +45,7 @@ export type CommandArgumentsSchema = Record<string, CommandArgumentOption>;
 /**
  * Maps a single {@link CommandArgumentOption} to its resolved TypeScript value type.
  */
-export type InferArgumentType<Opt extends CommandArgumentOption> = Opt['type'] extends 'string' | 'user' | 'snowflake' ? Opt['choices'] extends Array<infer C> ? C : string : Opt['type'] extends 'integer' | 'number' ? Opt['choices'] extends Array<infer C> ? C : number : Opt['type'] extends 'boolean' ? boolean : Opt['type'] extends 'attachment' ? Attachment : unknown;
+export type InferArgumentType<Opt extends CommandArgumentOption> = Opt['type'] extends 'string' | 'user' | 'room' | 'role' | 'snowflake' ? Opt['choices'] extends Array<infer C> ? C : string : Opt['type'] extends 'integer' | 'number' ? Opt['choices'] extends Array<infer C> ? C : number : Opt['type'] extends 'boolean' ? boolean : Opt['type'] extends 'attachment' ? Attachment : unknown;
 /**
  * Infers the full map of argument names to resolved TypeScript types for a {@link CommandArgumentsSchema}.
  */

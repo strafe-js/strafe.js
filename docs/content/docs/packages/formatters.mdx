@@ -93,3 +93,37 @@ const msg = [
   ]}
   example={`escapeMarkdown('**bold_and_italic**'); // "\\\\*\\\\*bold\\\\_and\\\\_italic\\\\*\\\\*"`}
 />
+
+<MethodCard
+  name="bold / italic / underline / strikethrough / spoiler"
+  signature="(text: string) => string"
+  returnType="string"
+  isAsync={false}
+  description="Wraps text in Markdown inline formatting (**text**, *text*, __text__, ~~text~~, ||text||)."
+  parameters={[
+    { name: 'text', type: 'string', required: true, description: 'Text to format.' },
+  ]}
+  example={`bold('Alert'); // "**Alert**"\nspoiler('secret'); // "||secret||"`}
+/>
+
+<MethodCard
+  name="inlineCode / codeBlock"
+  signature="(code: string, language?: string) => string"
+  returnType="string"
+  isAsync={false}
+  description="Formats text as inline code (`text`) or a fenced multi-line code block (```language\\ncode\\n```)."
+  parameters={[
+    { name: 'code', type: 'string', required: true, description: 'Source code string.' },
+    { name: 'language', type: 'string', required: false, default: "''", description: 'Optional syntax highlighting language.' },
+  ]}
+  example={`inlineCode('npm test'); // "\`npm test\`"\ncodeBlock('const x = 1;', 'ts');`}
+/>
+
+<MethodCard
+  name="quote / blockQuote / hyperlink"
+  signature="(text: string) => string / (label: string, url: string) => string"
+  returnType="string"
+  isAsync={false}
+  description="Formats single-line quotes (> text), multi-line block quotes (>>> text), or Markdown hyperlinks ([label](url))."
+  example={`quote('Single line');\nblockQuote('Line 1\\nLine 2');\nhyperlink('Docs', 'https://app.strafe.chat/docs');`}
+/>

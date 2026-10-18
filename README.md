@@ -35,9 +35,9 @@
 
 Full SDK documentation, package guides, and interactive developer tools are hosted at **[strafe-js.github.io/strafe.js](https://strafe-js.github.io/strafe.js/)**.
 
-- **Bot Client**: Combines the Gateway WebSocket (`@strafe-js/ws`) and REST client (`@strafe-js/rest`) with live state caches (`spaces`, `rooms`, `spaceRooms`, `members`).
+- **Bot Client**: Combines the Gateway WebSocket (`@strafe-js/ws`) and REST client (`@strafe-js/rest`) with live state caches (`spaces`, `rooms`, `spaceRooms`, `members`) and message/reaction collectors (`awaitMessages`, `awaitReactions`).
 - **Equinox Permission Engine**: Implements the 6-stage Strafe permission calculation (Space Owner, `@everyone` + role bitmasks, `Administrator` short-circuit, room overrides, implicit `ViewRoom` denial, and dependent `SendMessages` flags).
-- **Typed Command Framework**: Declarative argument schemas (`string`, `integer`, `number`, `boolean`, `user`, `snowflake`, `attachment`), quote-aware tokenization, per-user cooldowns, and permission guards.
+- **Typed Command Framework**: Declarative argument schemas (`string`, `integer`, `number`, `boolean`, `user`, `room`, `role`, `snowflake`, `attachment`), quote-aware tokenization, `rest` capture, `@mention` prefix support, middleware (`commands.use`), per-user cooldowns, permission guards, and built-in help generation (`createHelpCommand`).
 - **Transport Reliability**: Automatic HTTP `429 Retry-After` / `retry_after` backoff and WebSocket `Ping`/`Pong` (`op: 6` / `op: 7`) heartbeats with jittered exponential reconnects.
 
 ---
@@ -122,7 +122,7 @@ Strafe is federated and self-hosted. Each deployment serves its own API under `/
 Docs: [Bot Client](https://strafe-js.github.io/strafe.js/docs/strafebot/client/) • [Events](https://strafe-js.github.io/strafe.js/docs/strafebot/events/) • [Commands](https://strafe-js.github.io/strafe.js/docs/commands/overview/) • [Arguments](https://strafe-js.github.io/strafe.js/docs/commands/arguments/)
 
 ```ts
-import { Client, command, userMention } from '@strafe-js/strafebot';
+import { Client, command, createHelpCommand, userMention } from '@strafe-js/strafebot';
 
 const client = new Client({
   apiBase: process.env.STRAFE_API || 'https://app.strafe.chat/api',
@@ -131,10 +131,18 @@ const client = new Client({
   owners: ['123456789012345678'],
 });
 
+client.commands.use(async (ctx, next) => {
+  console.log(`[CMD] ${ctx.commandName} invoked by ${ctx.authorId}`);
+  await next();
+});
+
 client.commands.registerAll([
+  createHelpCommand({ title: '**Bot Commands**' }),
+
   command({
     name: 'ping',
     aliases: ['p'],
+    category: 'utility',
     description: 'Replies with pong',
     async run(ctx) {
       await ctx.reply('Pong!');
@@ -143,13 +151,14 @@ client.commands.registerAll([
 
   command({
     name: 'ban',
+    category: 'moderation',
     description: 'Ban a user with typed schema validation',
     guildOnly: true,
     permissions: ['BanMembers'],
     botPermissions: ['BanMembers'],
     arguments: {
       target: { type: 'user', required: true, description: 'User ID or @mention' },
-      reason: { type: 'string', default: 'No reason provided' },
+      reason: { type: 'string', rest: true, default: 'No reason provided' },
     },
     async run(ctx) {
       const targetId = ctx.arguments.get('target');
@@ -271,16 +280,29 @@ gateway.connect();
 Docs: [Builders Documentation](https://strafe-js.github.io/strafe.js/docs/packages/builders/)
 
 ```ts
-import { message, permissions, permissionMask } from '@strafe-js/builders';
+import {
+  message,
+  permissions,
+  permissionMask,
+  permissionOverwrite,
+} from '@strafe-js/builders';
 
 const payload = message()
   .setContent('Important announcement!')
+  .appendContent('Please review the updated rules.', '\n')
   .setReply('998877665544332211')
+  .addUserMention('123456789012345678')
   .mentionEveryone(false)
   .toJSON();
 
 const modBits = permissions(['KickMembers', 'BanMembers', 'ManageMessages']);
 const combinedMask = permissionMask('ViewRoom', 'SendMessages', modBits);
+
+const roomOverride = permissionOverwrite()
+  .setRole('234567890123456789')
+  .allow('ViewRoom', 'ReadMessageHistory')
+  .deny('SendMessages')
+  .toJSON();
 ```
 
 ---
@@ -297,6 +319,13 @@ import {
   customEmoji,
   customReactionEmoji,
   escapeMarkdown,
+  bold,
+  italic,
+  inlineCode,
+  codeBlock,
+  spoiler,
+  quote,
+  hyperlink,
 } from '@strafe-js/formatters';
 
 userMention('123456789012345678'); // "<@123456789012345678>"
@@ -305,6 +334,13 @@ roomMention('123456789012345678'); // "<#123456789012345678>"
 customEmoji('wave', '998877665544332211', true); // "<a:wave:998877665544332211>"
 customReactionEmoji('998877665544332211'); // "custom:998877665544332211"
 escapeMarkdown('**unsafe_input**'); // "\\*\\*unsafe\\_input\\*\\*"
+bold('Notice'); // "**Notice**"
+italic('subtle'); // "*subtle*"
+inlineCode('npm test'); // "`npm test`"
+codeBlock('const ok = true;', 'ts'); // "```ts\nconst ok = true;\n```"
+spoiler('hidden'); // "||hidden||"
+quote('quoted line'); // "> quoted line"
+hyperlink('Strafe Docs', 'https://app.strafe.chat/docs'); // "[Strafe Docs](https://app.strafe.chat/docs)"
 ```
 
 ---
@@ -322,6 +358,8 @@ users.set('2', { id: '2', bot: true });
 
 const firstHuman = users.find((u) => !u.bot);
 const botsOnly = users.filter((u) => u.bot);
+const [bots, humans] = users.partition((u) => u.bot);
+const randomUser = users.random();
 const allIds = users.map((u) => u.id);
 ```
 
@@ -332,7 +370,12 @@ const allIds = users.map((u) => u.id);
 Docs: [Util & BitField Documentation](https://strafe-js.github.io/strafe.js/docs/packages/util/)
 
 ```ts
-import { BitField, Permission, isSnowflake } from '@strafe-js/util';
+import {
+  BitField,
+  Permission,
+  isSnowflake,
+  deconstructSnowflake,
+} from '@strafe-js/util';
 
 const perms = new BitField(Permission.ViewRoom | Permission.SendMessages);
 perms.add('AddReactions', 'AttachFiles');
@@ -340,6 +383,7 @@ perms.add('AddReactions', 'AttachFiles');
 console.log(perms.has('AddReactions')); // true
 console.log(perms.toArray()); // ['ViewRoom', 'SendMessages', 'AddReactions', 'AttachFiles']
 console.log(isSnowflake('123456789012345678')); // true
+console.log(deconstructSnowflake('2104652899186380800').date.toISOString());
 ```
 
 ---

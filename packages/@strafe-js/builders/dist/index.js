@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MessageBuilder = void 0;
+exports.PermissionOverwriteBuilder = exports.MessageBuilder = void 0;
 exports.message = message;
+exports.permissionOverwrite = permissionOverwrite;
 exports.permissions = permissions;
 exports.permissionMask = permissionMask;
 exports.generateOAuth2Url = generateOAuth2Url;
@@ -101,6 +102,65 @@ class MessageBuilder {
         return this;
     }
     /**
+     * Appends `text` to the existing `plaintext` content separated by `separator` (defaults to `''`).
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Line 1').appendContent('Line 2', '\n').toJSON();
+     * ```
+     */
+    appendContent(text, separator = '') {
+        this.data.plaintext = this.data.plaintext
+            ? `${this.data.plaintext}${separator}${text}`
+            : text;
+        return this;
+    }
+    /**
+     * Appends one or more unique User {@link Snowflake} IDs to `mentions`.
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Hello!').addUserMention('123456789012345678').toJSON();
+     * ```
+     */
+    addUserMention(...userIds) {
+        const set = new Set(this.data.mentions ?? []);
+        for (const id of userIds)
+            set.add(id);
+        this.data.mentions = [...set];
+        return this;
+    }
+    /**
+     * Appends one or more unique Role {@link Snowflake} IDs to `mention_roles`.
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Alert!').addRoleMention('234567890123456789').toJSON();
+     * ```
+     */
+    addRoleMention(...roleIds) {
+        const set = new Set(this.data.mention_roles ?? []);
+        for (const id of roleIds)
+            set.add(id);
+        this.data.mention_roles = [...set];
+        return this;
+    }
+    /**
+     * Appends one or more unique Attachment {@link Snowflake} IDs to `attachments`.
+     *
+     * @example
+     * ```ts
+     * const body = message().setContent('Files:').addAttachment(att1.id, att2.id).toJSON();
+     * ```
+     */
+    addAttachment(...attachmentIds) {
+        const set = new Set(this.data.attachments ?? []);
+        for (const id of attachmentIds)
+            set.add(id);
+        this.data.attachments = [...set];
+        return this;
+    }
+    /**
      * Returns a shallow clone of the built {@link CreateMessageBody} payload.
      *
      * @example
@@ -109,7 +169,12 @@ class MessageBuilder {
      * ```
      */
     toJSON() {
-        return { ...this.data };
+        return {
+            ...this.data,
+            ...(this.data.mentions ? { mentions: [...this.data.mentions] } : {}),
+            ...(this.data.mention_roles ? { mention_roles: [...this.data.mention_roles] } : {}),
+            ...(this.data.attachments ? { attachments: [...this.data.attachments] } : {}),
+        };
     }
 }
 exports.MessageBuilder = MessageBuilder;
@@ -123,6 +188,96 @@ exports.MessageBuilder = MessageBuilder;
  */
 function message() {
     return new MessageBuilder();
+}
+/**
+ * Fluent builder for constructing a room-level {@link PermissionOverride} entry (`allow` and `deny` bitmasks
+ * for a target `role_id` or `user_id`). Allowing a permission automatically clears it from `deny`, and vice versa.
+ *
+ * @example
+ * ```ts
+ * import { permissionOverwrite } from '@strafe-js/builders';
+ *
+ * const override = permissionOverwrite()
+ *   .setRole('234567890123456789')
+ *   .allow('ViewRoom', 'ReadMessageHistory')
+ *   .deny('SendMessages', 'AddReactions')
+ *   .toJSON();
+ * ```
+ */
+class PermissionOverwriteBuilder {
+    roleId;
+    userId;
+    allowBits = 0;
+    denyBits = 0;
+    /**
+     * Sets the target `role_id` for this override and clears any previously set `user_id`.
+     */
+    setRole(roleId) {
+        this.roleId = roleId;
+        this.userId = undefined;
+        return this;
+    }
+    /**
+     * Sets the target `user_id` for this override and clears any previously set `role_id`.
+     */
+    setUser(userId) {
+        this.userId = userId;
+        this.roleId = undefined;
+        return this;
+    }
+    /**
+     * Adds the resolved permissions to `allow` and removes them from `deny`.
+     */
+    allow(...perms) {
+        const mask = (0, util_1.resolvePermission)(perms);
+        this.allowBits |= mask;
+        this.denyBits &= ~mask;
+        return this;
+    }
+    /**
+     * Adds the resolved permissions to `deny` and removes them from `allow`.
+     */
+    deny(...perms) {
+        const mask = (0, util_1.resolvePermission)(perms);
+        this.denyBits |= mask;
+        this.allowBits &= ~mask;
+        return this;
+    }
+    /**
+     * Clears the resolved permissions from both `allow` and `deny` so they inherit from space roles.
+     */
+    clear(...perms) {
+        const mask = (0, util_1.resolvePermission)(perms);
+        this.allowBits &= ~mask;
+        this.denyBits &= ~mask;
+        return this;
+    }
+    /**
+     * Serializes the builder state into a {@link PermissionOverride} object.
+     */
+    toJSON() {
+        const out = {
+            allow: this.allowBits,
+            deny: this.denyBits,
+        };
+        if (this.roleId !== undefined)
+            out.role_id = this.roleId;
+        if (this.userId !== undefined)
+            out.user_id = this.userId;
+        return out;
+    }
+}
+exports.PermissionOverwriteBuilder = PermissionOverwriteBuilder;
+/**
+ * Creates a new {@link PermissionOverwriteBuilder} instance.
+ *
+ * @example
+ * ```ts
+ * const override = permissionOverwrite().setUser('123456789012345678').deny('SendMessages').toJSON();
+ * ```
+ */
+function permissionOverwrite() {
+    return new PermissionOverwriteBuilder();
 }
 /**
  * Combines an array of {@link PermissionName} strings into a single numeric bitmask via {@link resolvePermission}.

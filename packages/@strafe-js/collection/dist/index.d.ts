@@ -99,5 +99,95 @@ export declare class Collection<K, V> extends Map<K, V> {
      * ```
      */
     keyArray(): K[];
+    /**
+     * Returns the last value in insertion order, or `undefined` if the collection is empty.
+     *
+     * @example
+     * ```ts
+     * const newestRoom = client.rooms.last();
+     * ```
+     */
+    last(): V | undefined;
+    /**
+     * Returns up to `count` values from the end of the collection in insertion order.
+     *
+     * @example
+     * ```ts
+     * const lastTwoSpaces = client.spaces.last(2);
+     * ```
+     */
+    last(count: number): V[];
+    /**
+     * Returns a single uniformly sampled value from the collection, or `undefined` if empty.
+     *
+     * @example
+     * ```ts
+     * const randomMember = members.random();
+     * ```
+     */
+    random(): V | undefined;
+    /**
+     * Returns up to `count` unique uniformly sampled values from the collection without replacement.
+     *
+     * @example
+     * ```ts
+     * const winners = members.random(3);
+     * ```
+     */
+    random(count: number): V[];
+    /**
+     * Folds all entries in insertion order into a single accumulated value starting from `initialValue`.
+     *
+     * @example
+     * ```ts
+     * const totalSize = attachments.reduce((sum, att) => sum + att.size, 0);
+     * ```
+     */
+    reduce<T>(fn: (accumulator: T, value: V, key: K, col: this) => T, initialValue: T): T;
+    /**
+     * Splits the collection into a two-tuple `[matching, nonMatching]` based on predicate `fn`.
+     *
+     * @example
+     * ```ts
+     * const [bots, humans] = members.partition((m) => Boolean(m.bot));
+     * ```
+     */
+    partition(fn: (value: V, key: K, col: this) => boolean): [Collection<K, V>, Collection<K, V>];
+    /**
+     * Removes all entries for which `fn` returns `true` in place and returns the number of deleted entries.
+     *
+     * @example
+     * ```ts
+     * const evicted = cache.sweep((entry) => entry.expiresAt < Date.now());
+     * ```
+     */
+    sweep(fn: (value: V, key: K, col: this) => boolean): number;
+    /**
+     * Creates a shallow copy of this collection with identical key-value pairs.
+     *
+     * @example
+     * ```ts
+     * const snapshot = client.rooms.clone();
+     * ```
+     */
+    clone(): Collection<K, V>;
+    /**
+     * Combines this collection with one or more additional collections into a new `Collection` instance without mutating the originals.
+     *
+     * @example
+     * ```ts
+     * const combined = spaceARooms.concat(spaceBRooms);
+     * ```
+     */
+    concat(...collections: Collection<K, V>[]): Collection<K, V>;
+    /**
+     * Invokes `fn(this)` for side effects and returns `this` to allow method chaining.
+     *
+     * @example
+     * ```ts
+     * const admins = members.filter((m) => m.role_ids.length > 0).tap((col) => console.log(col.size));
+     * ```
+     */
+    tap(fn: (col: this) => void): this;
 }
 //# sourceMappingURL=index.d.ts.map
