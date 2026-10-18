@@ -5,11 +5,12 @@ import { CodeWindow } from './CodeWindow';
 
 type RestEndpointKey =
   | 'getMe'
+  | 'getSpaceRooms'
   | 'createMessage'
   | 'listMessages'
   | 'addReaction'
   | 'kickMember';
-type WsFrameKey = 'messageCreate' | 'ready' | 'subscribe' | 'pingPong';
+type WsFrameKey = 'ready' | 'pingPong' | 'subscribe' | 'messageCreate';
 
 const REST_ENDPOINTS: Record<
   RestEndpointKey,
@@ -26,10 +27,16 @@ const REST_ENDPOINTS: Record<
     status: '200 OK',
     label: 'getMe()',
   },
+  getSpaceRooms: {
+    verb: 'GET',
+    route: '/spaces/:spaceId/rooms',
+    status: '200 OK',
+    label: 'getSpaceRooms(spaceId)',
+  },
   createMessage: {
     verb: 'POST',
     route: '/rooms/:roomId/messages',
-    status: '200 OK',
+    status: '201 Created',
     label: 'createMessage(roomId, body)',
   },
   listMessages: {
@@ -129,7 +136,7 @@ export function ApiPlayground() {
   const [activeTab, setActiveTab] = useState<'rest' | 'ws'>('rest');
   const [mode, setMode] = useState<'mock' | 'live'>('mock');
   const [method, setMethod] = useState<RestEndpointKey>('getMe');
-  const [wsFrame, setWsFrame] = useState<WsFrameKey>('messageCreate');
+  const [wsFrame, setWsFrame] = useState<WsFrameKey>('ready');
 
   const [apiBase, setApiBase] = useState('https://app.strafe.chat/api');
   const [gatewayUrl, setGatewayUrl] = useState('wss://app.strafe.chat/gateway/events');
@@ -224,6 +231,9 @@ const rest = new REST({
 
 const me = await rest.getMe();
 console.log(me.id, me.username);`;
+      case 'getSpaceRooms':
+        return `const rooms = await client.rest.getSpaceRooms('${spaceId}');
+const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       case 'createMessage':
         return `const message = await client.rest.createMessage('${roomId}', {
   plaintext: '${plaintext}',
@@ -301,6 +311,20 @@ console.log(me.id, me.username);`;
             is_bot: true,
           },
         };
+      case 'getSpaceRooms':
+        return {
+          status: 200,
+          route: `GET /spaces/${spaceId}/rooms`,
+          body: [
+            {
+              id: roomId,
+              space_id: spaceId,
+              name: 'general',
+              type: 3,
+              e2ee_enabled: false,
+            },
+          ],
+        };
       case 'createMessage':
         return {
           status: 200,
@@ -363,6 +387,9 @@ console.log(me.id, me.username);`;
     if (method === 'getMe') {
       verb = 'GET';
       path = '/users/@me';
+    } else if (method === 'getSpaceRooms') {
+      verb = 'GET';
+      path = `/spaces/${encodeURIComponent(spaceId.trim())}/rooms`;
     } else if (method === 'createMessage') {
       verb = 'POST';
       path = `/rooms/${encodeURIComponent(roomId.trim())}/messages`;
@@ -895,12 +922,25 @@ console.log(me.id, me.username);`;
                     GET /users/@me requires no path parameters; it inspects the authenticated Bot or Bearer token header.
                   </div>
                 )}
+                {method === 'getSpaceRooms' && (
+                  <div>
+                    <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                      spaceId (Snowflake)
+                    </label>
+                    <input
+                      type="text"
+                      value={spaceId}
+                      onChange={(e) => setSpaceId(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                    />
+                  </div>
+                )}
                 {(method === 'createMessage' ||
                   method === 'listMessages' ||
                   method === 'addReaction') && (
                   <div>
                     <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
-                      roomId (Snowflake)
+                      roomId (Snowflake, must have e2ee_enabled: false for bots)
                     </label>
                     <input
                       type="text"

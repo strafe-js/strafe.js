@@ -1,7 +1,56 @@
 import http from 'node:http';
+import https from 'node:https';
+import tls from 'node:tls';
 import WebSocket from 'ws';
 
 const RELAY_PORT = 3099;
+
+class HttpsProxyAgent extends https.Agent {
+  constructor(proxyUrlStr) {
+    super();
+    this.proxyUrl = new URL(proxyUrlStr);
+  }
+
+  createConnection(opts, cb) {
+    const req = http.request({
+      host: this.proxyUrl.hostname,
+      port: Number(this.proxyUrl.port) || 80,
+      method: 'CONNECT',
+      path: `${opts.host}:${opts.port || 443}`,
+    });
+
+    req.on('connect', (res, socket) => {
+      if (res.statusCode !== 200) {
+        socket.destroy();
+        return cb(new Error(`Proxy CONNECT failed with HTTP ${res.statusCode}`));
+      }
+      const tlsSocket = tls.connect({
+        socket,
+        servername: opts.servername || opts.host,
+      });
+      tlsSocket.on('error', cb);
+      cb(null, tlsSocket);
+    });
+
+    req.on('error', cb);
+    req.end();
+  }
+}
+
+function getWsAgent(gatewayUrl) {
+  if (!gatewayUrl.startsWith('wss://')) return undefined;
+  const proxyEnv =
+    process.env.HTTPS_PROXY ||
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy;
+  if (!proxyEnv) return undefined;
+  try {
+    return new HttpsProxyAgent(proxyEnv);
+  } catch {
+    return undefined;
+  }
+}
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -61,6 +110,42 @@ async function handleRestRelay(body, res) {
       }
     }
 
+    let roomDiagnostics;
+    if (
+      upstream.status === 400 &&
+      parsedBody &&
+      typeof parsedBody === 'object' &&
+      typeof parsedBody.error === 'string' &&
+      parsedBody.error.includes('E2EE')
+    ) {
+      const roomMatch = /^(https?:\/\/.+\/api\/rooms\/[^/]+)\/messages$/.exec(url);
+      if (roomMatch) {
+        try {
+          const roomRes = await fetch(roomMatch[1], {
+            method: 'GET',
+            headers: {
+              Authorization: authHeader,
+              'User-Agent': 'strafebot-js/1.2 (Playground)',
+            },
+          });
+          if (roomRes.ok) {
+            const roomData = await roomRes.json();
+            roomDiagnostics = {
+              room_id: roomData.id,
+              room_name: roomData.name || '(PM / Group PM)',
+              room_type: roomData.type,
+              e2ee_enabled: roomData.e2ee_enabled,
+              explanation: roomData.e2ee_enabled
+                ? 'This room has End-to-End Encryption (e2ee_enabled: true) enabled. Bots cannot post plaintext in encrypted rooms; select an unencrypted Space text room (e2ee_enabled: false) or provide ciphertext.'
+                : 'Ensure body.plaintext is a non-empty string.',
+            };
+          }
+        } catch {
+          // ignore diagnostic lookup error
+        }
+      }
+    }
+
     return sendJson(res, 200, {
       live: true,
       status: upstream.status,
@@ -68,7 +153,9 @@ async function handleRestRelay(body, res) {
       ok: upstream.ok,
       latency_ms: latencyMs,
       request: `${method} ${url}`,
+      ...(payload !== undefined ? { sent_body: payload } : {}),
       body: parsedBody,
+      ...(roomDiagnostics ? { room_diagnostics: roomDiagnostics } : {}),
     });
   } catch (err) {
     const latencyMs = Math.round(performance.now() - start);
@@ -93,26 +180,27 @@ function handleWsRelay(body, res) {
   const receivedFrames = [];
   const sentFrames = [];
   let settled = false;
+  let ws;
 
   const finish = (payload) => {
     if (settled) return;
     settled = true;
     clearTimeout(timeoutId);
     try {
-      ws.terminate();
+      if (ws) ws.terminate();
     } catch {
       // socket already closed
     }
     sendJson(res, 200, payload);
   };
 
-  let ws;
   try {
     ws = new WebSocket(gatewayUrl, {
       headers: {
         Authorization: authHeader,
         'User-Agent': 'strafebot-js/1.2 (Playground)',
       },
+      agent: getWsAgent(gatewayUrl),
     });
   } catch (err) {
     return sendJson(res, 200, {
@@ -241,12 +329,18 @@ function handleWsRelay(body, res) {
 
   ws.on('error', (err) => {
     if (!settled) {
+      const errMsg =
+        err instanceof Error && err.message
+          ? err.message
+          : err && typeof err === 'object' && 'code' in err
+            ? String(err.code)
+            : String(err);
       finish({
         live: true,
         ok: false,
         latency_ms: Math.round(performance.now() - start),
         statusLabel: 'WS Error',
-        error: err instanceof Error ? err.message : String(err),
+        error: errMsg,
       });
     }
   });
@@ -276,7 +370,7 @@ export function ensurePlaygroundRelayServer() {
   });
 
   server.on('error', () => {
-    // Port 3099 is already bound by another worker in dev mode
+    // Port 3099 is already bound
   });
 
   server.listen(RELAY_PORT, '127.0.0.1');
