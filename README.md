@@ -31,14 +31,14 @@
 
 ## About
 
-**Strafe.js** is a modular TypeScript monorepo for building bots, moderation tools, and real-time integrations on [Strafe Chat](https://app.strafe.chat). The primary package is [`@strafe-js/strafebot`](./packages/strafebot), backed by standalone packages for the HTTP REST API, Stargate WebSocket Gateway, payload builders, string formatters, collections, and project scaffolding.
+**Strafe.js** is a modular TypeScript monorepo for building bots, moderation tools, and real-time integrations on [Strafe Chat](https://app.strafe.chat). The main package is [`@strafe-js/strafebot`](./packages/strafebot), backed by standalone packages for the HTTP REST API, Stargate WebSocket Gateway, payload builders, string formatters, collections, and project scaffolding.
 
-Full SDK documentation, package guides, and interactive developer tools are hosted at **[strafe-js.github.io/strafe.js](https://strafe-js.github.io/strafe.js/)**.
+SDK documentation, package guides, and interactive protocol tools are hosted at **[strafe-js.github.io/strafe.js](https://strafe-js.github.io/strafe.js/)**.
 
-- **Bot Client**: Combines the Gateway WebSocket (`@strafe-js/ws`) and REST client (`@strafe-js/rest`) with live state caches (`spaces`, `rooms`, `spaceRooms`, `members`) and message/reaction collectors (`awaitMessages`, `awaitReactions`).
+- **`Client` (`@strafe-js/strafebot`)**: Combines the Gateway WebSocket (`@strafe-js/ws`) and REST client (`@strafe-js/rest`) with live state caches (`spaces`, `rooms`, `spaceRooms`, `members`) and message/reaction collectors (`awaitMessages`, `awaitReactions`).
 - **Equinox Permission Engine**: Implements the 6-stage Strafe permission calculation (Space Owner, `@everyone` + role bitmasks, `Administrator` short-circuit, room overrides, implicit `ViewRoom` denial, and dependent `SendMessages` flags).
-- **Typed Command Framework**: Declarative argument schemas (`string`, `integer`, `number`, `boolean`, `user`, `room`, `role`, `snowflake`, `attachment`), quote-aware tokenization, `rest` capture, `@mention` prefix support, middleware (`commands.use`), per-user cooldowns, permission guards, and built-in help generation (`createHelpCommand`).
-- **Transport Reliability**: Automatic HTTP `429 Retry-After` / `retry_after` backoff and WebSocket `Ping`/`Pong` (`op: 6` / `op: 7`) heartbeats with jittered exponential reconnects.
+- **Typed Command Framework**: Declarative argument schemas (`string`, `integer`, `number`, `boolean`, `user`, `room`, `role`, `snowflake`, `attachment`), quote-aware tokenization, `rest` capture, `@mention` prefix support, middleware (`commands.use`), per-user cooldowns, permission guards, and help command generation (`createHelpCommand`).
+- **Transport Handling**: Automatic HTTP `429 Retry-After` / `retry_after` backoff and WebSocket `Ping`/`Pong` (`op: 6` / `op: 7`) heartbeats with jittered exponential reconnects.
 
 ---
 
@@ -46,29 +46,29 @@ Full SDK documentation, package guides, and interactive developer tools are host
 
 | Package | Directory | SDK Documentation | Description | Install |
 | :--- | :--- | :--- | :--- | :--- |
-| **`@strafe-js/strafebot`** | [`packages/strafebot`](./packages/strafebot) | [Client](https://strafe-js.github.io/strafe.js/docs/strafebot/client/) / [Commands](https://strafe-js.github.io/strafe.js/docs/commands/overview/) | High-level Bot `Client`, state caches, Equinox permission engine, and `CommandHandler` | `npm i @strafe-js/strafebot` |
-| **`create-strafebot`** | [`packages/create-strafe-bot`](./packages/create-strafe-bot) | [CLI Guide](https://strafe-js.github.io/strafe.js/docs/cli/overview/) | Interactive CLI to scaffold new bot projects and generate command modules | `npm create strafebot@latest` |
+| **`@strafe-js/strafebot`** | [`packages/strafebot`](./packages/strafebot) | [Client](https://strafe-js.github.io/strafe.js/docs/strafebot/client/) / [Commands](https://strafe-js.github.io/strafe.js/docs/commands/overview/) | Bot `Client`, state caches, Equinox permission resolver, and `CommandHandler` | `npm i @strafe-js/strafebot` |
+| **`create-strafebot`** | [`packages/create-strafe-bot`](./packages/create-strafe-bot) | [CLI Guide](https://strafe-js.github.io/strafe.js/docs/cli/overview/) | CLI to scaffold new bot projects and generate command modules | `npm create strafebot@latest` |
 | **`@strafe-js/rest`** | [`packages/@strafe-js/rest`](./packages/@strafe-js/rest) | [REST Reference](https://strafe-js.github.io/strafe.js/docs/rest/overview/) | Fetch-based HTTP REST API client with automatic `429` retries and multipart uploads | `npm i @strafe-js/rest` |
 | **`@strafe-js/ws`** | [`packages/@strafe-js/ws`](./packages/@strafe-js/ws) | [Gateway Reference](https://strafe-js.github.io/strafe.js/docs/ws/overview/) | Persistent WebSocket Gateway client with heartbeating and exponential backoff | `npm i @strafe-js/ws` |
-| **`@strafe-js/builders`** | [`packages/@strafe-js/builders`](./packages/@strafe-js/builders) | [Builders Docs](https://strafe-js.github.io/strafe.js/docs/packages/builders/) | Fluent `MessageBuilder` and permission bitmask factories (`message`, `permissions`) | `npm i @strafe-js/builders` |
+| **`@strafe-js/builders`** | [`packages/@strafe-js/builders`](./packages/@strafe-js/builders) | [Builders Docs](https://strafe-js.github.io/strafe.js/docs/packages/builders/) | `MessageBuilder`, `PermissionOverwriteBuilder`, and OAuth2 URL factories | `npm i @strafe-js/builders` |
 | **`@strafe-js/formatters`** | [`packages/@strafe-js/formatters`](./packages/@strafe-js/formatters) | [Formatters Docs](https://strafe-js.github.io/strafe.js/docs/packages/formatters/) | Mentions (`<@id>`, `<@&id>`, `<#id>`), custom emoji, and Markdown escaping helpers | `npm i @strafe-js/formatters` |
-| **`@strafe-js/collection`** | [`packages/@strafe-js/collection`](./packages/@strafe-js/collection) | [Collection Docs](https://strafe-js.github.io/strafe.js/docs/packages/collection/) | Extended `Map<K, V>` subclass with functional query methods (`find`, `filter`, `map`) | `npm i @strafe-js/collection` |
+| **`@strafe-js/collection`** | [`packages/@strafe-js/collection`](./packages/@strafe-js/collection) | [Collection Docs](https://strafe-js.github.io/strafe.js/docs/packages/collection/) | `Map<K, V>` subclass with query methods (`find`, `filter`, `map`, `sweep`) | `npm i @strafe-js/collection` |
 | **`@strafe-js/util`** | [`packages/@strafe-js/util`](./packages/@strafe-js/util) | [Util & BitField](https://strafe-js.github.io/strafe.js/docs/packages/util/) | Shared API types, `Permission` flags, `BitField`, `StrafeError`, and `RateLimitError` | `npm i @strafe-js/util` |
 
 ---
 
 ## Interactive Documentation & Tools (`strafe-js.github.io/strafe.js`)
 
-The [`docs/`](./docs) workspace powers the static documentation portal at **[https://strafe-js.github.io/strafe.js/](https://strafe-js.github.io/strafe.js/)**, including browser-based developer tools:
+The [`docs/`](./docs) workspace builds the static documentation portal at **[https://strafe-js.github.io/strafe.js/](https://strafe-js.github.io/strafe.js/)**, including browser-based protocol tools:
 
 | Tool / Guide | URL | Capability |
 | :--- | :--- | :--- |
 | **Documentation Home** | [`/strafe.js/docs/`](https://strafe-js.github.io/strafe.js/docs/) | Architecture overview, package topology, and protocol quick reference |
-| **Getting Started Guide** | [`/docs/guides/getting-started/`](https://strafe-js.github.io/strafe.js/docs/guides/getting-started/) | Step-by-step bot setup, token configuration, and Gateway subscription |
+| **Getting Started Guide** | [`/docs/guides/getting-started/`](https://strafe-js.github.io/strafe.js/docs/guides/getting-started/) | Bot setup, token configuration, and Gateway subscription |
 | **Equinox Permission Calculator** | [`/docs/tools/permission-calculator/`](https://strafe-js.github.io/strafe.js/docs/tools/permission-calculator/) | Interactive 28-bit bitmask builder and 6-stage room override simulator |
 | **OAuth2 & Bot Invite Generator** | [`/docs/tools/oauth2-generator/`](https://strafe-js.github.io/strafe.js/docs/tools/oauth2-generator/) | Construct `/oauth2/authorize` consent and bot installation URLs with scope presets |
-| **Command Builder** | [`/docs/tools/command-builder/`](https://strafe-js.github.io/strafe.js/docs/tools/command-builder/) | Visual generator for `@strafe-js/strafebot` typed `command()` definitions |
-| **REST API Playground** | [`/docs/tools/api-playground/`](https://strafe-js.github.io/strafe.js/docs/tools/api-playground/) | Inspect HTTP routes, request payloads, and generated `@strafe-js/rest` snippets |
+| **Command Builder** | [`/docs/tools/command-builder/`](https://strafe-js.github.io/strafe.js/docs/tools/command-builder/) | Generator and tokenizer tester for `@strafe-js/strafebot` `command()` definitions |
+| **REST & Gateway Playground** | [`/docs/tools/api-playground/`](https://strafe-js.github.io/strafe.js/docs/tools/api-playground/) | Inspect HTTP routes, Stargate frames, and generated `@strafe-js/rest` / `@strafe-js/ws` snippets |
 
 ---
 
@@ -83,7 +83,7 @@ pnpm add @strafe-js/strafebot
 bun add @strafe-js/strafebot
 ```
 
-Or scaffold a new TypeScript bot project interactively:
+Or scaffold a new TypeScript bot project:
 
 ```sh
 npm create strafebot@latest my-bot
@@ -95,7 +95,7 @@ npx create-strafebot my-bot
 
 ## Instance Endpoints & Vocabulary (`app.strafe.chat`)
 
-Strafe is federated and self-hosted. Each deployment serves its own API under `/api` and WebSocket gateway under `/gateway/events`:
+Strafe is federated and self-hosted. Each deployment serves its HTTP API under `/api` and WebSocket gateway under `/gateway/events`:
 
 | Service | Default URL (`app.strafe.chat`) | Notes |
 | :--- | :--- | :--- |
@@ -106,16 +106,16 @@ Strafe is federated and self-hosted. Each deployment serves its own API under `/
 
 ### Strafe Vocabulary
 
-| Strafe Term | Discord Equivalent | Protocol Details |
+| Strafe Term | Discord Equivalent | Protocol Details (`RoomType`) |
 | :--- | :--- | :--- |
 | **Space** | Server / guild | `spaces` in REST paths and Gateway payloads |
-| **Room** | Channel | Space text (`type: 0`), voice (`type: 3`), PM (`type: 1`), and group PM (`type: 2`) |
-| **Section** | Category | Room of `type: 4` (`RoomType.SpaceSection`) that groups other rooms |
-| **Thread** | Thread | Public (`type: 5`) and private (`type: 6`) threads inside a parent room |
+| **Room** | Channel | PM (`type: 1`), Group PM (`type: 2`), Space text (`type: 3`), Space voice (`type: 4`) |
+| **Section** | Category | Collapsible section header room (`type: 5`, `RoomType.Section`) |
+| **Thread** | Thread | Public or private discussion thread (`type: 6`, `RoomType.Thread`) |
 
 ---
 
-## How to Use Each Package
+## Package Examples
 
 ### 1. `@strafe-js/strafebot` - Main Bot Client & Command Framework
 
@@ -213,13 +213,11 @@ await client.login(process.env.BOT_TOKEN!);
 Docs: [CLI Documentation](https://strafe-js.github.io/strafe.js/docs/cli/overview/)
 
 ```sh
-# 1. Scaffold a new bot project interactively
 npx create-strafebot my-bot
 
-# 2. Generate new command files inside an existing project (src/commands/<name>.ts)
 npx create-strafebot command userinfo
-npx create-strafebot command warn --mod     # Includes KickMembers + ManageMessages guards
-npx create-strafebot command purge --admin  # Includes Administrator + BanMembers guards
+npx create-strafebot command warn --mod
+npx create-strafebot command purge --admin
 ```
 
 ---
@@ -275,7 +273,7 @@ gateway.connect();
 
 ---
 
-### 5. `@strafe-js/builders` - Fluent Payload & Permission Builders
+### 5. `@strafe-js/builders` - Payload & Permission Builders
 
 Docs: [Builders Documentation](https://strafe-js.github.io/strafe.js/docs/packages/builders/)
 
@@ -288,7 +286,7 @@ import {
 } from '@strafe-js/builders';
 
 const payload = message()
-  .setContent('Important announcement!')
+  .setContent('Announcement')
   .appendContent('Please review the updated rules.', '\n')
   .setReply('998877665544332211')
   .addUserMention('123456789012345678')
@@ -391,19 +389,10 @@ console.log(deconstructSnowflake('2104652899186380800').date.toISOString());
 ## Development & Building the Monorepo
 
 ```sh
-# Install dependencies across all workspaces
 npm install
-
-# Build all packages in dependency order
 npm run build
-
-# Run the unit test suite (commands + Equinox permission engine)
 npm test
-
-# Start the interactive Fumadocs documentation site locally (http://localhost:3000)
 npm run docs:dev
-
-# Build the static documentation export (docs/out)
 npm run docs:build
 ```
 

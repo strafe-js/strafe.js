@@ -1,9 +1,9 @@
 ---
 title: Client Reference
-description: Complete reference for the StrafeBot Client class, state caches, methods, and Gateway events.
+description: Reference for the StrafeBot Client class, state caches, methods, and Gateway events.
 ---
 
-The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`client.rest`), Gateway WebSocket (`client.gateway`), in-memory `Collection` caches, Equinox permission resolution, and `CommandHandler` (`client.commands`).
+The `Client` class from `@strafe-js/strafebot` coordinates the REST client (`client.rest`), Gateway WebSocket (`client.gateway`), in-memory `Collection` caches, Equinox permission resolution, and `CommandHandler` (`client.commands`).
 
 ## Constructor Options (`ClientOptions`)
 
@@ -26,7 +26,7 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
       name: 'token',
       type: 'string',
       optional: true,
-      description: 'Bot token. Can also be passed directly to client.login(token).',
+      description: 'Bot token. Can also be passed to client.login(token).',
     },
     {
       name: 'authScheme',
@@ -51,7 +51,7 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
       name: 'autoSubscribeSpaces',
       type: 'boolean',
       optional: true,
-      description: 'Automatically subscribe to all spaces received in the READY payload (default: true).',
+      description: 'Subscribe to all spaces received in the READY payload (default: true).',
     },
   ]}
 />
@@ -88,7 +88,7 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
       name: 'spaces',
       type: 'Collection<Snowflake, Space>',
       readonly: true,
-      description: 'Cache of all Spaces the bot belongs to, kept updated via Gateway events.',
+      description: 'Cache of all Spaces the bot belongs to, updated via Gateway events.',
     },
     {
       name: 'rooms',
@@ -139,7 +139,7 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
   name="client.fetchMember"
   signature="(spaceId: Snowflake, userId: Snowflake) => Promise<SpaceMember | null>"
   returnType="Promise<SpaceMember | null>"
-  description="Fetches a single SpaceMember with automatic in-flight request deduplication."
+  description="Fetches a single SpaceMember with in-flight request deduplication."
   parameters={[
     { name: 'spaceId', type: 'Snowflake', required: true, description: 'Target Space ID.' },
     { name: 'userId', type: 'Snowflake', required: true, description: 'Target User ID.' },
@@ -187,7 +187,7 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
   signature="() => void"
   returnType="void"
   isAsync={false}
-  description="Cleanly closes the Gateway WebSocket connection and removes all event listeners."
+  description="Closes the Gateway WebSocket connection with code 1000 and removes all event listeners."
   example={`client.destroy();`}
 />
 

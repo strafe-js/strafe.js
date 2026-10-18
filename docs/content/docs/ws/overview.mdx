@@ -1,9 +1,9 @@
 ---
 title: WebSocket Gateway (@strafe-js/ws)
-description: Persistent Stargate WebSocket client with opcodes 0-8, heartbeat tracking, and room subscription restoration.
+description: Persistent Stargate WebSocket client with opcodes 0-8, heartbeat pings, and exponential backoff reconnection.
 ---
 
-`@strafe-js/ws` implements the **Stargate WebSocket Gateway protocol** (`wss://app.strafe.chat/gateway/events`) with automatic heartbeat timers (`op: 0`), `space_rooms` subscription hydration (`op: 1`), `SNAKE_CASE` to `camelCase` event normalization, and exponential backoff reconnection with random jitter.
+`@strafe-js/ws` implements the **Stargate WebSocket Gateway protocol** (`wss://app.strafe.chat/gateway/events`) with heartbeat timers (`op: 6`), `space_rooms` subscription frames (`op: 1`), `SNAKE_CASE` to `camelCase` event normalization, and exponential backoff reconnection with random jitter (`0..1000ms`).
 
 ## Standalone Usage
 
@@ -13,11 +13,14 @@ import { Gateway } from '@strafe-js/ws';
 const gateway = new Gateway({
   url: 'wss://app.strafe.chat/gateway/events',
   token: process.env.BOT_TOKEN!,
-  heartbeatInterval: 25_000,
+  heartbeatIntervalMs: 45_000,
 });
 
 gateway.on('ready', (readyPayload) => {
   console.log(`Connected as ${readyPayload.user.username}`);
+  for (const space of readyPayload.spaces) {
+    gateway.subscribe(space.id);
+  }
 });
 
 gateway.on('messageCreate', (message, envelope) => {
@@ -35,18 +38,18 @@ gateway.connect();
 
 | Opcode | Name | Direction | Description |
 | :--- | :--- | :--- | :--- |
-| `0` | `Heartbeat` | Client -> Server | Periodic keep-alive frame sent every `heartbeatInterval` ms |
-| `1` | `Subscribe` | Client -> Server | Subscribe to real-time events for `{ rooms, spaces }` |
-| `2` | `Send` | Client -> Server | Client-to-server action frame |
+| `0` | `Heartbeat` | Bidirectional | Legacy heartbeat frame |
+| `1` | `Subscribe` | Client -> Server | Subscribe to real-time events for `{ space_id }` |
+| `2` | `Send` | Client -> Server | Client-to-server action frame (such as `typing`) |
 | `3` | `Event` | Server -> Client | Dispatched event (`t`: event name, `d`: payload, `space_id`, `room_id`) |
-| `4` | `Ready` | Server -> Client | Initial session state (`user`, `spaces`, `rooms`, `space_rooms`, `presences`) |
-| `5` | `Unsubscribe` | Client -> Server | Unsubscribe from `{ rooms, spaces }` |
-| `6` | `Ping` | Bidirectional | Application-level latency ping |
-| `7` | `Pong` | Server -> Client | Response to `Heartbeat` (`op: 0`) or `Ping` (`op: 6`) |
+| `4` | `Ready` | Server -> Client | Initial session state (`user`, `spaces`, `rooms`, `space_rooms`) |
+| `5` | `Unsubscribe` | Client -> Server | Unsubscribe from `{ space_id }` |
+| `6` | `Ping` | Client -> Server | Periodic heartbeat ping sent every `heartbeatIntervalMs` |
+| `7` | `Pong` | Server -> Client | Response to `Ping` (`op: 6`) |
 | `8` | `Error` | Server -> Client | Gateway protocol or authentication error |
 
 <Callout title="Nested and Flat op: 3 Envelopes" type="info">
-  `@strafe-js/ws` normalizes both nested (`frame.d = { t, d, space_id, room_id }`) and flat (`frame = { op: 3, t, d, space_id, room_id }`) dispatch frames, and automatically copies `room_id` and `space_id` onto the payload object if omitted by the server.
+  `@strafe-js/ws` normalizes both nested (`frame.d = { t, d, space_id, room_id }`) and flat (`frame = { op: 3, t, d, space_id, room_id }`) dispatch frames, and copies `room_id` and `space_id` onto the payload object when omitted by the server.
 </Callout>
 
 ## Gateway Methods
@@ -56,21 +59,20 @@ gateway.connect();
   signature="() => void"
   returnType="void"
   isAsync={false}
-  description="Opens the WebSocket connection to wss://.../gateway/events?token=... and starts the heartbeat loop."
+  description="Opens the WebSocket connection to url with the configured Authorization header and starts the heartbeat timer once the socket opens."
   example={`gateway.connect();`}
 />
 
 <MethodCard
   name="gateway.subscribe / gateway.unsubscribe"
-  signature="(opts: { rooms?: Snowflake[]; spaces?: Snowflake[] }) => void"
+  signature="(spaceOrRoomId: Snowflake) => void"
   returnType="void"
   isAsync={false}
-  description="Subscribes (op: 1) or unsubscribes (op: 5) from real-time events in the specified rooms and spaces. Subscriptions are automatically restored on reconnect."
+  description="Subscribes (op: 1) or unsubscribes (op: 5) from real-time events for a space or room ID."
   parameters={[
-    { name: 'opts.rooms', type: 'Snowflake[]', required: false, description: 'Room IDs to subscribe/unsubscribe.' },
-    { name: 'opts.spaces', type: 'Snowflake[]', required: false, description: 'Space IDs to subscribe/unsubscribe.' },
+    { name: 'spaceOrRoomId', type: 'Snowflake', required: true, description: 'Space or Room Snowflake ID to subscribe or unsubscribe.' },
   ]}
-  example={`gateway.subscribe({ spaces: ['100'], rooms: ['200', '201'] });`}
+  example={`gateway.subscribe('987654321098765432');`}
 />
 
 <MethodCard
@@ -78,18 +80,15 @@ gateway.connect();
   signature="() => void"
   returnType="void"
   isAsync={false}
-  description="Sends an application-level Ping (op: 6) frame to the Gateway."
+  description="Sends a Ping (op: 6) frame to the Gateway. The Gateway responds with Pong (op: 7)."
   example={`gateway.ping();`}
 />
 
 <MethodCard
-  name="gateway.close"
-  signature="(code?: number) => void"
+  name="gateway.disconnect"
+  signature="() => void"
   returnType="void"
   isAsync={false}
-  description="Disables automatic reconnection, clears timers, and closes the WebSocket connection."
-  parameters={[
-    { name: 'code', type: 'number', required: false, default: '1000', description: 'WebSocket close code.' },
-  ]}
-  example={`gateway.close();`}
+  description="Disables automatic reconnection, clears active heartbeat and reconnect timers, and closes the WebSocket connection with code 1000."
+  example={`gateway.disconnect();`}
 />

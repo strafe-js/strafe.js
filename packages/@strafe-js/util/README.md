@@ -19,10 +19,10 @@
 
 `@strafe-js/util` is the zero-dependency foundational package of the Strafe.js monorepo. It provides:
 
-- **28 Official Strafe Permission Bitflags (`Permission` & `ALL_PERMISSIONS`)** and **`BitField`** manipulation class.
+- **28 Strafe Permission Bitflags (`Permission` & `ALL_PERMISSIONS`)** and **`BitField`** manipulation class.
 - **Constants**: `RoomType` (`PM` through `Thread`) and `GatewayOp` (`Heartbeat` through `Error`).
 - **Error Classes**: `StrafeError` and `RateLimitError` (with `retryAfter`).
-- **Helpers**: `resolvePermission()`, `isSnowflake()`, and `sleep()`.
+- **Helpers**: `resolvePermission()`, `isSnowflake()`, `deconstructSnowflake()`, `snowflakeTimestamp()`, `isEncryptedRoom()`, `isEncryptedMessage()`, `isSystemMessage()`, and `sleep()`.
 - **TypeScript Interfaces**: `User`, `Space`, `Room`, `ThreadMetadata`, `Role`, `PermissionOverride`, `Message`, `MessageReaction`, `Attachment`, `SpaceMember`, `ReadyPayload`, `GatewayEventEnvelope`, and `GatewayFrame`.
 
 ---
@@ -40,27 +40,21 @@ npm install @strafe-js/util
 ### 1. `BitField` & `Permission`
 
 ```ts
-import { BitField, Permission, ALL_PERMISSIONS, resolvePermission } from '@strafe-js/util';
+import { BitField, Permission } from '@strafe-js/util';
 
 const perms = new BitField(Permission.ViewRoom | Permission.SendMessages);
 
-// Add permissions by name, number, or array
 perms.add('AddReactions', 'AttachFiles');
-
-// Check if all specified permissions are present
 console.log(perms.has(['ViewRoom', 'SendMessages'])); // true
 
-// Remove a permission
 perms.remove('AttachFiles');
-
-// Convert active bits to an array of PermissionName strings
 console.log(perms.toArray()); // ['ViewRoom', 'SendMessages', 'AddReactions']
 console.log(perms.valueOf()); // numeric bitmask
 ```
 
 ### 2. Permission Bitflags Table (`Permission`)
 
-Matches the official [Strafe Permissions Bit Table](https://app.strafe.chat/docs/permissions/#the-bits):
+Matches the [Strafe Permissions Bit Table](https://app.strafe.chat/docs/permissions/#the-bits):
 
 | Permission Name | Bit Shift | Decimal Value | Category |
 | :--- | :--- | :--- | :--- |
@@ -99,7 +93,7 @@ Matches the official [Strafe Permissions Bit Table](https://app.strafe.chat/docs
 import { isSnowflake, sleep, RoomType, GatewayOp } from '@strafe-js/util';
 
 isSnowflake('123456789012345678'); // true (16..20 digits)
-await sleep(1000); // 1 second delay
+await sleep(1000);
 
 console.log(RoomType.Text); // 3
 console.log(GatewayOp.Event); // 3

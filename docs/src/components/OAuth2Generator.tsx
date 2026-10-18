@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy, ExternalLink } from 'lucide-react';
 import { CodeWindow } from './CodeWindow';
 import { PERMISSION_LIST } from './PermissionCalculator';
 
@@ -35,32 +34,9 @@ const OAUTH_SCOPES = [
 
 type ScopeName = (typeof OAUTH_SCOPES)[number]['name'];
 
-function OAuthHandshakeSvg() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-[#6ab585] shrink-0" aria-hidden="true">
-      <circle cx="7.5" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="7.5" cy="12" r="1.5" fill="currentColor" />
-      <path
-        d="M11.75 12H21M18 12V15.5M15 12V14.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 5.5C6.5 3.2 10.5 3.2 13 5.5"
-        stroke="currentColor"
-        strokeOpacity="0.4"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 export function OAuth2Generator() {
   const [baseUrl, setBaseUrl] = useState('https://app.strafe.chat');
-  const [clientId, setClientId] = useState('123456789012345678');
+  const [clientId, setClientId] = useState('');
   const [redirectUri, setRedirectUri] = useState('');
   const [state, setState] = useState('');
   const [spaceId, setSpaceId] = useState('');
@@ -104,9 +80,11 @@ export function OAuth2Generator() {
     .replace(/\/+$/, '')
     .replace(/\/api$/, '');
 
+  const resolvedClientId = clientId.trim() || 'YOUR_CLIENT_ID';
+
   const queryEntries: Array<[string, string]> = [
     ['response_type', 'code'],
-    ['client_id', clientId.trim() || 'YOUR_CLIENT_ID'],
+    ['client_id', resolvedClientId],
     ['scope', scopes.join(' ')],
   ];
   if (redirectUri.trim()) queryEntries.push(['redirect_uri', redirectUri.trim()]);
@@ -132,12 +110,13 @@ export function OAuth2Generator() {
   );
 
   const isBotInviteOnly = scopes.length === 1 && scopes[0] === 'bot';
+  const requiresRedirectUriWarning = !isBotInviteOnly && !redirectUri.trim();
 
   const generatedCode = isBotInviteOnly
     ? `import { generateBotInviteUrl } from '@strafe-js/builders';
 
 const inviteUrl = generateBotInviteUrl({
-  clientId: '${clientId.trim() || 'YOUR_CLIENT_ID'}',${
+  clientId: '${resolvedClientId}',${
     baseUrl.trim() && baseUrl.trim() !== 'https://app.strafe.chat'
       ? `\n  baseUrl: '${baseUrl.trim()}',`
       : ''
@@ -154,7 +133,7 @@ const inviteUrl = generateBotInviteUrl({
     : `import { generateOAuth2Url } from '@strafe-js/builders';
 
 const authorizeUrl = generateOAuth2Url({
-  clientId: '${clientId.trim() || 'YOUR_CLIENT_ID'}',
+  clientId: '${resolvedClientId}',
   scopes: [${scopes.map((s) => `'${s}'`).join(', ')}],${
     baseUrl.trim() && baseUrl.trim() !== 'https://app.strafe.chat'
       ? `\n  baseUrl: '${baseUrl.trim()}',`
@@ -177,114 +156,127 @@ const authorizeUrl = generateOAuth2Url({
   };
 
   return (
-    <div className="my-6 rounded-xl border border-[#2a2f39] bg-[#12151b] shadow-[0_18px_42px_-12px_rgba(0,0,0,0.7),0_1px_0_0_rgba(255,255,255,0.04)_inset] overflow-hidden text-[#e6e8ec]">
-      <div className="px-5 py-4 bg-[#161a22] border-b border-[#262b35] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#0d1015] border border-[#2a2f39] flex items-center justify-center shadow-inner">
-            <OAuthHandshakeSvg />
+    <div className="my-6 rounded-lg border border-[#2a303c] bg-[#161920] overflow-hidden text-[#e6e8ec]">
+      <div className="px-5 py-4 bg-[#12151b] border-b border-[#2a303c] flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold tracking-tight text-[#f0f2f5] !m-0">
+              OAuth2 &amp; Bot Installation URL Builder
+            </h3>
+            <span className="px-2 py-0.5 rounded text-xs font-mono bg-[#0b0d11] text-[#7fd19c] border border-[#5c677a]">
+              {isBotInviteOnly ? 'generateBotInviteUrl()' : 'generateOAuth2Url()'}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold tracking-tight text-[#f0f2f5] !m-0">
-                OAuth2 & Bot Installation URL Builder
-              </h3>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#509b6b]/15 text-[#7fd19c] border border-[#509b6b]/30">
-                {isBotInviteOnly ? 'generateBotInviteUrl()' : 'generateOAuth2Url()'}
-              </span>
-            </div>
-            <p className="text-xs text-[#8f98a8] !m-0 mt-0.5">
-              Construct RFC 6749 authorization links for /oauth2/authorize with scope and permission bitmask encoding.
-            </p>
-          </div>
+          <p className="text-xs text-[#b4bac6] !m-0 mt-1">
+            Construct RFC 6749 authorization links for /oauth2/authorize with scope and permission bitmask encoding.
+          </p>
         </div>
       </div>
 
       <div className="p-5 space-y-5 text-xs">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1.5">
-              client_id (Snowflake)
+            <label htmlFor="oauth-client-id" className="block font-mono text-xs text-[#b4bac6] mb-1.5">
+              client_id (Application Snowflake ID)
             </label>
             <input
+              id="oauth-client-id"
               type="text"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              placeholder="123456789012345678"
-              className="w-full px-3 py-2 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none transition-colors"
+              placeholder="YOUR_APPLICATION_CLIENT_ID"
+              className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
             />
           </div>
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1.5">
+            <label htmlFor="oauth-base-url" className="block font-mono text-xs text-[#b4bac6] mb-1.5">
               Instance Origin
             </label>
             <input
+              id="oauth-base-url"
               type="text"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://app.strafe.chat"
-              className="w-full px-3 py-2 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none transition-colors"
+              className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
             />
           </div>
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1.5">
-              space_id (Optional)
+            <label htmlFor="oauth-space-id" className="block font-mono text-xs text-[#b4bac6] mb-1.5">
+              space_id (Optional preselected space)
             </label>
             <input
+              id="oauth-space-id"
               type="text"
               value={spaceId}
               onChange={(e) => setSpaceId(e.target.value)}
-              placeholder="987654321098765432"
-              className="w-full px-3 py-2 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none transition-colors"
+              placeholder="OPTIONAL_SPACE_SNOWFLAKE_ID"
+              className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
             />
           </div>
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1.5">
-              redirect_uri (Optional for bot scope)
+            <label htmlFor="oauth-redirect-uri" className="block font-mono text-xs text-[#b4bac6] mb-1.5">
+              redirect_uri (Required for non-bot scopes)
             </label>
             <input
+              id="oauth-redirect-uri"
               type="text"
               value={redirectUri}
               onChange={(e) => setRedirectUri(e.target.value)}
-              placeholder="https://example.com/oauth/callback"
-              className="w-full px-3 py-2 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none transition-colors"
+              placeholder="https://your-app.example/oauth/callback"
+              className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
             />
           </div>
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1.5">
+            <label htmlFor="oauth-state" className="block font-mono text-xs text-[#b4bac6] mb-1.5">
               state (CSRF Token)
             </label>
             <input
+              id="oauth-state"
               type="text"
               value={state}
               onChange={(e) => setState(e.target.value)}
-              placeholder="csrf_nonce_9f8a7b"
-              className="w-full px-3 py-2 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none transition-colors"
+              placeholder="YOUR_CSRF_STATE_TOKEN"
+              className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
             />
           </div>
           <div className="flex items-end">
             <button
               type="button"
               disabled={!spaceId.trim()}
+              aria-pressed={Boolean(spaceId.trim() && disableSpaceSelect)}
               onClick={() => setDisableSpaceSelect((v) => !v)}
-              className={`w-full px-3 py-2 rounded-lg border text-left font-mono text-xs flex items-center justify-between transition-colors ${
+              className={`w-full px-3 py-2 min-h-[40px] rounded border text-left font-mono text-xs flex items-center justify-between transition-colors ${
                 !spaceId.trim()
-                  ? 'border-[#1f232c] bg-[#0b0d11]/50 text-[#555d6d] cursor-not-allowed'
+                  ? 'border-[#2a303c] bg-[#0b0d11] text-[#949eb0] cursor-not-allowed'
                   : disableSpaceSelect
-                    ? 'border-[#509b6b] bg-[#509b6b]/15 text-[#7fd19c] cursor-pointer'
-                    : 'border-[#252a34] bg-[#0b0d11] text-[#b4bac6] hover:border-[#363c48] cursor-pointer'
+                    ? 'border-[#7fd19c] bg-[#26613c] text-white cursor-pointer'
+                    : 'border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] hover:border-[#7fd19c] cursor-pointer'
               }`}
             >
               <span>disable_space_select</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#141820] border border-[#252a34]">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-[#161920] border border-[#5c677a]">
                 {spaceId.trim() && disableSpaceSelect ? 'true' : 'false'}
               </span>
             </button>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-[#252a34]">
+        {!clientId.trim() && (
+          <div className="px-3 py-2 rounded bg-[#0b0d11] border border-[#5c677a] font-mono text-xs text-[#b4bac6]">
+            [PLACEHOLDER CLIENT_ID] Using placeholder &quot;YOUR_CLIENT_ID&quot; in generated URL. Enter your application Snowflake ID above for a production link.
+          </div>
+        )}
+
+        {requiresRedirectUriWarning && (
+          <div className="px-3 py-2 rounded bg-[#f0be52]/15 border border-[#f0be52] font-mono text-xs text-[#f0be52]">
+            [REDIRECT_URI REQUIRED] Non-bot OAuth2 scopes ({scopes.filter((s) => s !== 'bot').join(', ')}) require a registered redirect_uri for authorization code exchange.
+          </div>
+        )}
+
+        <div className="pt-4 border-t border-[#2a303c]">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#8f98a8]">
+            <span className="text-xs font-mono font-bold text-[#e6e8ec]">
               OAuth2 Scopes ({scopes.join(' ')})
             </span>
           </div>
@@ -295,25 +287,30 @@ const authorizeUrl = generateOAuth2Url({
                 <button
                   key={s.name}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => toggleScope(s.name)}
-                  className={`p-3 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  className={`p-3 min-h-[44px] rounded border text-left transition-colors cursor-pointer flex flex-col justify-between ${
                     active
-                      ? 'border-[#509b6b] bg-[#509b6b]/12 shadow-[0_0_16px_-6px_rgba(80,155,107,0.35)]'
-                      : 'border-[#252a34] bg-[#0b0d11] hover:border-[#363c48]'
+                      ? 'border-[#7fd19c] bg-[#26613c]/25'
+                      : 'border-[#5c677a] bg-[#0b0d11] hover:border-[#7fd19c]'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="font-mono font-bold text-xs text-[#7fd19c]">{s.name}</span>
                       <span
-                        className={`w-2 h-2 rounded-full ${
-                          active ? 'bg-[#509b6b] shadow-[0_0_6px_#509b6b]' : 'bg-[#2a2f39]'
+                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+                          active
+                            ? 'bg-[#26613c] border-[#7fd19c] text-white'
+                            : 'bg-[#161920] border-[#5c677a] text-[#b4bac6]'
                         }`}
-                      />
+                      >
+                        {active ? 'ON' : 'OFF'}
+                      </span>
                     </div>
-                    <div className="text-[11px] text-[#8f98a8] leading-snug">{s.desc}</div>
+                    <div className="text-xs text-[#b4bac6] leading-snug">{s.desc}</div>
                   </div>
-                  <div className="mt-2 pt-1.5 border-t border-[#1e232d] font-mono text-[10px] text-[#6b7385] truncate">
+                  <div className="mt-2 pt-1.5 border-t border-[#2a303c] font-mono text-[11px] text-[#949eb0] truncate">
                     {s.route}
                   </div>
                 </button>
@@ -323,71 +320,72 @@ const authorizeUrl = generateOAuth2Url({
         </div>
 
         {scopes.includes('bot') && (
-          <div className="pt-4 border-t border-[#252a34] space-y-3">
+          <div className="pt-4 border-t border-[#2a303c] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#8f98a8]">
+                <span className="text-xs font-mono font-bold text-[#e6e8ec]">
                   Bot Role Bitmask
                 </span>
-                <span className="px-2 py-0.5 rounded font-mono text-[11px] bg-[#0b0d11] border border-[#252a34] text-[#7fd19c]">
+                <span className="px-2 py-0.5 rounded font-mono text-xs bg-[#0b0d11] border border-[#5c677a] text-[#7fd19c]">
                   permissions={permMask} (0x{permMask.toString(16).toUpperCase()})
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
                 <button
                   type="button"
                   onClick={() => setPermPreset('read_post')}
-                  className="px-2 py-1 rounded bg-[#0d1015] border border-[#252a34] hover:border-[#509b6b] text-[#b4bac6] hover:text-[#7fd19c] transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 min-h-[36px] rounded bg-[#0b0d11] border border-[#5c677a] hover:border-[#7fd19c] text-[#e6e8ec] transition-colors cursor-pointer"
                 >
-                  Read & Post (7)
+                  Read &amp; Post (7)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPermPreset('everyone')}
-                  className="px-2 py-1 rounded bg-[#0d1015] border border-[#252a34] hover:border-[#509b6b] text-[#b4bac6] hover:text-[#7fd19c] transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 min-h-[36px] rounded bg-[#0b0d11] border border-[#5c677a] hover:border-[#7fd19c] text-[#e6e8ec] transition-colors cursor-pointer"
                 >
                   @everyone (10723359)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPermPreset('mod')}
-                  className="px-2 py-1 rounded bg-[#0d1015] border border-[#252a34] hover:border-[#509b6b] text-[#b4bac6] hover:text-[#7fd19c] transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 min-h-[36px] rounded bg-[#0b0d11] border border-[#5c677a] hover:border-[#7fd19c] text-[#e6e8ec] transition-colors cursor-pointer"
                 >
                   Moderator
                 </button>
                 <button
                   type="button"
                   onClick={() => setPermPreset('admin')}
-                  className="px-2 py-1 rounded bg-[#0d1015] border border-[#252a34] hover:border-[#509b6b] text-[#b4bac6] hover:text-[#7fd19c] transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 min-h-[36px] rounded bg-[#0b0d11] border border-[#5c677a] hover:border-[#7fd19c] text-[#e6e8ec] transition-colors cursor-pointer"
                 >
                   Admin (2048)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPermPreset('none')}
-                  className="px-2 py-1 rounded bg-[#0d1015] border border-[#252a34] hover:border-[#e25555]/60 text-[#8f98a8] hover:text-[#f28b8b] transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 min-h-[36px] rounded bg-[#0b0d11] border border-[#5c677a] hover:border-[#f28b8b] text-[#b4bac6] hover:text-[#f28b8b] transition-colors cursor-pointer"
                 >
                   Clear (0)
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 p-3 rounded-lg bg-[#0b0d11] border border-[#252a34]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 p-3 rounded bg-[#0b0d11] border border-[#2a303c]">
               {PERMISSION_LIST.map((p) => {
                 const checked = (permMask & p.bit) === p.bit;
                 return (
                   <button
                     key={p.name}
                     type="button"
+                    aria-pressed={checked}
                     onClick={() => togglePerm(p.bit)}
-                    className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded text-left font-mono text-[11px] transition-colors cursor-pointer border ${
+                    className={`flex items-center justify-between gap-2 px-2.5 py-2 min-h-[40px] rounded text-left font-mono text-xs transition-colors cursor-pointer border ${
                       checked
-                        ? 'bg-[#509b6b]/15 border-[#509b6b]/40 text-[#7fd19c] font-semibold'
-                        : 'bg-transparent border-transparent text-[#8f98a8] hover:bg-[#141820] hover:text-[#cfd5e0]'
+                        ? 'bg-[#26613c] border-[#7fd19c] text-white font-semibold'
+                        : 'bg-[#161920] border-[#2a303c] text-[#b4bac6] hover:border-[#5c677a] hover:text-white'
                     }`}
                   >
                     <span className="truncate">{p.name}</span>
-                    <span className="text-[9px] opacity-65 shrink-0">1&lt;&lt;{p.shift}</span>
+                    <span className="text-[10px] text-[#cfd5e0] shrink-0">1&lt;&lt;{p.shift}</span>
                   </button>
                 );
               })}
@@ -395,41 +393,30 @@ const authorizeUrl = generateOAuth2Url({
           </div>
         )}
 
-        <div className="pt-4 border-t border-[#252a34] space-y-4">
-          <div className="rounded-lg border border-[#252a34] bg-[#0b0d11] overflow-hidden">
-            <div className="px-3.5 py-2 bg-[#141820] border-b border-[#252a34] flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 font-mono text-[11px]">
-                <span className="px-1.5 py-0.5 rounded bg-[#509b6b]/20 text-[#7fd19c] font-bold">
+        <div className="pt-4 border-t border-[#2a303c] space-y-4">
+          <div className="rounded border border-[#2a303c] bg-[#0b0d11] overflow-hidden">
+            <div className="px-3.5 py-2 bg-[#12151b] border-b border-[#2a303c] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <span className="px-1.5 py-0.5 rounded bg-[#26613c] text-white border border-[#7fd19c] font-bold">
                   GET
                 </span>
-                <span className="text-[#cfd5e0] font-semibold">/oauth2/authorize</span>
+                <span className="text-[#e6e8ec] font-semibold">/oauth2/authorize</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={copyUrl}
-                  className="px-2.5 py-1 rounded bg-[#181c24] border border-[#2a2f39] hover:border-[#509b6b] text-[#cfd5e0] text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-3 py-1.5 min-h-[36px] rounded bg-[#161920] border border-[#5c677a] hover:border-[#7fd19c] text-[#e6e8ec] font-mono text-xs cursor-pointer transition-colors"
                 >
-                  {copiedUrl ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-[#509b6b]" />
-                      <span className="text-[#7fd19c]">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy URL</span>
-                    </>
-                  )}
+                  {copiedUrl ? 'Copied URL' : 'Copy URL'}
                 </button>
                 <a
                   href={generatedUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-2.5 py-1 rounded bg-[#509b6b] hover:bg-[#45875d] text-white text-xs font-semibold flex items-center gap-1 transition-colors"
+                  className="px-3 py-1.5 min-h-[36px] rounded bg-[#26613c] hover:bg-[#1f5433] border border-[#7fd19c] text-white font-mono text-xs font-semibold inline-flex items-center transition-colors"
                 >
-                  <span>Open</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open URL
                 </a>
               </div>
             </div>
@@ -442,10 +429,10 @@ const authorizeUrl = generateOAuth2Url({
               {queryEntries.map(([k, v]) => (
                 <span
                   key={k}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#141820] border border-[#222731] font-mono text-[10px]"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#161920] border border-[#2a303c] font-mono text-xs"
                 >
-                  <span className="text-[#8f98a8]">{k}=</span>
-                  <span className="text-[#cfd5e0]">{v}</span>
+                  <span className="text-[#b4bac6]">{k}=</span>
+                  <span className="text-[#e6e8ec]">{v}</span>
                 </span>
               ))}
             </div>

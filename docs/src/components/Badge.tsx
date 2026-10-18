@@ -9,19 +9,19 @@ interface BadgeProps {
 
 export function Badge({ type = 'default', children }: BadgeProps) {
   const styles: Record<string, string> = {
-    required: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-    optional: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20',
-    readonly: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    async: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-    event: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    rest: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
-    tag: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-    default: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
+    required: 'bg-[#f28b8b]/15 text-[#f28b8b] border-[#f28b8b]/40',
+    optional: 'bg-[#161920] text-[#b4bac6] border-[#5c677a]',
+    readonly: 'bg-[#f0be52]/15 text-[#f0be52] border-[#f0be52]/40',
+    async: 'bg-[#26613c]/30 text-[#7fd19c] border-[#7fd19c]/50',
+    event: 'bg-[#26613c]/30 text-[#7fd19c] border-[#7fd19c]/50',
+    rest: 'bg-[#161920] text-[#e6e8ec] border-[#5c677a]',
+    tag: 'bg-[#0b0d11] text-[#7fd19c] border-[#5c677a]',
+    default: 'bg-[#161920] text-[#b4bac6] border-[#5c677a]',
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-xs font-medium border ${
         styles[type] || styles.default
       }`}
     >

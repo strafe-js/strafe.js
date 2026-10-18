@@ -1,9 +1,9 @@
 ---
 title: Arguments & Schema Validation
-description: Deep dive into quote-aware tokenization, declarative ArgumentsSchema definitions, and ArgumentValidationError handling.
+description: Quote-aware tokenization, declarative CommandArgumentsSchema definitions, and ArgumentValidationError handling.
 ---
 
-`@strafe-js/strafebot` provides a powerful argument parsing pipeline (`tokenizeArguments` and `parseAndValidateArguments`) that transforms raw chat messages into strongly-typed TypeScript values.
+`@strafe-js/strafebot` parses and validates command arguments using `tokenizeArguments` and `parseAndValidateArguments`.
 
 ## 1. Quote-Aware Tokenization (`tokenizeArguments`)
 
@@ -16,27 +16,27 @@ tokenizeArguments('123456789012345678 "Spamming in #general" --silent');
 // -> ['123456789012345678', 'Spamming in #general', '--silent']
 ```
 
-## 2. Declarative `ArgumentsSchema`
+## 2. Declarative `CommandArgumentsSchema`
 
-Each key in `arguments` defines an `ArgumentSchemaEntry`:
+Each key in `arguments` defines a `CommandArgumentOption`:
 
 <PropertyTable
-  title="ArgumentSchemaEntry Options"
+  title="CommandArgumentOption Fields"
   properties={[
     { name: 'type', type: "'string' | 'integer' | 'number' | 'boolean' | 'user' | 'room' | 'role' | 'snowflake' | 'attachment'", description: 'Target data type to parse and validate.' },
-    { name: 'required', type: 'boolean', optional: true, description: 'Whether the argument must be provided.' },
-    { name: 'default', type: 'T', optional: true, description: 'Fallback value used when the argument is omitted by the caller.' },
-    { name: 'description', type: 'string', optional: true, description: 'Human-readable description of the argument.' },
-    { name: 'min', type: 'number', optional: true, description: 'Minimum inclusive numeric value (for integer/number).' },
-    { name: 'max', type: 'number', optional: true, description: 'Maximum inclusive numeric value (for integer/number).' },
-    { name: 'minLength', type: 'number', optional: true, description: 'Minimum inclusive character length (for string).' },
-    { name: 'maxLength', type: 'number', optional: true, description: 'Maximum inclusive character length (for string).' },
-    { name: 'choices', type: 'readonly (string | number)[]', optional: true, description: 'Restricts input to a fixed set of allowed values.' },
-    { name: 'rest', type: 'boolean', optional: true, description: '(string only) Joins all remaining tokens with spaces into a single string.' },
+    { name: 'required', type: 'boolean', optional: true, description: 'Throws ArgumentValidationError (code: REQUIRED) when omitted.' },
+    { name: 'default', type: 'unknown', optional: true, description: 'Fallback value returned when an optional argument is omitted.' },
+    { name: 'description', type: 'string', optional: true, description: 'Argument summary included in createHelpCommand() output.' },
+    { name: 'min', type: 'number', optional: true, description: 'Minimum inclusive numeric bound for integer and number arguments.' },
+    { name: 'max', type: 'number', optional: true, description: 'Maximum inclusive numeric bound for integer and number arguments.' },
+    { name: 'minLength', type: 'number', optional: true, description: 'Minimum inclusive character length for string arguments.' },
+    { name: 'maxLength', type: 'number', optional: true, description: 'Maximum inclusive character length for string arguments.' },
+    { name: 'choices', type: 'Array<string | number>', optional: true, description: 'Whitelist of allowed string or numeric values.' },
+    { name: 'rest', type: 'boolean', optional: true, description: 'When true on a string argument, joins all remaining tokens with spaces.' },
   ]}
 />
 
-## 3. Complete Schema Example
+## 3. Schema Example
 
 ```ts title="src/commands/timeout.ts"
 import { command } from '@strafe-js/strafebot';
@@ -61,7 +61,7 @@ export const timeoutCommand = command({
     },
     unit: {
       type: 'string',
-      choices: ['m', 'h', 'd'] as const,
+      choices: ['m', 'h', 'd'],
       default: 'm',
     },
     silent: {
@@ -75,14 +75,14 @@ export const timeoutCommand = command({
     },
   },
   async run(ctx) {
-    const target = ctx.arguments.get('target');           // Snowflake
-    const duration = ctx.arguments.get('durationMinutes'); // number
-    const unit = ctx.arguments.get('unit');               // string
-    const silent = ctx.arguments.get('silent');           // boolean
-    const reason = ctx.arguments.get('reason');           // string
+    const target = ctx.arguments.get('target');
+    const duration = ctx.arguments.get('durationMinutes');
+    const unit = ctx.arguments.get('unit');
+    const silent = ctx.arguments.get('silent');
+    const reason = ctx.arguments.get('reason');
 
     await ctx.reply(
-      `Timed out <@${target}> for ${duration}${unit} (silent=${silent}): ${reason}`
+      `Timed out <@${target}> for ${duration}${unit} (silent=${silent}): ${reason}`,
     );
   },
 });
@@ -90,18 +90,16 @@ export const timeoutCommand = command({
 
 ## 4. Handling `ArgumentValidationError`
 
-When an argument fails validation, `parseAndValidateArguments` throws an `ArgumentValidationError` with structured diagnostic fields (`argName`, `reason`, `expectedType`, `received`):
+When an argument fails validation, `parseAndValidateArguments` throws an `ArgumentValidationError` containing `argumentName`, `code` (`'REQUIRED' | 'INVALID_TYPE' | 'INVALID_CHOICE' | 'OUT_OF_RANGE' | 'INVALID_ATTACHMENT'`), `expected`, and `value`. `CommandHandler` replies to the caller and emits `commandArgumentError`:
 
 ```ts title="src/index.ts"
 import { ArgumentValidationError } from '@strafe-js/strafebot';
 
-client.on('commandInvalidArguments', async (ctx, cmd, err) => {
+client.on('commandArgumentError', (err, msg, cmd) => {
   if (err instanceof ArgumentValidationError) {
-    await ctx.reply(
-      `⚠️ Invalid argument \`${err.argName}\` (${err.reason}): ${err.message}`
+    console.warn(
+      `Command !${cmd.name} failed on ${err.argumentName} (${err.code}): expected ${err.expected}, got ${String(err.value)}`,
     );
-  } else {
-    await ctx.reply(`⚠️ ${err.message}`);
   }
 });
 ```

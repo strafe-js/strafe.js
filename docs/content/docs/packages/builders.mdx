@@ -1,9 +1,9 @@
 ---
 title: "@strafe-js/builders"
-description: Fluent MessageBuilder and permission bitmask factories for constructing Strafe API payloads.
+description: MessageBuilder, PermissionOverwriteBuilder, permission bitmask helpers, and OAuth2 URL builders.
 ---
 
-`@strafe-js/builders` provides chainable builders for constructing `CreateMessageBody` payloads and calculating bitwise permission masks.
+`@strafe-js/builders` provides chainable builders for constructing `CreateMessageBody` payloads, room permission overrides (`PermissionOverride`), and OAuth2 authorization URLs.
 
 ## Installation
 
@@ -11,14 +11,13 @@ description: Fluent MessageBuilder and permission bitmask factories for construc
 npm install @strafe-js/builders @strafe-js/util
 ```
 
-## Quick Example
+## Example Usage
 
 ```ts title="src/builders.ts"
 import { message, permissions, permissionMask } from '@strafe-js/builders';
 
-// 1. Build a message payload fluently
 const payload = message()
-  .setContent('Welcome to the server! Please read the rules.')
+  .setContent('Welcome to the space. Please read the rules.')
   .setReply('112233445566778899')
   .setMentions(['223344556677889900'])
   .setRoleMentions(['334455667788990011'])
@@ -28,7 +27,6 @@ const payload = message()
 
 await client.rest.createMessage(roomId, payload);
 
-// 2. Compute permission bitmasks
 const modMask = permissions(['KickMembers', 'BanMembers', 'ManageMessages']);
 const combinedMask = permissionMask('ViewRoom', 'SendMessages', modMask);
 ```
@@ -66,7 +64,7 @@ Instantiate with `message()` or `new MessageBuilder()`.
   signature="(userIds: Snowflake[]) => this"
   returnType="MessageBuilder"
   isAsync={false}
-  description="Explicitly specifies which User IDs should be notified by this message."
+  description="Sets the explicit mentions array of User IDs to notify."
   parameters={[
     { name: 'userIds', type: 'Snowflake[]', required: true, description: 'Array of user Snowflake IDs.' },
   ]}
@@ -78,7 +76,7 @@ Instantiate with `message()` or `new MessageBuilder()`.
   signature="(roleIds: Snowflake[]) => this"
   returnType="MessageBuilder"
   isAsync={false}
-  description="Explicitly specifies which Role IDs should be notified by this message."
+  description="Sets the explicit mention_roles array of Role IDs to notify."
   parameters={[
     { name: 'roleIds', type: 'Snowflake[]', required: true, description: 'Array of role Snowflake IDs.' },
   ]}
@@ -90,7 +88,7 @@ Instantiate with `message()` or `new MessageBuilder()`.
   signature="(allowed?: boolean) => this"
   returnType="MessageBuilder"
   isAsync={false}
-  description="Enables or disables @everyone mentions in the message payload."
+  description="Sets mention_everyone (defaults to true) in the message payload."
   parameters={[
     { name: 'allowed', type: 'boolean', required: false, default: 'true', description: 'Whether @everyone is allowed.' },
   ]}
@@ -102,11 +100,11 @@ Instantiate with `message()` or `new MessageBuilder()`.
   signature="(ids: Snowflake[]) => this"
   returnType="MessageBuilder"
   isAsync={false}
-  description="Attaches previously uploaded attachment IDs (from rest.uploadAttachment) to the message."
+  description="Attaches uploaded attachment IDs (from rest.uploadAttachment) to the message."
   parameters={[
     { name: 'ids', type: 'Snowflake[]', required: true, description: 'Array of uploaded Attachment IDs.' },
   ]}
-  example={`const uploaded = await client.rest.uploadAttachment(buf, 'report.txt');\nconst body = message().setContent('Report attached').setAttachments([uploaded.id]).toJSON();`}
+  example={`const uploaded = await client.rest.uploadAttachment(roomId, buf, 'report.txt');\nconst body = message().setContent('Report attached').setAttachments([uploaded.id]).toJSON();`}
 />
 
 <MethodCard
@@ -123,7 +121,7 @@ Instantiate with `message()` or `new MessageBuilder()`.
   signature="(...) => this"
   returnType="MessageBuilder"
   isAsync={false}
-  description="Incrementally appends text content, user mentions, role mentions, or attachment IDs without overwriting existing arrays."
+  description="Appends text content, user mentions, role mentions, or attachment IDs without overwriting existing arrays."
   example={`const payload = message()\n  .setContent('Header')\n  .appendContent('Body line', '\\n')\n  .addUserMention('123456789012345678')\n  .toJSON();`}
 />
 
@@ -136,7 +134,7 @@ Instantiate with `permissionOverwrite()` or `new PermissionOverwriteBuilder()` t
   signature="() => PermissionOverwriteBuilder"
   returnType="PermissionOverwriteBuilder"
   isAsync={false}
-  description="Builds a room permission override for a role (setRole) or member (setUser), automatically clearing conflicting bits between allow() and deny()."
+  description="Builds a room permission override for a role (setRole) or member (setUser), clearing conflicting bits between allow() and deny()."
   example={`const ov = permissionOverwrite()\n  .setRole('234567890123456789')\n  .allow('ViewRoom', 'ReadMessageHistory')\n  .deny('SendMessages')\n  .toJSON();`}
 />
 
