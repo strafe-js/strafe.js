@@ -17,7 +17,7 @@
 
 ## Overview
 
-`@strafe-js/rest` is the standalone HTTP REST client for the [Strafe Chat API](https://app.strafe.chat/docs/rest/). It uses Node.js native `fetch` and `FormData`, handles `Bot` and `Bearer` authorization headers, automatically retries `HTTP 429 Too Many Requests` responses using `retry_after` / `Retry-After`, and provides strongly-typed methods for all core Strafe endpoints.
+`@strafe-js/rest` is the standalone HTTP REST client for the [Strafe Chat API](https://app.strafe.chat/docs/rest/). It uses Node.js native `fetch` and `FormData`, sends `Bot` and `Bearer` authorization headers, retries `HTTP 429 Too Many Requests` responses using `retry_after` / `Retry-After`, and provides typed methods for Strafe endpoints.
 
 ---
 
@@ -43,11 +43,9 @@ const rest = new REST({
   retries: 3,
 });
 
-// Fetch current bot user
 const me = await rest.getMe();
 console.log(`Authenticated as ${me.username} (${me.id})`);
 
-// Send a message to a room
 await rest.createMessage('112233445566778899', {
   plaintext: 'Hello from @strafe-js/rest!',
 });
@@ -82,7 +80,8 @@ await rest.createMessage('112233445566778899', {
 ### Users & Spaces
 
 - `rest.getMe(): Promise<User>`: `GET /users/@me`
-- `rest.getMySpaces(): Promise<Space[]>` (alias: `rest.getSpaces()`): `GET /users/@me/spaces`
+- `rest.getMySpaces(): Promise<Space[]>`: `GET /users/@me/spaces`
+- `rest.getSpaces(): Promise<Space[]>`: `GET /spaces`
 - `rest.getSpace(spaceId: Snowflake): Promise<Space>`: `GET /spaces/:spaceId`
 - `rest.getSpaceRooms(spaceId: Snowflake): Promise<Room[]>`: `GET /spaces/:spaceId/rooms`
 - `rest.getSpaceMembers(spaceId: Snowflake): Promise<SpaceMember[]>`: `GET /spaces/:spaceId/members`
@@ -97,14 +96,14 @@ await rest.createMessage('112233445566778899', {
 - `rest.getMessage(roomId: Snowflake, messageId: Snowflake): Promise<Message>`: `GET /rooms/:roomId/messages/:messageId`
 - `rest.triggerTyping(roomId: Snowflake): Promise<void>`: `POST /rooms/:roomId/typing`
 - `rest.addReaction(roomId: Snowflake, messageId: Snowflake, emoji: string): Promise<void>`: `PUT /rooms/:roomId/messages/:messageId/reactions/:emoji`
-- `rest.removeReaction(roomId: Snowflake, messageId: Snowflake, emoji: string, userId?: Snowflake): Promise<void>`: `DELETE /rooms/:roomId/messages/:messageId/reactions/:emoji/:userId`
+- `rest.removeReaction(roomId: Snowflake, messageId: Snowflake, emoji: string, userId?: Snowflake): Promise<void>`: `DELETE /rooms/:roomId/messages/:messageId/reactions/:emoji[/:userId]`
 
 ### Invites, Moderation & Attachments
 
-- `rest.createInvite(spaceId: Snowflake, opts?: { max_uses?: number; max_age?: number; room_id?: Snowflake }): Promise<{ code: string }>`: `POST /spaces/:spaceId/invites`
+- `rest.createInvite(spaceId: Snowflake, opts?: { max_uses?: number; max_age_seconds?: number; max_age?: number; room_id?: Snowflake }): Promise<Invite>`: `POST /spaces/:spaceId/invites`
 - `rest.kickMember(spaceId: Snowflake, userId: Snowflake): Promise<void>`: `DELETE /spaces/:spaceId/members/:userId`
-- `rest.banMember(spaceId: Snowflake, userId: Snowflake, reason?: string): Promise<void>`: `PUT /spaces/:spaceId/bans/:userId`
-- `rest.uploadAttachment(file: Blob | Buffer, filename: string, uploadUrl?: string): Promise<Attachment>`: Uploads a binary file via `multipart/form-data`.
+- `rest.banMember(spaceId: Snowflake, userId: Snowflake, reason?: string): Promise<void>`: `POST /spaces/:spaceId/bans/:userId`
+- `rest.uploadAttachment(roomId: Snowflake, file: Blob | Buffer, filename?: string): Promise<Attachment>`: Uploads a binary file via `multipart/form-data` to `POST /rooms/:roomId/attachments`.
 
 ---
 

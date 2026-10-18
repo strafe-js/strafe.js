@@ -95,42 +95,11 @@ const WS_FRAMES: Record<
 };
 
 const VERB_COLORS: Record<string, string> = {
-  GET: 'bg-[#4b8fe2]/20 text-[#85b8f8] border-[#4b8fe2]/35',
-  POST: 'bg-[#509b6b]/20 text-[#7fd19c] border-[#509b6b]/35',
-  PUT: 'bg-[#e0a526]/20 text-[#f0be52] border-[#e0a526]/35',
-  DELETE: 'bg-[#e25555]/20 text-[#f28b8b] border-[#e25555]/35',
+  GET: 'bg-[#161920] text-[#7fd19c] border-[#7fd19c]',
+  POST: 'bg-[#26613c] text-white border-[#7fd19c]',
+  PUT: 'bg-[#f0be52]/15 text-[#f0be52] border-[#f0be52]',
+  DELETE: 'bg-[#f28b8b]/15 text-[#f28b8b] border-[#f28b8b]',
 };
-
-function ProtocolWaveSvg() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-[#6ab585] shrink-0" aria-hidden="true">
-      <path
-        d="M3 12H6.5L9 6.5L12.5 17.5L15.5 9.5L17.5 12H21"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="3" cy="12" r="1.5" fill="currentColor" />
-      <circle cx="21" cy="12" r="1.5" fill="currentColor" />
-    </svg>
-  );
-}
-
-function ZeroStorageLockSvg() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4 text-[#7fd19c] shrink-0 mt-0.5" aria-hidden="true">
-      <rect x="3.5" y="8.5" width="13" height="9" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M6.5 8.5V6C6.5 4.067 8.067 2.5 10 2.5C11.933 2.5 13.5 4.067 13.5 6V8.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="10" cy="13" r="1.25" fill="currentColor" />
-    </svg>
-  );
-}
 
 export function ApiPlayground() {
   const [activeTab, setActiveTab] = useState<'rest' | 'ws'>('rest');
@@ -156,6 +125,7 @@ export function ApiPlayground() {
   const [lastMeta, setLastMeta] = useState<{
     source: 'simulated' | 'live';
     statusLabel: string;
+    isError?: boolean;
     latencyMs?: number;
   } | null>(null);
   const [response, setResponse] = useState<Record<string, unknown> | null>(null);
@@ -182,10 +152,7 @@ const gateway = new Gateway({
 });
 
 gateway.on('ready', () => {
-  gateway.subscribe({
-    spaces: ['${spaceId}'],
-    rooms: ['${roomId}'],
-  });
+  gateway.subscribe('${spaceId}');
 });
 
 gateway.connect();`;
@@ -196,7 +163,7 @@ gateway.connect();`;
 const gateway = new Gateway({
   url: '${gatewayUrl}',
   token: process.env.BOT_TOKEN!,
-  heartbeatInterval: 45_000,
+  heartbeatIntervalMs: 45_000,
 });
 
 gateway.on('pong', () => {
@@ -254,6 +221,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       switch (wsFrame) {
         case 'messageCreate':
           return {
+            _note: '[SIMULATED PAYLOAD PREVIEW]',
             op: 3,
             d: {
               t: 'MESSAGE_CREATE',
@@ -272,27 +240,29 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
           };
         case 'ready':
           return {
+            _note: '[SIMULATED PAYLOAD PREVIEW]',
             op: 4,
             d: {
               user: {
                 id: '998877665544332211',
                 username: 'strafe-bot',
-                is_bot: true,
+                bot: true,
               },
-              spaces: [{ id: spaceId, name: 'Strafe Developers', owner_id: userId }],
+              spaces: [{ id: spaceId, name: 'Example Space', owner_id: userId }],
               rooms: [{ id: roomId, space_id: spaceId, name: 'general', type: 3 }],
             },
           };
         case 'subscribe':
           return {
+            _note: '[SIMULATED PAYLOAD PREVIEW]',
             op: 1,
             d: {
-              spaces: [spaceId],
-              rooms: [roomId],
+              space_id: spaceId,
             },
           };
         case 'pingPong':
           return {
+            _note: '[SIMULATED PAYLOAD PREVIEW]',
             sent: { op: 6 },
             received: { op: 7 },
           };
@@ -302,17 +272,19 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
     switch (method) {
       case 'getMe':
         return {
+          _note: '[SIMULATED PAYLOAD PREVIEW]',
           status: 200,
           route: 'GET /users/@me',
           body: {
             id: '998877665544332211',
             username: 'strafe-bot',
             display_name: 'Strafe Helper',
-            is_bot: true,
+            bot: true,
           },
         };
       case 'getSpaceRooms':
         return {
+          _note: '[SIMULATED PAYLOAD PREVIEW]',
           status: 200,
           route: `GET /spaces/${spaceId}/rooms`,
           body: [
@@ -327,7 +299,8 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
         };
       case 'createMessage':
         return {
-          status: 200,
+          _note: '[SIMULATED PAYLOAD PREVIEW]',
+          status: 201,
           route: `POST /rooms/${roomId}/messages`,
           body: {
             id: messageId,
@@ -335,13 +308,14 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
             sender_id: '998877665544332211',
             plaintext,
             mentions: [],
-            role_mentions: [],
+            mention_roles: [],
             mention_everyone: false,
             created_at: '2026-10-18T12:00:00.000Z',
           },
         };
       case 'listMessages':
         return {
+          _note: '[SIMULATED PAYLOAD PREVIEW]',
           status: 200,
           route: `GET /rooms/${roomId}/messages?limit=25`,
           body: [
@@ -356,12 +330,14 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
         };
       case 'addReaction':
         return {
+          _note: '[SIMULATED PAYLOAD PREVIEW]',
           status: 204,
           route: `PUT /rooms/${roomId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
           body: null,
         };
       case 'kickMember':
         return {
+          _note: '[SIMULATED PAYLOAD PREVIEW]',
           status: 204,
           route: `DELETE /spaces/${spaceId}/members/${userId}`,
           body: null,
@@ -372,9 +348,9 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
   const executeLiveRest = async () => {
     const cleanToken = token.trim();
     if (!cleanToken) {
-      setLastMeta({ source: 'live', statusLabel: 'Missing Token' });
+      setLastMeta({ source: 'live', statusLabel: 'Missing Token', isError: true });
       setResponse({
-        error: 'Provide a Bot or Bearer token in the Live Credentials panel before sending a live request.',
+        error: 'Missing authorization token. Paste a Bot or Bearer token in the Live Credentials input above and retry.',
       });
       return;
     }
@@ -443,6 +419,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
         setLastMeta({
           source: 'live',
           statusLabel: statusNum ? `${statusNum} ${statusText}`.trim() : 'Network Error',
+          isError: !relayData.ok,
           latencyMs,
         });
         setResponse(relayData);
@@ -469,6 +446,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       setLastMeta({
         source: 'live',
         statusLabel: `${res.status} ${res.statusText || ''}`.trim(),
+        isError: !res.ok,
         latencyMs,
       });
       setResponse({
@@ -484,6 +462,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       setLastMeta({
         source: 'live',
         statusLabel: 'Network / CORS Error',
+        isError: true,
         latencyMs,
       });
       setResponse({
@@ -499,9 +478,9 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
   const executeLiveGateway = async () => {
     const cleanToken = token.trim();
     if (!cleanToken) {
-      setLastMeta({ source: 'live', statusLabel: 'Missing Token' });
+      setLastMeta({ source: 'live', statusLabel: 'Missing Token', isError: true });
       setResponse({
-        error: 'Provide a Bot or Bearer token before opening a live WebSocket connection.',
+        error: 'Missing authorization token. Paste a Bot or Bearer token before opening a live WebSocket connection.',
       });
       return;
     }
@@ -534,6 +513,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
         setLastMeta({
           source: 'live',
           statusLabel,
+          isError: !relayData.ok,
           latencyMs,
         });
         setResponse(relayData);
@@ -541,7 +521,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
         return;
       }
     } catch {
-      // Fallback to direct browser WebSocket when static export is hosted without Node relay
+      // Static export fallback when local Node relay is unavailable
     }
 
     if (wsRef.current) {
@@ -591,11 +571,11 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       sock.onerror = () => {
         setIsLoading(false);
         setWsConnected(false);
-        setLastMeta({ source: 'live', statusLabel: 'WS Handshake Rejected' });
+        setLastMeta({ source: 'live', statusLabel: 'WS Handshake Rejected', isError: true });
         setResponse({
           live: true,
           error: 'Browser WebSocket handshake failed on static host.',
-          note: 'Stargate accepts Bot tokens exclusively via the HTTP Authorization: Bot <token> upgrade header. Run the docs server locally (npm run docs:dev) or execute the snippet in Node.js with @strafe-js/ws.',
+          note: 'Stargate accepts Bot tokens via the HTTP Authorization: Bot <token> upgrade header. Run the docs server locally (npm run docs:dev) or execute the snippet in Node.js with @strafe-js/ws.',
         });
       };
 
@@ -611,6 +591,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       };
     } catch (err) {
       setIsLoading(false);
+      setLastMeta({ source: 'live', statusLabel: 'Connection Error', isError: true });
       setResponse({
         error: err instanceof Error ? err.message : String(err),
       });
@@ -643,78 +624,72 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
   const activePayload = response ?? buildPayloadPreview();
 
   return (
-    <div className="my-6 rounded-xl border border-[#2a2f39] bg-[#12151b] shadow-[0_18px_42px_-12px_rgba(0,0,0,0.7),0_1px_0_0_rgba(255,255,255,0.04)_inset] overflow-hidden text-[#e6e8ec]">
-      <div className="px-5 py-4 bg-[#161a22] border-b border-[#262b35] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#0d1015] border border-[#2a2f39] flex items-center justify-center shadow-inner">
-            <ProtocolWaveSvg />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold tracking-tight text-[#f0f2f5] !m-0">
-              REST API & Stargate Frame Inspector
-            </h3>
-            <p className="text-xs text-[#8f98a8] !m-0 mt-0.5">
-              Inspect simulated payloads or execute live requests with your own Bot or Bearer token.
-            </p>
-          </div>
+    <div className="my-6 rounded-lg border border-[#2a303c] bg-[#161920] overflow-hidden text-[#e6e8ec]">
+      <div className="px-5 py-4 bg-[#12151b] border-b border-[#2a303c] flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-bold tracking-tight text-[#f0f2f5] !m-0">
+            REST API &amp; Stargate Frame Inspector
+          </h3>
+          <p className="text-xs text-[#b4bac6] !m-0 mt-1">
+            Inspect simulated payloads or execute live requests with your own Bot or Bearer token.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0b0d11] border border-[#252a34]">
+          <div className="flex items-center gap-1 p-1 rounded bg-[#0b0d11] border border-[#2a303c]">
             <button
               type="button"
+              aria-pressed={mode === 'mock'}
               onClick={() => setMode('mock')}
-              className={`px-2.5 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 min-h-[36px] rounded font-mono text-xs font-semibold transition-colors cursor-pointer ${
                 mode === 'mock'
-                  ? 'bg-[#222834] text-[#e6e8ec]'
-                  : 'text-[#8f98a8] hover:text-[#e6e8ec]'
+                  ? 'bg-[#26613c] text-white border border-[#7fd19c]'
+                  : 'text-[#b4bac6] hover:text-white'
               }`}
             >
-              Simulated
+              Simulated Preview
             </button>
             <button
               type="button"
+              aria-pressed={mode === 'live'}
               onClick={() => setMode('live')}
-              className={`px-2.5 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 min-h-[36px] rounded font-mono text-xs font-semibold transition-colors cursor-pointer ${
                 mode === 'live'
-                  ? 'bg-[#509b6b]/25 border border-[#509b6b]/50 text-[#7fd19c]'
-                  : 'text-[#8f98a8] hover:text-[#7fd19c]'
+                  ? 'bg-[#26613c] text-white border border-[#7fd19c]'
+                  : 'text-[#b4bac6] hover:text-white'
               }`}
             >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  mode === 'live' ? 'bg-[#7fd19c] shadow-[0_0_6px_#7fd19c]' : 'bg-[#5c6474]'
-                }`}
-              />
-              Use Own Token (Live)
+              Live Token Mode
             </button>
           </div>
 
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0b0d11] border border-[#252a34]">
+          <div className="flex items-center gap-1 p-1 rounded bg-[#0b0d11] border border-[#2a303c]">
             <button
               type="button"
+              aria-pressed={activeTab === 'rest'}
               onClick={() => {
                 setActiveTab('rest');
                 setResponse(null);
               }}
-              className={`px-3 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 min-h-[36px] rounded font-mono text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'rest'
-                  ? 'bg-[#509b6b] text-white'
-                  : 'text-[#8f98a8] hover:text-[#e6e8ec]'
+                  ? 'bg-[#26613c] text-white border border-[#7fd19c]'
+                  : 'text-[#b4bac6] hover:text-white'
               }`}
             >
               @strafe-js/rest
             </button>
             <button
               type="button"
+              aria-pressed={activeTab === 'ws'}
               onClick={() => {
                 setActiveTab('ws');
                 setResponse(null);
               }}
-              className={`px-3 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 min-h-[36px] rounded font-mono text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'ws'
-                  ? 'bg-[#509b6b] text-white'
-                  : 'text-[#8f98a8] hover:text-[#e6e8ec]'
+                  ? 'bg-[#26613c] text-white border border-[#7fd19c]'
+                  : 'text-[#b4bac6] hover:text-white'
               }`}
             >
               @strafe-js/ws
@@ -724,25 +699,21 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
       </div>
 
       {mode === 'live' && (
-        <div className="px-5 py-4 bg-[#0e1218] border-b border-[#262b35] space-y-3.5 text-xs">
-          <div className="p-3 rounded-lg bg-[#509b6b]/[0.08] border border-[#509b6b]/30 flex items-start gap-2.5">
-            <ZeroStorageLockSvg />
-            <div className="space-y-0.5 text-[11px] leading-relaxed text-[#cfd5e0]">
-              <div className="font-bold text-[#7fd19c]">
-                Zero Storage & Direct Client Execution Guarantee
-              </div>
-              <p className="!m-0 text-[#9ba5b6]">
-                We do not store, log, proxy, or transmit your token to any third-party server. The token resides strictly in volatile browser memory (React state) for this tab, is never written to <code className="text-[#7fd19c]">localStorage</code>, <code className="text-[#7fd19c]">sessionStorage</code>, or cookies, and is wiped immediately when you clear the field or close the tab.
-              </p>
-            </div>
+        <div className="px-5 py-4 bg-[#0b0d11] border-b border-[#2a303c] space-y-3.5 text-xs">
+          <div className="p-3 rounded bg-[#161920] border border-[#5c677a] text-xs leading-relaxed text-[#e6e8ec]">
+            <span className="font-mono font-bold text-[#7fd19c]">[IN-MEMORY TOKEN POLICY]</span>{' '}
+            Your token stays in volatile React state for this tab only. It is never written to{' '}
+            <code className="text-[#7fd19c]">localStorage</code>,{' '}
+            <code className="text-[#7fd19c]">sessionStorage</code>, or cookies.
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
             <div className="md:col-span-4">
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1">
+              <label htmlFor="pg-endpoint-url" className="block font-mono text-xs text-[#b4bac6] mb-1">
                 {activeTab === 'rest' ? 'REST Base URL' : 'Stargate WS URL'}
               </label>
               <input
+                id="pg-endpoint-url"
                 type="text"
                 value={activeTab === 'rest' ? apiBase : gatewayUrl}
                 onChange={(e) =>
@@ -750,18 +721,19 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
                     ? setApiBase(e.target.value)
                     : setGatewayUrl(e.target.value)
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#161920] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1">
+              <label htmlFor="pg-auth-scheme" className="block font-mono text-xs text-[#b4bac6] mb-1">
                 Auth Scheme
               </label>
               <select
+                id="pg-auth-scheme"
                 value={authScheme}
                 onChange={(e) => setAuthScheme(e.target.value as 'Bot' | 'Bearer')}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#7fd19c] font-mono text-xs focus:border-[#509b6b] outline-none"
+                className="w-full px-2.5 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#161920] text-[#7fd19c] font-mono text-xs focus:border-[#7fd19c]"
               >
                 <option value="Bot">Bot</option>
                 <option value="Bearer">Bearer</option>
@@ -769,23 +741,24 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
             </div>
 
             <div className="md:col-span-6">
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1">
-                Authorization Token (Volatile In-Memory Only)
+              <label htmlFor="pg-token-input" className="block font-mono text-xs text-[#b4bac6] mb-1">
+                Authorization Token (Volatile In-Memory)
               </label>
               <div className="flex items-center gap-1.5">
                 <input
+                  id="pg-token-input"
                   type={showToken ? 'text' : 'password'}
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  placeholder="Paste Bot or OAuth2 Bearer token..."
+                  placeholder="YOUR_BOT_OR_BEARER_TOKEN"
                   autoComplete="off"
                   spellCheck={false}
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                  className="flex-1 px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#161920] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken((v) => !v)}
-                  className="px-2.5 py-1.5 rounded-lg border border-[#252a34] bg-[#141820] hover:border-[#363c48] text-[#b4bac6] font-mono text-[11px] cursor-pointer"
+                  className="px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#161920] hover:border-[#7fd19c] text-[#e6e8ec] font-mono text-xs cursor-pointer"
                 >
                   {showToken ? 'Hide' : 'Show'}
                 </button>
@@ -793,9 +766,9 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
                   <button
                     type="button"
                     onClick={() => setToken('')}
-                    className="px-2.5 py-1.5 rounded-lg border border-[#e25555]/40 bg-[#e25555]/10 text-[#f28b8b] font-mono text-[11px] cursor-pointer"
+                    className="px-3 py-2 min-h-[40px] rounded border border-[#f28b8b] bg-[#f28b8b]/15 text-[#f28b8b] font-mono text-xs cursor-pointer"
                   >
-                    Wipe
+                    Clear
                   </button>
                 )}
               </div>
@@ -804,51 +777,68 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
         </div>
       )}
 
-      <div className="px-5 py-3 bg-[#0b0d11] border-b border-[#262b35] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+      <div className="px-5 py-3 bg-[#0b0d11] border-b border-[#2a303c] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
         {activeTab === 'rest' ? (
           <>
             <div className="flex items-center gap-2.5">
               <span
-                className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                className={`px-2 py-0.5 rounded text-xs font-bold border ${
                   VERB_COLORS[currentRest.verb]
                 }`}
               >
                 {currentRest.verb}
               </span>
-              <span className="text-[#cfd5e0]">{currentRest.route}</span>
+              <span className="text-[#e6e8ec]">{currentRest.route}</span>
             </div>
             <div className="flex items-center gap-2">
+              {isLoading && (
+                <span className="px-2 py-0.5 rounded bg-[#f0be52]/15 border border-[#f0be52] text-[#f0be52] text-xs">
+                  [LOADING] Waiting for response...
+                </span>
+              )}
               {lastMeta?.latencyMs !== undefined && (
-                <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#8f98a8] text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-[#161920] border border-[#5c677a] text-[#b4bac6] text-xs">
                   {lastMeta.latencyMs} ms
                 </span>
               )}
-              <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#7fd19c] text-[11px]">
-                {lastMeta ? lastMeta.statusLabel : `HTTP ${currentRest.status}`}
+              <span
+                className={`px-2 py-0.5 rounded border text-xs ${
+                  lastMeta?.isError
+                    ? 'bg-[#f28b8b]/15 border-[#f28b8b] text-[#f28b8b]'
+                    : 'bg-[#161920] border-[#5c677a] text-[#7fd19c]'
+                }`}
+              >
+                {lastMeta ? `[${lastMeta.source.toUpperCase()}] ${lastMeta.statusLabel}` : `[SIMULATED] HTTP ${currentRest.status}`}
               </span>
             </div>
           </>
         ) : (
           <>
             <div className="flex items-center gap-2.5">
-              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#509b6b]/20 text-[#7fd19c] border border-[#509b6b]/35">
+              <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#26613c] text-white border border-[#7fd19c]">
                 OP {currentWs.op}
               </span>
-              <span className="text-[#cfd5e0]">{currentWs.name}</span>
+              <span className="text-[#e6e8ec]">{currentWs.name}</span>
             </div>
-            <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#8f98a8] text-[11px]">
-              {lastMeta ? lastMeta.statusLabel : currentWs.direction}
+            <span
+              className={`px-2 py-0.5 rounded border text-xs ${
+                lastMeta?.isError
+                  ? 'bg-[#f28b8b]/15 border-[#f28b8b] text-[#f28b8b]'
+                  : 'bg-[#161920] border-[#5c677a] text-[#b4bac6]'
+              }`}
+            >
+              {isLoading ? '[LOADING] Connecting to Gateway...' : lastMeta ? lastMeta.statusLabel : currentWs.direction}
             </span>
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#262b35]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#2a303c]">
         <div className="p-5 space-y-4 text-xs">
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1.5">
+            <div className="block font-mono text-xs font-bold text-[#e6e8ec] mb-2">
               {activeTab === 'rest' ? 'Select REST Method' : 'Select Gateway Frame'}
-            </label>
+            </div>
             {activeTab === 'rest' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {(Object.keys(REST_ENDPOINTS) as RestEndpointKey[]).map((key) => {
@@ -858,22 +848,23 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
                     <button
                       key={key}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => {
                         setMethod(key);
                         setResponse(null);
                         setLastMeta(null);
                       }}
-                      className={`p-2.5 rounded-lg border text-left font-mono transition-colors cursor-pointer ${
+                      className={`p-3 min-h-[48px] rounded border text-left font-mono transition-colors cursor-pointer ${
                         selected
-                          ? 'border-[#509b6b] bg-[#509b6b]/12 text-[#7fd19c]'
-                          : 'border-[#252a34] bg-[#0b0d11] text-[#b4bac6] hover:border-[#363c48]'
+                          ? 'border-[#7fd19c] bg-[#26613c]/25 text-[#7fd19c]'
+                          : 'border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] hover:border-[#7fd19c]'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-bold text-xs">{key}()</span>
-                        <span className="text-[10px] opacity-80">{item.verb}</span>
+                        <span className="text-[11px] text-[#b4bac6]">{item.verb}</span>
                       </div>
-                      <div className="text-[10px] text-[#7f8797] truncate">{item.route}</div>
+                      <div className="text-[11px] text-[#949eb0] truncate">{item.route}</div>
                     </button>
                   );
                 })}
@@ -887,22 +878,23 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
                     <button
                       key={key}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => {
                         setWsFrame(key);
                         setResponse(null);
                         setLastMeta(null);
                       }}
-                      className={`p-2.5 rounded-lg border text-left font-mono transition-colors cursor-pointer ${
+                      className={`p-3 min-h-[48px] rounded border text-left font-mono transition-colors cursor-pointer ${
                         selected
-                          ? 'border-[#509b6b] bg-[#509b6b]/12 text-[#7fd19c]'
-                          : 'border-[#252a34] bg-[#0b0d11] text-[#b4bac6] hover:border-[#363c48]'
+                          ? 'border-[#7fd19c] bg-[#26613c]/25 text-[#7fd19c]'
+                          : 'border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] hover:border-[#7fd19c]'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-bold text-xs">{item.name}</span>
-                        <span className="text-[10px] opacity-80">op: {item.op}</span>
+                        <span className="text-[11px] text-[#b4bac6]">op: {item.op}</span>
                       </div>
-                      <div className="text-[10px] text-[#7f8797] truncate">{item.direction}</div>
+                      <div className="text-[11px] text-[#949eb0] truncate">{item.direction}</div>
                     </button>
                   );
                 })}
@@ -910,28 +902,29 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
             )}
           </div>
 
-          <div className="pt-3 border-t border-[#252a34] space-y-3">
-            <div className="font-mono text-[11px] uppercase tracking-wider text-[#8f98a8]">
+          <div className="pt-3 border-t border-[#2a303c] space-y-3">
+            <div className="font-mono text-xs font-bold text-[#e6e8ec]">
               Request / Frame Parameters
             </div>
 
             {activeTab === 'rest' ? (
               <div className="space-y-3">
                 {method === 'getMe' && (
-                  <div className="p-2.5 rounded-lg bg-[#0b0d11] border border-[#252a34] font-mono text-[11px] text-[#8f98a8]">
-                    GET /users/@me requires no path parameters; it inspects the authenticated Bot or Bearer token header.
+                  <div className="p-3 rounded bg-[#0b0d11] border border-[#2a303c] font-mono text-xs text-[#b4bac6]">
+                    [NO PATH PARAMETERS] GET /users/@me inspects the authenticated Bot or Bearer token header directly.
                   </div>
                 )}
                 {method === 'getSpaceRooms' && (
                   <div>
-                    <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                    <label htmlFor="pg-space-id" className="block font-mono text-xs text-[#b4bac6] mb-1">
                       spaceId (Snowflake)
                     </label>
                     <input
+                      id="pg-space-id"
                       type="text"
                       value={spaceId}
                       onChange={(e) => setSpaceId(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                      className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                     />
                   </div>
                 )}
@@ -939,52 +932,56 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
                   method === 'listMessages' ||
                   method === 'addReaction') && (
                   <div>
-                    <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                    <label htmlFor="pg-room-id" className="block font-mono text-xs text-[#b4bac6] mb-1">
                       roomId (Snowflake, must have e2ee_enabled: false for bots)
                     </label>
                     <input
+                      id="pg-room-id"
                       type="text"
                       value={roomId}
                       onChange={(e) => setRoomId(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                      className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                     />
                   </div>
                 )}
                 {method === 'createMessage' && (
                   <div>
-                    <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                    <label htmlFor="pg-plaintext" className="block font-mono text-xs text-[#b4bac6] mb-1">
                       body.plaintext
                     </label>
                     <input
+                      id="pg-plaintext"
                       type="text"
                       value={plaintext}
                       onChange={(e) => setPlaintext(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] text-xs focus:border-[#509b6b] outline-none"
+                      className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] text-xs focus:border-[#7fd19c]"
                     />
                   </div>
                 )}
                 {method === 'kickMember' && (
                   <>
                     <div>
-                      <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                      <label htmlFor="pg-kick-space" className="block font-mono text-xs text-[#b4bac6] mb-1">
                         spaceId (Snowflake)
                       </label>
                       <input
+                        id="pg-kick-space"
                         type="text"
                         value={spaceId}
                         onChange={(e) => setSpaceId(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                        className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                      <label htmlFor="pg-kick-user" className="block font-mono text-xs text-[#b4bac6] mb-1">
                         userId (Snowflake)
                       </label>
                       <input
+                        id="pg-kick-user"
                         type="text"
                         value={userId}
                         onChange={(e) => setUserId(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                        className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                       />
                     </div>
                   </>
@@ -992,25 +989,27 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
                 {method === 'addReaction' && (
                   <>
                     <div>
-                      <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                      <label htmlFor="pg-react-msg" className="block font-mono text-xs text-[#b4bac6] mb-1">
                         messageId (Snowflake)
                       </label>
                       <input
+                        id="pg-react-msg"
                         type="text"
                         value={messageId}
                         onChange={(e) => setMessageId(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                        className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                      <label htmlFor="pg-react-emoji" className="block font-mono text-xs text-[#b4bac6] mb-1">
                         emoji (Unicode or custom:id)
                       </label>
                       <input
+                        id="pg-react-emoji"
                         type="text"
                         value={emoji}
                         onChange={(e) => setEmoji(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                        className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                       />
                     </div>
                   </>
@@ -1019,25 +1018,27 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                  <label htmlFor="pg-ws-space" className="block font-mono text-xs text-[#b4bac6] mb-1">
                     space_id (Snowflake)
                   </label>
                   <input
+                    id="pg-ws-space"
                     type="text"
                     value={spaceId}
                     onChange={(e) => setSpaceId(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                    className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                   />
                 </div>
                 <div>
-                  <label className="block font-mono text-[11px] text-[#8f98a8] mb-1">
+                  <label htmlFor="pg-ws-room" className="block font-mono text-xs text-[#b4bac6] mb-1">
                     room_id (Snowflake)
                   </label>
                   <input
+                    id="pg-ws-room"
                     type="text"
                     value={roomId}
                     onChange={(e) => setRoomId(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                    className="w-full px-3 py-2 min-h-[40px] rounded border border-[#5c677a] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#7fd19c]"
                   />
                 </div>
               </div>
@@ -1047,10 +1048,10 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
               type="button"
               disabled={isLoading}
               onClick={handleRun}
-              className={`w-full py-2 px-4 rounded-lg font-mono font-semibold text-xs transition-colors cursor-pointer ${
+              className={`w-full py-2.5 px-4 min-h-[44px] rounded font-mono font-semibold text-xs border transition-colors cursor-pointer ${
                 mode === 'live' && activeTab === 'ws' && wsConnected
-                  ? 'bg-[#e25555] hover:bg-[#c94545] text-white'
-                  : 'bg-[#509b6b] hover:bg-[#45875d] text-white'
+                  ? 'bg-[#f28b8b]/20 border-[#f28b8b] text-[#f28b8b] hover:bg-[#f28b8b]/30'
+                  : 'bg-[#26613c] hover:bg-[#1f5433] border-[#7fd19c] text-white'
               }`}
             >
               {isLoading
@@ -1066,7 +1067,7 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
           </div>
         </div>
 
-        <div className="p-5 bg-[#0e1116] flex flex-col justify-between space-y-4">
+        <div className="p-5 bg-[#0b0d11] flex flex-col justify-between space-y-4">
           <CodeWindow
             title={activeTab === 'rest' ? `rest.${method}.ts` : `gateway.${wsFrame}.ts`}
             lang="ts"
@@ -1075,10 +1076,10 @@ const plainRooms = rooms.filter((r) => !r.e2ee_enabled);`;
           <CodeWindow
             title={
               mode === 'live'
-                ? `Live Output (${lastMeta?.statusLabel || 'Ready'})`
+                ? `Live Output (${lastMeta?.statusLabel || 'Awaiting Execution'})`
                 : activeTab === 'rest'
-                  ? `HTTP Response (${currentRest.status})`
-                  : `Stargate Frame (op: ${currentWs.op})`
+                  ? `Simulated HTTP Response (${currentRest.status})`
+                  : `Simulated Stargate Frame (op: ${currentWs.op})`
             }
             lang="json"
             code={JSON.stringify(activePayload, null, 2)}

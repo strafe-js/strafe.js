@@ -3,7 +3,7 @@ title: CLI Tool (create-strafebot)
 description: Scaffold new Strafe Chat bot projects and generate typed command modules from the terminal.
 ---
 
-`create-strafebot` is an interactive command-line tool that scaffolds a complete TypeScript bot project and generates individual command files inside existing projects.
+`create-strafebot` is a CLI tool that scaffolds a TypeScript bot project and generates individual command files inside existing projects.
 
 ## Scaffolding a New Bot Project
 
@@ -37,9 +37,11 @@ description: Scaffold new Strafe Chat bot projects and generate typed command mo
     <Folder name="src" defaultOpen>
       <Folder name="commands" defaultOpen>
         <File name="ping.ts" />
+        <File name="help.ts" />
         <File name="kick.ts" />
       </Folder>
       <File name="index.ts" />
+      <File name="loadEnv.ts" />
     </Folder>
     <File name=".env" />
     <File name=".env.example" />
@@ -51,15 +53,15 @@ description: Scaffold new Strafe Chat bot projects and generate typed command mo
 
 ## Generating Command Modules
 
-Inside an existing bot project, use the `command` (or `cmd` / `g`) subcommand to generate a new command file in `src/commands/<name>.ts`:
+Inside an existing bot project, use the `command` subcommand to generate a new command file in `src/commands/<name>.ts`:
 
 ```bash title="Terminal"
-# Generate a standard user command
+# Generate a general command
 npx create-strafebot command userinfo
 
-# Generate a moderator command (pre-configured with KickMembers, ManageMessages)
+# Generate a moderator command (pre-configured with ManageMessages)
 npx create-strafebot command warn --mod
 
-# Generate an administrator command (pre-configured with Administrator, BanMembers)
+# Generate an administrator command (pre-configured with Administrator)
 npx create-strafebot command purge --admin
 ```

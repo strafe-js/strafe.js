@@ -5,7 +5,6 @@ import {
   ALL_PERMISSIONS,
   BitField,
   resolvePermission,
-  type Role,
   type Room,
   type Space,
   type SpaceMember,
@@ -47,11 +46,9 @@ test('resolveMemberPermissions - Space Owner & Administrator', () => {
   };
   client.spaces.set(space.id, space);
 
-  // 1. Space Owner gets ALL_PERMISSIONS
   const ownerPerms = client.resolveMemberPermissions('user_owner', '100');
   assert.equal(ownerPerms, ALL_PERMISSIONS);
 
-  // 2. Member with Administrator gets ALL_PERMISSIONS
   client.members.set('100', new Map([
     ['user_admin', { user_id: 'user_admin', role_ids: ['role_admin'] } as SpaceMember],
   ]) as any);
@@ -84,13 +81,10 @@ test('resolveMemberPermissions - Overrides and Dependent Permissions', () => {
     type: 3,
     space_id: '100',
     permission_overrides: [
-      // Muted role denies SendMessages
       { role_id: 'role_muted', allow: 0, deny: Permission.SendMessages },
     ],
     user_overrides: [
-      // User 1 explicitly allowed SendMessages
       { user_id: 'user_1', allow: Permission.SendMessages, deny: 0 },
-      // User 2 denied ViewRoom
       { user_id: 'user_2', allow: 0, deny: Permission.ViewRoom },
     ],
   };
@@ -101,11 +95,11 @@ test('resolveMemberPermissions - Overrides and Dependent Permissions', () => {
     ['user_2', { user_id: 'user_2', role_ids: ['role_mod'] } as SpaceMember],
   ]) as any);
 
-  // User 1 has role_muted (denies SendMessages), but user_override explicitly ALLOWS SendMessages
+  // User override takes precedence over role override in Equinox Stage 4c.
   const user1Perms = client.resolveMemberPermissions('user_1', '100', 'room_1');
   assert.equal((user1Perms & Permission.SendMessages) !== 0, true);
 
-  // User 2 denied ViewRoom -> Dependent cascade clears room permissions to 0
+  // Denying ViewRoom zeroes the entire room mask in Equinox Stage 5.
   const user2Perms = client.resolveMemberPermissions('user_2', '100', 'room_1');
   assert.equal(user2Perms, 0);
 });
@@ -188,4 +182,3 @@ test('resolveMemberPermissions - Thread Parent Override Inheritance & Private Th
   assert.equal(client.resolveMemberPermissions('user_normal', '100', 'thread_priv'), 0);
   assert.notEqual(client.resolveMemberPermissions('user_mod', '100', 'thread_priv'), 0);
 });
-

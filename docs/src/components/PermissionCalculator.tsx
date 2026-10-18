@@ -64,59 +64,9 @@ const PRESETS = [
 
 const GROUPS = ['General', 'Text', 'Threads', 'Voice', 'Moderation'] as const;
 
-function BitMatrixIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-[#6ab585] shrink-0" aria-hidden="true">
-      <rect x="2.5" y="2.5" width="19" height="19" rx="4" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.45" />
-      <rect x="6" y="6" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
-      <rect x="10.4" y="6" width="3.2" height="3.2" rx="0.8" fill="currentColor" fillOpacity="0.25" />
-      <rect x="14.8" y="6" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
-      <rect x="6" y="10.4" width="3.2" height="3.2" rx="0.8" fill="currentColor" fillOpacity="0.25" />
-      <rect x="10.4" y="10.4" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
-      <rect x="14.8" y="10.4" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
-      <rect x="6" y="14.8" width="3.2" height="3.2" rx="0.8" fill="currentColor" />
-      <rect x="10.4" y="14.8" width="3.2" height="3.2" rx="0.8" fill="currentColor" fillOpacity="0.25" />
-      <rect x="14.8" y="14.8" width="3.2" height="3.2" rx="0.8" fill="currentColor" fillOpacity="0.25" />
-    </svg>
-  );
-}
-
-function CheckVector({ checked }: { checked: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      className={`w-4 h-4 shrink-0 mt-0.5 transition-all ${
-        checked ? 'text-[#509b6b]' : 'text-[#363c48] group-hover:text-[#525b6d]'
-      }`}
-      aria-hidden="true"
-    >
-      <rect
-        x="1.25"
-        y="1.25"
-        width="13.5"
-        height="13.5"
-        rx="3.25"
-        fill={checked ? 'rgba(80, 155, 107, 0.18)' : '#0b0d11'}
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      {checked && (
-        <path
-          d="M4.5 8.2L6.9 10.6L11.6 5.4"
-          stroke="#7fd19c"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
-    </svg>
-  );
-}
-
 export function PermissionCalculator() {
   const [mask, setMask] = useState<number>(10723359);
-  const [hoveredBit, setHoveredBit] = useState<number | null>(null);
+  const [focusedBit, setFocusedBit] = useState<number | null>(null);
 
   const toggle = (bit: number) => setMask((prev) => prev ^ bit);
 
@@ -135,37 +85,31 @@ export function PermissionCalculator() {
   const codeSnippet = `import { BitField, Permission } from '@strafe-js/util';
 import { permissions } from '@strafe-js/builders';
 
-// Decimal: ${mask} | Hex: ${hexValue} | Active bits: ${selectedNames.length}/28
 export const roleMask = permissions([
 ${selectedNames.map((n) => `  '${n}',`).join('\n')}
 ]);
 
 const bitfield = new BitField(roleMask);
-console.log(bitfield.has(Permission.ViewRoom)); // ${(mask & (1 << 0)) !== 0 || hasAdmin}`;
+console.log(bitfield.has(Permission.ViewRoom));`;
 
-  const hoveredPerm =
-    hoveredBit !== null ? PERMISSION_LIST.find((p) => p.shift === hoveredBit) : null;
+  const inspectedPerm =
+    focusedBit !== null ? PERMISSION_LIST.find((p) => p.shift === focusedBit) : null;
 
   return (
-    <div className="my-6 rounded-xl border border-[#2a2f39] bg-[#12151b] shadow-[0_18px_42px_-12px_rgba(0,0,0,0.7),0_1px_0_0_rgba(255,255,255,0.04)_inset] overflow-hidden text-[#e6e8ec]">
-      <div className="px-5 py-4 bg-[#161a22] border-b border-[#262b35] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#0d1015] border border-[#2a2f39] flex items-center justify-center shadow-inner">
-            <BitMatrixIcon />
+    <div className="my-6 rounded-lg border border-[#2a303c] bg-[#161920] overflow-hidden text-[#e6e8ec]">
+      <div className="px-5 py-4 bg-[#12151b] border-b border-[#2a303c] flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold tracking-tight text-[#f0f2f5] !m-0">
+              Equinox 28-Bit Permission Register
+            </h3>
+            <span className="px-2 py-0.5 rounded text-xs font-mono bg-[#0b0d11] text-[#7fd19c] border border-[#5c677a]">
+              bits 0..27
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold tracking-tight text-[#f0f2f5] !m-0">
-                Equinox 28-Bit Permission Register
-              </h3>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#509b6b]/15 text-[#7fd19c] border border-[#509b6b]/30">
-                bits 0..27
-              </span>
-            </div>
-            <p className="text-xs text-[#8f98a8] !m-0 mt-0.5">
-              Click any register cell or flag row to toggle bits and inspect Equinox cascade invariants.
-            </p>
-          </div>
+          <p className="text-xs text-[#b4bac6] !m-0 mt-1">
+            Toggle any register bit or permission flag row to compute the bitmask and inspect Equinox cascade rules.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -175,13 +119,14 @@ console.log(bitfield.has(Permission.ViewRoom)); // ${(mask & (1 << 0)) !== 0 || 
               <button
                 key={preset.id}
                 type="button"
+                aria-pressed={isCurrent}
                 onClick={() => setMask(preset.mask)}
-                className={`px-2.5 py-1 rounded-md font-mono text-[11px] font-medium border transition-all cursor-pointer ${
+                className={`px-3 py-1.5 min-h-[38px] rounded font-mono text-xs font-medium border transition-colors cursor-pointer ${
                   isCurrent
-                    ? 'bg-[#509b6b]/20 border-[#509b6b] text-[#7fd19c] shadow-[0_0_12px_-3px_rgba(80,155,107,0.4)]'
+                    ? 'bg-[#26613c] border-[#7fd19c] text-white'
                     : preset.id === 'none'
-                      ? 'bg-[#0d1015] border-[#262b35] text-[#8f98a8] hover:border-[#e25555]/50 hover:text-[#f28b8b]'
-                      : 'bg-[#0d1015] border-[#262b35] text-[#b4bac6] hover:border-[#363c48] hover:text-[#e6e8ec]'
+                      ? 'bg-[#0b0d11] border-[#5c677a] text-[#b4bac6] hover:border-[#f28b8b] hover:text-[#f28b8b]'
+                      : 'bg-[#0b0d11] border-[#5c677a] text-[#e6e8ec] hover:border-[#7fd19c]'
                 }`}
               >
                 {preset.label}
@@ -191,60 +136,67 @@ console.log(bitfield.has(Permission.ViewRoom)); // ${(mask & (1 << 0)) !== 0 || 
         </div>
       </div>
 
-      <div className="px-5 py-4 bg-[#0b0d11] border-b border-[#262b35]">
-        <div className="flex items-center justify-between text-[11px] font-mono text-[#7f8797] mb-2">
+      <div className="px-5 py-4 bg-[#0b0d11] border-b border-[#2a303c]">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[#b4bac6] mb-3">
           <span>MSB (1 &lt;&lt; 27: ManageThreads)</span>
           <span className="text-[#7fd19c] font-semibold">
-            {hoveredPerm
-              ? `Bit ${hoveredPerm.shift} (1 << ${hoveredPerm.shift} = ${hoveredPerm.bit}): ${hoveredPerm.name}`
+            {inspectedPerm
+              ? `Bit ${inspectedPerm.shift} (1 << ${inspectedPerm.shift} = ${inspectedPerm.bit}): ${inspectedPerm.name}`
               : `0b${binaryValue}`}
           </span>
           <span>LSB (1 &lt;&lt; 0: ViewRoom)</span>
         </div>
 
-        <div className="grid grid-cols-14 sm:grid-cols-28 gap-1">
+        <div className="grid grid-cols-7 sm:grid-cols-14 lg:grid-cols-28 gap-1">
           {[...PERMISSION_LIST].reverse().map((p) => {
             const active = (mask & p.bit) === p.bit;
             return (
               <button
                 key={p.shift}
                 type="button"
+                aria-pressed={active}
+                aria-label={`Bit ${p.shift}: ${p.name} (${active ? 'enabled' : 'disabled'})`}
                 onClick={() => toggle(p.bit)}
-                onMouseEnter={() => setHoveredBit(p.shift)}
-                onMouseLeave={() => setHoveredBit(null)}
+                onMouseEnter={() => setFocusedBit(p.shift)}
+                onMouseLeave={() => setFocusedBit(null)}
+                onFocus={() => setFocusedBit(p.shift)}
+                onBlur={() => setFocusedBit(null)}
                 title={`${p.name} (1 << ${p.shift})`}
-                className={`h-9 rounded flex flex-col items-center justify-center font-mono transition-all cursor-pointer border ${
+                className={`min-h-[44px] rounded flex flex-col items-center justify-center font-mono transition-colors cursor-pointer border ${
                   active
-                    ? 'bg-[#509b6b]/25 border-[#509b6b] text-[#7fd19c] shadow-[0_0_10px_-2px_rgba(80,155,107,0.45)]'
-                    : 'bg-[#12161d] border-[#222731] text-[#5c6474] hover:border-[#363c48] hover:text-[#b4bac6]'
+                    ? 'bg-[#26613c] border-[#7fd19c] text-white'
+                    : 'bg-[#161920] border-[#5c677a] text-[#b4bac6] hover:border-[#7fd19c] hover:text-white'
                 }`}
               >
-                <span className="text-[11px] font-bold leading-none">{active ? '1' : '0'}</span>
-                <span className="text-[8px] opacity-70 leading-none mt-1">{p.shift}</span>
+                <span className="text-xs font-bold leading-none">{active ? '1' : '0'}</span>
+                <span className="text-[10px] leading-none mt-1 text-[#cfd5e0]">{p.shift}</span>
               </button>
             );
           })}
         </div>
 
-        {(hasAdmin || missingViewRoom || missingSendWithDependents) && (
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-mono">
-            {hasAdmin && (
-              <div className="px-2.5 py-1 rounded bg-[#509b6b]/15 border border-[#509b6b]/35 text-[#7fd19c]">
-                Equinox Stage 3: Permission.Administrator (1 &lt;&lt; 11) grants ALL_PERMISSIONS (0x0FFFFFFF) in space and room checks.
-              </div>
-            )}
-            {missingViewRoom && (
-              <div className="px-2.5 py-1 rounded bg-[#e0a526]/12 border border-[#e0a526]/35 text-[#f0be52]">
-                Equinox Stage 5: ViewRoom (1 &lt;&lt; 0) is unset; room permission resolution zeroes the effective room mask to 0.
-              </div>
-            )}
-            {missingSendWithDependents && (
-              <div className="px-2.5 py-1 rounded bg-[#4b8fe2]/12 border border-[#4b8fe2]/35 text-[#85b8f8]">
-                Equinox Stage 6: SendMessages (1 &lt;&lt; 1) is unset; AttachFiles and MentionEveryone are cleared in room resolution.
-              </div>
-            )}
-          </div>
-        )}
+        <div className="mt-3 space-y-2 text-xs font-mono">
+          {mask === 0 && (
+            <div className="px-3 py-2 rounded bg-[#161920] border border-[#5c677a] text-[#b4bac6]">
+              [EMPTY MASK] No permissions selected (mask = 0). Select a preset above or toggle individual flags below.
+            </div>
+          )}
+          {hasAdmin && (
+            <div className="px-3 py-2 rounded bg-[#26613c]/30 border border-[#7fd19c] text-[#7fd19c]">
+              [STAGE 3 SHORT-CIRCUIT] Permission.Administrator (1 &lt;&lt; 11) grants ALL_PERMISSIONS (0x0FFFFFFF) in space and room checks.
+            </div>
+          )}
+          {missingViewRoom && (
+            <div className="px-3 py-2 rounded bg-[#f0be52]/15 border border-[#f0be52] text-[#f0be52]">
+              [STAGE 5 IMPLICIT DENIAL] ViewRoom (1 &lt;&lt; 0) is unset; room permission resolution zeroes the effective room mask to 0.
+            </div>
+          )}
+          {missingSendWithDependents && (
+            <div className="px-3 py-2 rounded bg-[#f0be52]/15 border border-[#f0be52] text-[#f0be52]">
+              [STAGE 6 CASCADE] SendMessages (1 &lt;&lt; 1) is unset; AttachFiles and MentionEveryone are cleared during room resolution.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -255,32 +207,41 @@ console.log(bitfield.has(Permission.ViewRoom)); // ${(mask & (1 << 0)) !== 0 || 
           return (
             <div
               key={group}
-              className="rounded-lg border border-[#252a34] bg-[#0e1116] overflow-hidden flex flex-col"
+              className="rounded-lg border border-[#2a303c] bg-[#0b0d11] overflow-hidden flex flex-col"
             >
-              <div className="px-3.5 py-2.5 bg-[#141820] border-b border-[#252a34] flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#cfd5e0]">
+              <div className="px-3.5 py-2.5 bg-[#12151b] border-b border-[#2a303c] flex items-center justify-between">
+                <span className="text-xs font-bold text-[#e6e8ec]">
                   {group}
                 </span>
-                <span className="font-mono text-[11px] text-[#7fd19c]">
-                  {activeInGroup}/{items.length}
+                <span className="font-mono text-xs text-[#7fd19c]">
+                  {activeInGroup}/{items.length} enabled
                 </span>
               </div>
 
-              <div className="p-2.5 space-y-1">
+              <div className="p-2.5 space-y-1.5">
                 {items.map((p) => {
                   const isChecked = (mask & p.bit) === p.bit;
                   return (
                     <button
                       key={p.name}
                       type="button"
+                      aria-pressed={isChecked}
                       onClick={() => toggle(p.bit)}
-                      className={`w-full text-left p-2 rounded-md flex items-start gap-2.5 transition-colors cursor-pointer group border ${
+                      className={`w-full text-left p-2.5 min-h-[44px] rounded flex items-start gap-2.5 transition-colors cursor-pointer border ${
                         isChecked
-                          ? 'bg-[#509b6b]/[0.09] border-[#509b6b]/30'
-                          : 'bg-transparent border-transparent hover:bg-[#151922]'
+                          ? 'bg-[#26613c]/25 border-[#7fd19c]'
+                          : 'bg-[#161920] border-[#2a303c] hover:border-[#5c677a]'
                       }`}
                     >
-                      <CheckVector checked={isChecked} />
+                      <span
+                        className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                          isChecked
+                            ? 'bg-[#26613c] border-[#7fd19c] text-white'
+                            : 'bg-[#0b0d11] border-[#5c677a] text-[#b4bac6]'
+                        }`}
+                      >
+                        {isChecked ? 'ON' : 'OFF'}
+                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <span
@@ -290,11 +251,11 @@ console.log(bitfield.has(Permission.ViewRoom)); // ${(mask & (1 << 0)) !== 0 || 
                           >
                             {p.name}
                           </span>
-                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#0b0d11] text-[#7f8797] border border-[#222731] shrink-0">
+                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[#0b0d11] text-[#b4bac6] border border-[#2a303c] shrink-0">
                             1 &lt;&lt; {p.shift}
                           </span>
                         </div>
-                        <div className="text-[11px] text-[#8f98a8] leading-snug mt-0.5">
+                        <div className="text-xs text-[#b4bac6] leading-snug mt-1">
                           {p.desc}
                         </div>
                       </div>
@@ -307,18 +268,18 @@ console.log(bitfield.has(Permission.ViewRoom)); // ${(mask & (1 << 0)) !== 0 || 
         })}
       </div>
 
-      <div className="p-5 bg-[#0e1116] border-t border-[#262b35] space-y-4">
+      <div className="p-5 bg-[#0b0d11] border-t border-[#2a303c] space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
-          <div className="px-3.5 py-2.5 rounded-lg bg-[#141820] border border-[#252a34] flex items-center justify-between">
-            <span className="text-[#8f98a8] text-[11px] uppercase tracking-wider">Decimal Mask</span>
+          <div className="px-3.5 py-2.5 rounded bg-[#161920] border border-[#2a303c] flex items-center justify-between">
+            <span className="text-[#b4bac6]">Decimal Mask</span>
             <span className="font-bold text-[#7fd19c] text-sm">{mask}</span>
           </div>
-          <div className="px-3.5 py-2.5 rounded-lg bg-[#141820] border border-[#252a34] flex items-center justify-between">
-            <span className="text-[#8f98a8] text-[11px] uppercase tracking-wider">Hexadecimal</span>
+          <div className="px-3.5 py-2.5 rounded bg-[#161920] border border-[#2a303c] flex items-center justify-between">
+            <span className="text-[#b4bac6]">Hexadecimal</span>
             <span className="font-bold text-[#7fd19c] text-sm">{hexValue}</span>
           </div>
-          <div className="px-3.5 py-2.5 rounded-lg bg-[#141820] border border-[#252a34] flex items-center justify-between">
-            <span className="text-[#8f98a8] text-[11px] uppercase tracking-wider">Enabled Flags</span>
+          <div className="px-3.5 py-2.5 rounded bg-[#161920] border border-[#2a303c] flex items-center justify-between">
+            <span className="text-[#b4bac6]">Enabled Flags</span>
             <span className="font-bold text-[#7fd19c] text-sm">{selectedNames.length} / 28</span>
           </div>
         </div>

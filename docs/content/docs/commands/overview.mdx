@@ -1,13 +1,13 @@
 ---
 title: Command Framework
-description: Declarative commands, typed argument schemas, permission guards, cooldowns, and execution context.
+description: Declarative prefix commands, typed argument schemas, permission guards, cooldowns, and execution context.
 ---
 
-`@strafe-js/strafebot` includes a first-class command framework powered by `CommandHandler`, `Command`, `Context`, and `CommandArgument`.
+`@strafe-js/strafebot` includes a prefix command dispatcher built from `CommandHandler`, `Command`, `Context`, and `CommandArgument`.
 
 ## Defining a Command
 
-Use the `command()` helper to define commands with full TypeScript inference for parsed arguments:
+Use the `command()` factory to define commands with TypeScript inference for parsed arguments:
 
 ```ts title="src/commands/roll.ts"
 import { command } from '@strafe-js/strafebot';
@@ -15,7 +15,7 @@ import { command } from '@strafe-js/strafebot';
 export const rollCommand = command({
   name: 'roll',
   aliases: ['dice'],
-  description: 'Roll a dice with custom sides',
+  description: 'Roll a die with custom sides',
   cooldown: 3000,
   arguments: {
     sides: {
@@ -29,7 +29,7 @@ export const rollCommand = command({
   async run(ctx) {
     const sides = ctx.arguments.get('sides'); // inferred as number
     const result = Math.floor(Math.random() * sides) + 1;
-    await ctx.reply(`🎲 You rolled **${result}** (1-${sides})`);
+    await ctx.reply(`Rolled **${result}** (1-${sides})`);
   },
 });
 ```
@@ -38,19 +38,19 @@ export const rollCommand = command({
 
 | Type | Parsed TypeScript Type | Validation & Features |
 | :--- | :--- | :--- |
-| `'string'` | `string` | Supports `minLength` / `maxLength`, `choices`, and `rest: true` (captures remaining tokens) |
+| `'string'` | `string` | Supports `minLength` / `maxLength`, `choices`, and `rest: true` (joins remaining tokens) |
 | `'integer'` | `number` | Rejects decimals; supports `min` / `max` numeric bounds and `choices` |
 | `'number'` | `number` | Floating-point or integer numbers; supports `min` / `max` bounds and `choices` |
 | `'boolean'` | `boolean` | Accepts `true/false`, `yes/no`, `1/0`, `y/n` |
-| `'user'` | `Snowflake` | Accepts raw 16-20 digit Snowflake IDs or `<@id>` / `<@!id>` user mentions |
-| `'room'` | `Snowflake` | Accepts raw 16-20 digit Snowflake IDs or `<#id>` room mentions |
-| `'role'` | `Snowflake` | Accepts raw 16-20 digit Snowflake IDs or `<@&id>` role mentions |
+| `'user'` | `Snowflake` | Extracts IDs from `<@id>` / `<@!id>` user mentions or passes a raw ID string |
+| `'room'` | `Snowflake` | Accepts 16-20 digit Snowflake IDs or `<#id>` room mentions |
+| `'role'` | `Snowflake` | Accepts 16-20 digit Snowflake IDs or `<@&id>` role mentions |
 | `'snowflake'` | `Snowflake` | Extracts 16-20 digit Snowflake IDs from `<@id>`, `<#id>`, `<@&id>`, or raw strings |
-| `'attachment'` | `Attachment` | Consumes uploaded message attachments from `message.attachments` |
+| `'attachment'` | `Attachment` | Consumes `message.attachments[0]` without advancing the text token cursor |
 
 ## Built-In Help Command & Middleware
 
-Register a category-grouped `!help [command]` command with `createHelpCommand()` and attach logging or rate-limit hooks via `client.commands.use()`:
+Register a category-grouped `!help [command]` command with `createHelpCommand()` and attach pre-execution hooks via `client.commands.use()`:
 
 ```ts title="src/index.ts"
 import { createHelpCommand } from '@strafe-js/strafebot';
@@ -65,15 +65,15 @@ client.commands.register(
 );
 ```
 
-## Command Guard Events
+## Command Lifecycle Events
 
-`CommandHandler` emits lifecycle and guard rejection events on `Client`:
+`CommandHandler` emits lifecycle events on `Client`:
 
-- `commandCooldown`: `(remainingMs, message, command)` - User is on cooldown
-- `commandArgumentError`: `(error, message, command)` - Schema validation failed with `ArgumentValidationError`
-- `commandError`: `(error, ctx)` - Unhandled error thrown inside `command.run(ctx)`
+- `commandCooldown`: `(remainingMs: number, message: Message, command: Command)` - Caller is on per-user cooldown.
+- `commandArgumentError`: `(error: ArgumentValidationError, message: Message, command: Command)` - Schema validation failed.
+- `commandError`: `(error: unknown, ctx: Context)` - Unhandled exception thrown inside `command.run(ctx)`.
 
-## Context (`ctx`) Helpers
+## Context (`ctx`) Reference
 
 <PropertyTable
   title="Context Properties & Methods"
@@ -89,7 +89,7 @@ client.commands.register(
     { name: 'ctx.react(emoji)', type: 'Promise<null>', description: 'Adds an emoji reaction to the triggering message.' },
     { name: 'ctx.deleteMessage()', type: 'Promise<null>', description: 'Deletes the triggering message.' },
     { name: 'ctx.fetchMember()', type: 'Promise<SpaceMember | null>', description: 'Returns the caller SpaceMember from cache or fetches it via REST.' },
-    { name: 'ctx.awaitMessages(opts?)', type: 'Promise<Collection<Snowflake, Message>>', description: 'Collects subsequent messages in the current room matching filter/max/timeoutMs.' },
+    { name: 'ctx.awaitMessages(opts?)', type: 'Promise<Collection<Snowflake, Message>>', description: 'Collects subsequent messages in the current room matching filter, max, and timeoutMs.' },
     { name: 'ctx.awaitReactions(opts?, messageId?)', type: 'Promise<ReactionEventPayload[]>', description: 'Collects reactions on a message in the current room.' },
     { name: 'ctx.typing()', type: 'Promise<null>', description: 'Triggers the typing indicator in the current room.' },
   ]}

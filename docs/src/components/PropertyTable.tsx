@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Badge } from './Badge';
 import { CodeWindow } from './CodeWindow';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export interface PropertyItem {
   name: string;
@@ -20,7 +19,7 @@ export interface PropertyTableProps {
   properties: PropertyItem[];
 }
 
-export function PropertyTable({ title = 'Properties Overview', properties }: PropertyTableProps) {
+export function PropertyTable({ title = 'Properties Reference', properties }: PropertyTableProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const toggle = (name: string) => {
@@ -28,60 +27,87 @@ export function PropertyTable({ title = 'Properties Overview', properties }: Pro
   };
 
   return (
-    <div className="my-6 rounded-xl border border-[#2a2f39] bg-[#15181d] overflow-hidden shadow-[0_10px_28px_-8px_rgba(0,0,0,0.55),0_1px_0_0_rgba(255,255,255,0.03)_inset]">
+    <div className="my-6 rounded-lg border border-[#2a303c] bg-[#161920] overflow-hidden">
       {title && (
-        <div className="px-4 py-3 bg-[#101317] border-b border-[#262b33] font-semibold text-sm text-[#f3f5f7] flex items-center justify-between">
+        <div className="px-4 py-3 bg-[#12151b] border-b border-[#2a303c] font-semibold text-sm text-[#e6e8ec] flex items-center justify-between">
           <span>{title}</span>
-          <span className="text-xs font-normal text-[#9ba5b4]">{properties.length} properties</span>
+          <span className="text-xs font-mono text-[#949eb0]">{properties.length} fields</span>
         </div>
       )}
 
-      <div className="divide-y divide-[#262b33]/70 text-xs">
-        {properties.map((prop) => {
-          const isExp = !!expanded[prop.name];
+      {properties.length === 0 ? (
+        <div className="p-4 text-xs font-mono text-[#b4bac6]">
+          No properties defined for this interface.
+        </div>
+      ) : (
+        <div className="divide-y divide-[#2a303c] text-xs">
+          {properties.map((prop) => {
+            const isExp = !!expanded[prop.name];
+            const hasExtra = Boolean(prop.example || prop.details);
 
-          return (
-            <div key={prop.name} className="transition-colors hover:bg-[#101317]/60">
-              <div
-                className="p-3.5 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none"
-                onClick={() => toggle(prop.name)}
-              >
-                <div className="flex items-center gap-2.5 font-mono">
-                  <button className="text-[#9ba5b4]">
-                    {isExp ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            return (
+              <div key={prop.name} className="transition-colors hover:bg-[#1a1e27]">
+                {hasExtra ? (
+                  <button
+                    type="button"
+                    aria-expanded={isExp}
+                    onClick={() => toggle(prop.name)}
+                    className="w-full p-3.5 min-h-[44px] flex flex-wrap items-center justify-between gap-3 text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="text-[#7fd19c] font-bold w-4 text-center" aria-hidden="true">
+                        {isExp ? '−' : '+'}
+                      </span>
+                      <span className="font-bold text-[#7fd19c] text-sm">{prop.name}</span>
+                      <span className="text-[#949eb0]">:</span>
+                      <span className="text-[#f0be52] font-medium">{prop.type}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {prop.readonly && <Badge type="readonly">Readonly</Badge>}
+                      {prop.optional && <Badge type="optional">Optional</Badge>}
+                    </div>
                   </button>
-                  <span className="font-bold text-[#6db888] text-sm">{prop.name}</span>
-                  <span className="text-[#9ba5b4] font-normal">:</span>
-                  <span className="text-amber-400 font-medium">{prop.type}</span>
+                ) : (
+                  <div className="p-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="text-[#949eb0] w-4 text-center" aria-hidden="true">
+                        •
+                      </span>
+                      <span className="font-bold text-[#7fd19c] text-sm">{prop.name}</span>
+                      <span className="text-[#949eb0]">:</span>
+                      <span className="text-[#f0be52] font-medium">{prop.type}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {prop.readonly && <Badge type="readonly">Readonly</Badge>}
+                      {prop.optional && <Badge type="optional">Optional</Badge>}
+                    </div>
+                  </div>
+                )}
+
+                <div className="px-3.5 pb-3 text-[#e6e8ec] leading-relaxed">
+                  {prop.description}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {prop.readonly && <Badge type="readonly">Readonly</Badge>}
-                  {prop.optional && <Badge type="optional">Optional</Badge>}
-                </div>
+                {isExp && hasExtra && (
+                  <div className="mx-3.5 mb-3.5 p-3 rounded bg-[#0b0d11] border border-[#2a303c] space-y-2">
+                    {prop.details && <p className="text-xs text-[#b4bac6]">{prop.details}</p>}
+                    {prop.example && (
+                      <CodeWindow
+                        title={prop.name}
+                        lang="ts"
+                        code={prop.example}
+                        showLineNumbers={false}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-
-              <div className="px-3.5 pb-2.5 text-[#d4dbe3]">
-                {prop.description}
-              </div>
-
-              {isExp && (prop.example || prop.details) && (
-                <div className="mx-3.5 mb-3.5 p-3 rounded-lg bg-[#0d0f12] border border-[#262b33] space-y-2">
-                  {prop.details && <p className="text-xs text-[#9ba5b4]">{prop.details}</p>}
-                  {prop.example && (
-                    <CodeWindow
-                      title={prop.name}
-                      lang="ts"
-                      code={prop.example}
-                      showLineNumbers={false}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

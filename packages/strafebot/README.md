@@ -5,7 +5,7 @@
 	</a>
 	<h1>@strafe-js/strafebot</h1>
 	<p>
-		<strong>High-level TypeScript Bot Client, State Cache, Permission Engine & Command Framework for Strafe Chat</strong>
+		<strong>TypeScript Bot Client, State Cache, Permission Engine & Command Framework for Strafe Chat</strong>
 	</p>
 	<p>
 		<a href="https://www.npmjs.com/package/@strafe-js/strafebot"><img src="https://img.shields.io/npm/v/@strafe-js/strafebot.svg?color=509b6b" alt="npm version" /></a>
@@ -19,12 +19,12 @@
 
 ## Overview
 
-`@strafe-js/strafebot` is the primary all-in-one SDK for building bots on [Strafe Chat](https://app.strafe.chat). It integrates `@strafe-js/rest`, `@strafe-js/ws`, `@strafe-js/collection`, and `@strafe-js/util` into a single `Client` with:
+`@strafe-js/strafebot` is the main SDK for building bots on [Strafe Chat](https://app.strafe.chat). It combines `@strafe-js/rest`, `@strafe-js/ws`, `@strafe-js/collection`, `@strafe-js/builders`, `@strafe-js/formatters`, and `@strafe-js/util` into a single `Client`:
 
-- **Automatic Entity Caching**: Live `Collection` caches for `spaces`, `rooms`, `spaceRooms`, and `members`.
-- **Equinox Permission Engine**: Full 6-stage hierarchical permission resolution (`client.resolveMemberPermissions()`).
-- **Command Framework**: Prefix matching, quote-aware argument tokenization, typed `ArgumentsSchema` validation, cooldowns, and permission/ownership guards.
-- **Re-exported Ecosystem**: Conveniently re-exports `@strafe-js/util`, `@strafe-js/collection`, `@strafe-js/rest`, and `@strafe-js/ws`.
+- **Entity Caching**: Live `Collection` caches for `spaces`, `rooms`, `spaceRooms`, and `members`.
+- **Equinox Permission Engine**: 6-stage permission resolution (`client.resolveMemberPermissions()`).
+- **Command Framework**: Prefix matching, quote-aware argument tokenization, typed `CommandArgumentsSchema` validation, cooldowns, and permission/ownership guards.
+- **Re-exported Ecosystem**: Re-exports `@strafe-js/util`, `@strafe-js/collection`, `@strafe-js/rest`, `@strafe-js/ws`, `@strafe-js/builders`, and `@strafe-js/formatters`.
 
 ---
 
@@ -87,16 +87,16 @@ await client.login(process.env.BOT_TOKEN!);
 | `gatewayUrl` | `string` | *Required* | WebSocket URL for the Strafe Gateway (`wss://app.strafe.chat/gateway/events`) |
 | `token` | `string` | `undefined` | Bot token (can also be passed to `client.login(token)`) |
 | `authScheme` | `'Bot' \| 'Bearer'` | `'Bot'` | HTTP & Gateway authorization header scheme |
-| `prefix` | `string \| string[]` | `undefined` | Command prefix(es) passed to `client.commands` |
+| `prefix` | `string \| string[]` | `'!'` | Command prefix(es) passed to `client.commands` |
 | `owners` | `Snowflake[]` | `[]` | User IDs permitted to invoke `botOwnerOnly` commands |
-| `autoSubscribeSpaces` | `boolean` | `true` | Automatically subscribe to all spaces received in `READY` |
+| `autoSubscribeSpaces` | `boolean` | `true` | Subscribe to all spaces received in `READY` and `SPACE_CREATE` |
 | `heartbeatIntervalMs` | `number` | `45000` | Interval between Gateway `Ping` frames in milliseconds |
 
 ### Properties & State Caches
 
 - `client.rest: REST`: Underlying HTTP REST client.
 - `client.gateway: Gateway`: Underlying WebSocket Gateway client.
-- `client.commands: CommandHandler`: Built-in command registry and dispatcher.
+- `client.commands: CommandHandler`: Prefix command registry and dispatcher.
 - `client.user: User | null`: Authenticated bot user (populated on `ready`).
 - `client.spaces: Collection<Snowflake, Space>`: Cached spaces.
 - `client.rooms: Collection<Snowflake, Room>`: Cached rooms by room ID.
@@ -109,8 +109,8 @@ await client.login(process.env.BOT_TOKEN!);
 - `await client.fetchMembers(spaceId: Snowflake)`: Fetches all members of a space from REST and caches them in `client.members`.
 - `await client.fetchMember(spaceId: Snowflake, userId: Snowflake)`: Fetches and caches a single member with in-flight request deduplication.
 - `client.getMember(spaceId: Snowflake, userId: Snowflake)`: Synchronously reads a cached `SpaceMember`.
-- `client.resolveMemberPermissions(userId: Snowflake, spaceId?: Snowflake, roomId?: Snowflake): BitField`: Resolves effective permissions using the 6-stage Equinox permission engine.
-- `client.destroy()`: Disconnects the Gateway WebSocket and removes all listeners.
+- `client.resolveMemberPermissions(userId: Snowflake, spaceId?: Snowflake, roomId?: Snowflake): number`: Resolves effective permissions using the 6-stage Equinox permission engine.
+- `client.destroy()`: Disconnects the Gateway WebSocket (`code: 1000`) and removes all listeners.
 
 ---
 
@@ -118,14 +118,14 @@ await client.login(process.env.BOT_TOKEN!);
 
 ### Typed Argument Schemas (`arguments`)
 
-Commands support strongly-typed argument schemas with automatic validation, default values, range bounds (`min`/`max`), `choices`, and `rest` capture:
+Commands support typed argument schemas with validation, default values, range bounds (`min`/`max`, `minLength`/`maxLength`), `choices`, and `rest` capture:
 
 ```ts
 import { command } from '@strafe-js/strafebot';
 
-export const slowmodeCommand = command({
+export const rollCommand = command({
   name: 'roll',
-  description: 'Roll a die with custom sides and multiplier',
+  description: 'Roll a die with custom sides',
   guildOnly: true,
   permissions: ['SendMessages'],
   botPermissions: ['SendMessages'],
@@ -134,8 +134,8 @@ export const slowmodeCommand = command({
     label: { type: 'string', rest: true, default: 'Standard Roll' },
   },
   async run(ctx) {
-    const sides = ctx.arguments.get('sides'); // number
-    const label = ctx.arguments.get('label'); // string
+    const sides = ctx.arguments.get('sides');
+    const label = ctx.arguments.get('label');
     const rolled = Math.floor(Math.random() * sides) + 1;
     await ctx.reply(`**${label}**: rolled **${rolled}** (1..${sides})`);
   },
@@ -143,12 +143,14 @@ export const slowmodeCommand = command({
 ```
 
 Supported argument types:
-- `'string'` (`string`): supports `choices`
+- `'string'` (`string`): supports `minLength`, `maxLength`, `choices`, and `rest`
 - `'integer'` (`number`): whole integers, supports `min`/`max` value, `choices`
 - `'number'` (`number`): floating-point numbers, supports `min`/`max` value, `choices`
 - `'boolean'` (`boolean`): accepts `true/false`, `yes/no`, `1/0`, `y/n`
 - `'user'` (`Snowflake`): accepts `<@id>`, `<@!id>`, or raw 16..20 digit Snowflake IDs
-- `'snowflake'` (`Snowflake`): validates 16..20 digit Snowflake IDs
+- `'room'` (`Snowflake`): accepts `<#id>` or raw 16..20 digit Snowflake IDs
+- `'role'` (`Snowflake`): accepts `<@&id>` or raw 16..20 digit Snowflake IDs
+- `'snowflake'` (`Snowflake`): extracts 16..20 digit Snowflake IDs
 - `'attachment'` (`Attachment`): consumes uploaded files from `ctx.message.attachments`
 
 ### `Context` Helpers
@@ -164,25 +166,21 @@ Inside `run(ctx)`:
 - `ctx.hasPermissions(required)` / `ctx.hasBotPermissions(required)`: Check caller or bot permissions in the current room.
 - `ctx.isBotOwner()` / `ctx.isSpaceOwner()`: Check ownership status.
 
-### Command Guard Events
+### Command Lifecycle Events
 
-Listen on `client` to customize feedback when a command is blocked:
+`CommandHandler` emits lifecycle events on `client`:
 
 ```ts
-client.on('commandPermissionDenied', (ctx, cmd) => {
-  void ctx.reply(`You lack permissions to run \`${cmd.name}\`.`);
+client.on('commandCooldown', (remainingMs, msg, cmd) => {
+  console.log(`User ${msg.sender_id} on cooldown for !${cmd.name}: ${remainingMs}ms remaining`);
 });
 
-client.on('commandBotPermissionDenied', (ctx, cmd, missing) => {
-  void ctx.reply(`I am missing permissions: ${missing.toArray().join(', ')}`);
+client.on('commandArgumentError', (err, msg, cmd) => {
+  console.warn(`Invalid argument ${err.argumentName} for !${cmd.name}: ${err.message}`);
 });
 
-client.on('commandCooldown', (ctx, cmd, remainingMs) => {
-  void ctx.reply(`Please wait ${(remainingMs / 1000).toFixed(1)}s before reusing \`${cmd.name}\`.`);
-});
-
-client.on('commandInvalidArguments', (ctx, cmd, err) => {
-  void ctx.reply(`Invalid argument: ${err.message}`);
+client.on('commandError', (err, ctx) => {
+  console.error(`Command !${ctx.commandName} threw an error:`, err);
 });
 ```
 

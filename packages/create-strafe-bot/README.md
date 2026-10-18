@@ -17,16 +17,16 @@
 
 ## Overview
 
-`create-strafebot` is an interactive command-line tool that helps you:
+`create-strafebot` is a CLI tool that:
 
-1. **Scaffold a complete TypeScript Strafe Chat bot project** with pre-configured environment files, scripts, and starter commands.
-2. **Generate new typed command modules** (`src/commands/<name>.ts`) inside an existing bot project with optional moderator (`--mod`) or administrator (`--admin`) permission guards.
+1. **Scaffolds a TypeScript Strafe Chat bot project** with `.env`, `tsconfig.json`, and starter commands (`ping.ts`, `help.ts`, `kick.ts`).
+2. **Generates new command modules** (`src/commands/<name>.ts`) inside an existing bot project with optional moderator (`--mod`) or administrator (`--admin`) permission guards.
 
 ---
 
 ## 1. Scaffolding a New Bot Project
 
-Run the interactive wizard with `npm`, `npx`, `pnpm`, or `bun`:
+Run the CLI with `npm`, `npx`, `pnpm`, or `bun`:
 
 ```sh
 npm create strafebot@latest my-bot
@@ -36,60 +36,47 @@ npx create-strafebot my-bot
 
 ### Interactive Prompts
 
-1. **Project folder**: Target directory name (default: `my-strafe-bot`).
-2. **Bot token**: Optional token written directly into `.env` (`BOT_TOKEN`).
+1. **Bot token**: Optional token written into `.env` (`BOT_TOKEN`).
+2. **Instance**: Use `app.strafe.chat` (`https://app.strafe.chat/api` and `wss://app.strafe.chat/gateway/events`) or custom self-hosted URLs.
 3. **Command prefix**: Default command prefix (default: `!`).
 4. **Owner user IDs**: Comma-separated Snowflake IDs for `botOwnerOnly` commands.
-5. **Template selection**:
-   - **1) Full Command Bot**: Includes `CommandHandler`, `src/commands/ping.ts`, and `src/commands/kick.ts`.
-   - **2) Minimal Event Bot**: Lightweight `messageCreate` listener setup without command files.
 
 ### Generated Directory Structure
 
 ```text
 my-bot/
-├── .env                  # Local environment secrets (gitignored)
-├── .env.example          # Safe template for version control
+├── .env
+├── .env.example
 ├── .gitignore
-├── package.json          # Scripts: dev (tsx watch), build (tsc), start
-├── tsconfig.json         # Strict ES2022 + NodeNext TypeScript config
+├── package.json
+├── tsconfig.json
 └── src/
-    ├── index.ts          # Client setup, event logging, and command registration
+    ├── index.ts
+    ├── loadEnv.ts
     └── commands/
-        ├── ping.ts       # Basic latency check command
-        └── kick.ts       # Moderation command example
+        ├── ping.ts
+        ├── help.ts
+        └── kick.ts
 ```
 
-### Running Your New Bot
+### Running Your Bot
 
 ```sh
 cd my-bot
+npm install
 npm run dev
 ```
 
 ---
 
-## 2. Generating Command Files (`command` / `cmd` / `g`)
+## 2. Generating Command Files (`command`)
 
 From the root of an existing bot project, generate a new command module in `src/commands/<name>.ts`:
 
 ```sh
-# Generate a standard user command (SendMessages)
 npx create-strafebot command userinfo
-
-# Generate a moderator command (KickMembers, ManageMessages + guildOnly)
 npx create-strafebot command warn --mod
-
-# Generate an administrator command (Administrator, BanMembers + guildOnly)
 npx create-strafebot command purge --admin
-```
-
-Then import and register the generated command in `src/index.ts`:
-
-```ts
-import { warnCommand } from './commands/warn.js';
-
-client.commands.register(warnCommand);
 ```
 
 ---

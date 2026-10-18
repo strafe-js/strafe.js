@@ -1,28 +1,28 @@
 ---
 title: Getting Started
-description: Step-by-step guide to scaffolding, configuring, and running your first Strafe Chat bot.
+description: Scaffold, configure, and run a Strafe Chat bot with Node.js and TypeScript.
 ---
 
 ## Prerequisites
 
 - **Node.js 18+** (Node.js 20 or 22 LTS recommended)
-- A **Strafe Bot Token** (`strf_bot_...`) obtained from the Strafe Developer Portal (`Settings -> Developer Portal`)
+- **Strafe Bot Token** (`strf_bot_...`) issued in the Strafe Developer Portal (`Settings -> Developer Portal`)
 
 <Callout title="Keep Your Bot Token Secret" type="warn">
-  Strafe returns your `strf_bot_...` token only once when the bot is created or when `resetApplicationBotToken` is called. Store it in `.env` and never commit it to version control.
+  Strafe returns your `strf_bot_...` token once when the bot is created or when `resetApplicationBotToken` is called. Store it in `.env` and keep `.env` in `.gitignore`.
 </Callout>
 
-## Option 1: Using the CLI Scaffolder (Recommended)
+## Option 1: Using the CLI Scaffolder
 
 <Steps>
 <Step>
-### Run the Interactive Scaffolder
+### Run `create-strafebot`
 
 ```bash title="Terminal"
 npx create-strafebot my-strafe-bot
 ```
 
-The wizard prompts you for your project directory, bot token, command prefix (default `!`), owner Snowflake IDs, and starter template (`Full Command Bot` or `Minimal Event Bot`).
+The CLI prompts for your bot token, instance URLs (`https://app.strafe.chat/api` and `wss://app.strafe.chat/gateway/events`), command prefix (`!`), and owner Snowflake IDs.
 </Step>
 
 <Step>
@@ -33,9 +33,11 @@ The wizard prompts you for your project directory, bot token, command prefix (de
     <Folder name="src" defaultOpen>
       <Folder name="commands" defaultOpen>
         <File name="ping.ts" />
+        <File name="help.ts" />
         <File name="kick.ts" />
       </Folder>
       <File name="index.ts" />
+      <File name="loadEnv.ts" />
     </Folder>
     <File name=".env" />
     <File name=".env.example" />
@@ -46,10 +48,11 @@ The wizard prompts you for your project directory, bot token, command prefix (de
 </Step>
 
 <Step>
-### Start the Bot in Watch Mode
+### Build and Start the Bot
 
 ```bash title="Terminal"
 cd my-strafe-bot
+npm install
 npm run dev
 ```
 </Step>
@@ -98,8 +101,7 @@ Create `src/index.ts`:
 
 ```ts title="src/index.ts"
 import 'dotenv/config';
-import { Client, command } from '@strafe-js/strafebot';
-import { userMention } from '@strafe-js/formatters';
+import { Client, command, userMention } from '@strafe-js/strafebot';
 
 const client = new Client({
   apiBase: process.env.STRAFE_API || 'https://app.strafe.chat/api',
@@ -122,7 +124,7 @@ client.commands.register(
   command({
     name: 'hello',
     aliases: ['hi'],
-    description: 'Greet a user',
+    description: 'Greet the caller',
     async run(ctx) {
       await ctx.reply(`Hello ${userMention(ctx.authorId)}!`);
     },

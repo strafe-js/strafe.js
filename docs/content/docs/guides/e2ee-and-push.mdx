@@ -5,13 +5,13 @@ description: How Strafe bots handle encrypted rooms, dynamic space joins, sessio
 
 ## End-to-End Encryption (E2EE) & Bot Visibility
 
-Private messages (PMs) and space rooms with `e2ee_enabled: true` use client-side end-to-end encryption. Because bots do not participate in MLS/ratchet key exchange:
+Private messages (PMs) and space rooms with `e2ee_enabled: true` use client-side end-to-end encryption. Because bots do not participate in MLS or ratchet key exchange:
 
 - Messages in E2EE rooms arrive over the Gateway and REST API with `ciphertext` populated and `plaintext` omitted.
 - Bots cannot decrypt `ciphertext` or send `plaintext` into an E2EE room.
 
 <Callout title="CommandHandler Skips Encrypted Messages Automatically" type="warn">
-  When an encrypted message arrives over `MESSAGE_CREATE`, `Client` emits both `messageCreate` and the dedicated `encryptedMessageCreate` event, while `CommandHandler` safely ignores the message so your prefix parsers never crash on missing `plaintext`.
+  When an encrypted message arrives over `MESSAGE_CREATE`, `Client` emits both `messageCreate` and `encryptedMessageCreate`, while `CommandHandler` skips the message because `message.plaintext` is absent.
 </Callout>
 
 ### Detecting Encrypted Rooms and Messages
@@ -21,7 +21,6 @@ Use `isEncryptedRoom`, `isEncryptedMessage`, `client.isRoomEncrypted`, or `ctx.i
 ```ts title="src/e2ee-handling.ts"
 import {
   Client,
-  isEncryptedRoom,
   isEncryptedMessage,
   isSystemMessage,
 } from '@strafe-js/strafebot';
@@ -50,16 +49,16 @@ client.on('messageCreate', (message) => {
 
 <Accordions>
   <Accordion title="How does Client handle being added to a Space while connected (SPACE_CREATE)?">
-    When a user installs your bot into a Space while the Gateway connection is already active, Stargate dispatches `SPACE_CREATE` with the `Space` object (without rooms). `Client` automatically caches the Space, calls `GET /spaces/:id/rooms`, caches each `Room`, and sends `op: 1` (`Subscribe`) for the space and all of its rooms so the bot immediately receives `MESSAGE_CREATE` events without restarting.
+    When a user installs your bot into a Space while the Gateway connection is open, Stargate dispatches `SPACE_CREATE` with the `Space` object. `Client` caches the Space, calls `GET /spaces/:id/rooms` if `space.rooms` was omitted, caches each `Room`, and sends `op: 1` (`Subscribe`) for the space and its rooms so the bot receives `MESSAGE_CREATE` events without restarting.
   </Accordion>
   <Accordion title="What happens when a bot token is reset (SESSION_REVOKED)?">
-    When a bot token is regenerated via `POST /applications/:id/bot/reset-token`, Stargate dispatches `SESSION_REVOKED` (`{ reason: string }`) and closes the WebSocket. `@strafe-js/ws` automatically disables its reconnect loop (`shouldReconnect = false`) and emits `sessionRevoked` so your process can exit cleanly instead of retrying with an invalidated token.
+    When a bot token is regenerated via `POST /applications/:id/bot/token`, Stargate dispatches `SESSION_REVOKED` (`{ reason: string }`) and closes the WebSocket. `@strafe-js/ws` sets `shouldReconnect = false` and emits `sessionRevoked` so your process can exit cleanly instead of reconnecting with an invalidated token.
   </Accordion>
 </Accordions>
 
 ## Web Push Notifications (RFC 8291)
 
-User-authenticated clients can register Web Push endpoints (`aes128gcm`) using `@strafe-js/rest`:
+User-authenticated sessions can manage Web Push subscriptions (`PUT / PATCH / GET / DELETE /users/@me/push`) using `@strafe-js/rest`:
 
 ```ts title="src/push.ts"
 import { REST } from '@strafe-js/rest';
@@ -70,21 +69,23 @@ const userRest = new REST({
   authScheme: 'Bearer',
 });
 
-// 1. Fetch the instance VAPID public key (no auth required)
 const { public_key } = await userRest.getPushVapidKey();
 
-// 2. Register or update the browser push subscription
-const sub = await userRest.putPushSubscription({
+const { subscription } = await userRest.putPushSubscription({
   endpoint: 'https://fcm.googleapis.com/fcm/send/example',
   keys: {
     p256dh: 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM',
     auth: 'tBHItJI5svbpez7KI4CCXg',
   },
-  user_agent: navigator.userAgent,
-  include_preview: true,
+  kind: 'web',
+  prefs: {
+    preview: true,
+    pm: 'all',
+    space: 'mentions',
+    calls: true,
+  },
 });
 
-// 3. Send a test push notification to all registered devices
 const testResult = await userRest.testPushSubscription();
-console.log(`Sent: ${testResult.sent}, Failed: ${testResult.failed}`);
+console.log(`Delivered: ${testResult.delivered} (status: ${testResult.status})`);
 ```

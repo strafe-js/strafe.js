@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Badge } from './Badge';
 import { CodeWindow } from './CodeWindow';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export interface ParamDef {
   name: string;
@@ -39,52 +38,56 @@ export function MethodCard({
   const [activeTab, setActiveTab] = useState<'details' | 'example'>('details');
 
   return (
-    <div className="my-4 rounded-xl border border-[#2a2f39] bg-[#15181d] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.55),0_1px_0_0_rgba(255,255,255,0.03)_inset] overflow-hidden transition-all duration-200 hover:border-[#509b6b]/60 hover:shadow-[0_14px_34px_-8px_rgba(0,0,0,0.68),0_0_20px_-6px_rgba(80,155,107,0.22)]">
-      <div
-        className="p-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer bg-[#101317] select-none"
-        onClick={() => setIsOpen(!isOpen)}
+    <div className="my-4 rounded-lg border border-[#2a303c] bg-[#161920] overflow-hidden">
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((v) => !v)}
+        className="w-full p-4 min-h-[48px] flex flex-wrap items-center justify-between gap-3 text-left cursor-pointer bg-[#12151b] hover:bg-[#1a1e27] transition-colors"
       >
-        <div className="flex items-center gap-3 font-mono text-sm">
-          <button className="text-[#9ba5b4] hover:text-[#509b6b] transition-colors">
-            {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          <span className="font-bold text-[#6db888] text-base">{name}</span>
-          <span className="text-[#9ba5b4] text-xs hidden md:inline">{signature}</span>
+        <div className="flex items-center gap-2.5 font-mono text-sm min-w-0">
+          <span className="text-[#7fd19c] font-bold text-xs w-4 inline-block text-center" aria-hidden="true">
+            {isOpen ? '−' : '+'}
+          </span>
+          <span className="font-bold text-[#7fd19c] text-sm sm:text-base">{name}</span>
+          <span className="text-[#b4bac6] text-xs hidden md:inline truncate">{signature}</span>
         </div>
 
         <div className="flex items-center gap-2">
           {isAsync && <Badge type="async">async</Badge>}
           <Badge type="tag">: {returnType}</Badge>
         </div>
-      </div>
+      </button>
 
-      <div className="px-4 py-3 text-sm text-[#d4dbe3] border-t border-[#262b33]/80">
+      <div className="px-4 py-3 text-sm text-[#e6e8ec] border-t border-[#2a303c]">
         {description}
       </div>
 
       {isOpen && (
-        <div className="border-t border-[#262b33] bg-[#0d0f12] p-4 space-y-4">
-          <div className="flex items-center gap-2 border-b border-[#262b33] pb-2">
+        <div className="border-t border-[#2a303c] bg-[#0b0d11] p-4 space-y-4">
+          <div className="flex items-center gap-2 border-b border-[#2a303c] pb-2">
             <button
+              type="button"
               onClick={() => setActiveTab('details')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 min-h-[36px] rounded text-xs font-mono font-medium border transition-colors cursor-pointer ${
                 activeTab === 'details'
-                  ? 'bg-[#509b6b]/15 text-[#6db888] font-semibold'
-                  : 'text-[#9ba5b4] hover:text-[#f3f5f7]'
+                  ? 'bg-[#26613c] text-white border-[#7fd19c]'
+                  : 'bg-[#161920] text-[#b4bac6] border-[#5c677a] hover:text-white'
               }`}
             >
-              Parameters & Details
+              Parameters ({parameters.length})
             </button>
             {example && (
               <button
+                type="button"
                 onClick={() => setActiveTab('example')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 min-h-[36px] rounded text-xs font-mono font-medium border transition-colors cursor-pointer ${
                   activeTab === 'example'
-                    ? 'bg-[#509b6b]/15 text-[#6db888] font-semibold'
-                    : 'text-[#9ba5b4] hover:text-[#f3f5f7]'
+                    ? 'bg-[#26613c] text-white border-[#7fd19c]'
+                    : 'bg-[#161920] text-[#b4bac6] border-[#5c677a] hover:text-white'
                 }`}
               >
-                Usage Example
+                Code Example
               </button>
             )}
           </div>
@@ -95,20 +98,20 @@ export function MethodCard({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-[#262b33] text-[#9ba5b4] font-semibold">
+                      <tr className="border-b border-[#2a303c] text-[#b4bac6] font-semibold">
                         <th className="py-2 px-3">Parameter</th>
                         <th className="py-2 px-3">Type</th>
-                        <th className="py-2 px-3">Status</th>
+                        <th className="py-2 px-3">Requirement</th>
                         <th className="py-2 px-3">Description</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#262b33]/50">
+                    <tbody className="divide-y divide-[#2a303c]">
                       {parameters.map((p) => (
-                        <tr key={p.name} className="hover:bg-[#15181d]">
-                          <td className="py-2.5 px-3 font-mono font-bold text-[#6db888]">
+                        <tr key={p.name} className="hover:bg-[#161920]">
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#7fd19c]">
                             {p.name}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-amber-400">
+                          <td className="py-2.5 px-3 font-mono text-[#f0be52]">
                             {p.type}
                           </td>
                           <td className="py-2.5 px-3">
@@ -118,7 +121,7 @@ export function MethodCard({
                               <Badge type="optional">Optional {p.default ? `(${p.default})` : ''}</Badge>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 text-[#d4dbe3]">
+                          <td className="py-2.5 px-3 text-[#e6e8ec]">
                             {p.description}
                           </td>
                         </tr>
@@ -127,10 +130,12 @@ export function MethodCard({
                   </table>
                 </div>
               ) : (
-                <p className="text-xs text-[#9ba5b4] italic">This method takes no parameters.</p>
+                <p className="text-xs text-[#b4bac6] font-mono">
+                  No parameters required for {name}().
+                </p>
               )}
               {notes && (
-                <p className="text-xs text-[#9ba5b4] bg-[#15181d] border border-[#262b33] rounded-lg p-3">
+                <p className="text-xs text-[#b4bac6] bg-[#161920] border border-[#2a303c] rounded p-3">
                   {notes}
                 </p>
               )}

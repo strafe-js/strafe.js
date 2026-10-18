@@ -5,7 +5,7 @@
 	</a>
 	<h1>@strafe-js/collection</h1>
 	<p>
-		<strong>Extended Map&lt;K, V&gt; Data Structure with Functional Array-Like Query Methods</strong>
+		<strong>Extended Map&lt;K, V&gt; Data Structure with Array-Like Query Methods</strong>
 	</p>
 	<p>
 		<a href="https://www.npmjs.com/package/@strafe-js/collection"><img src="https://img.shields.io/npm/v/@strafe-js/collection.svg?color=509b6b" alt="npm version" /></a>
@@ -17,7 +17,7 @@
 
 ## Overview
 
-`@strafe-js/collection` exports `Collection<K, V>`, a zero-dependency subclass of JavaScript's built-in `Map<K, V>` enriched with functional search, filtering, and projection methods. It powers all entity caches in `@strafe-js/strafebot` (`client.spaces`, `client.rooms`, `client.spaceRooms`, `client.members`).
+`@strafe-js/collection` exports `Collection<K, V>`, a zero-dependency subclass of JavaScript's built-in `Map<K, V>` with search, filtering, and projection methods. It backs all entity caches in `@strafe-js/strafebot` (`client.spaces`, `client.rooms`, `client.spaceRooms`, `client.members`).
 
 ---
 
@@ -45,16 +45,9 @@ rooms.set('101', { id: '101', name: 'general', topic: 'Main chat' });
 rooms.set('102', { id: '102', name: 'announcements', topic: 'News' });
 rooms.set('103', { id: '103', name: 'off-topic' });
 
-// Find a single entry matching a predicate
 const general = rooms.find((room) => room.name === 'general');
-
-// Filter into a new Collection<K, V>
 const withTopics = rooms.filter((room) => Boolean(room.topic));
-
-// Map values into an array
 const names = rooms.map((room) => room.name); // ['general', 'announcements', 'off-topic']
-
-// Retrieve first item or first N items
 const firstRoom = rooms.first();
 const topTwo = rooms.first(2);
 ```
@@ -63,7 +56,7 @@ const topTwo = rooms.first(2);
 
 ## API Reference
 
-In addition to all standard `Map<K, V>` methods (`get`, `set`, `has`, `delete`, `clear`, `entries`, `keys`, `values`, `forEach`, `size`), `Collection<K, V>` provides:
+In addition to standard `Map<K, V>` methods (`get`, `set`, `has`, `delete`, `clear`, `entries`, `keys`, `values`, `forEach`, `size`), `Collection<K, V>` provides:
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
@@ -73,6 +66,14 @@ In addition to all standard `Map<K, V>` methods (`get`, `set`, `has`, `delete`, 
 | `some` | `(fn: (value: V, key: K, col: this) => boolean) => boolean` | Returns `true` if at least one entry satisfies `fn` |
 | `every` | `(fn: (value: V, key: K, col: this) => boolean) => boolean` | Returns `true` if all entries satisfy `fn` |
 | `first` | `() => V \| undefined` / `(count: number) => V[]` | Returns the first value, or an array of the first `count` values |
+| `last` | `() => V \| undefined` / `(count: number) => V[]` | Returns the last value, or an array of the last `count` values |
+| `random` | `() => V \| undefined` / `(count: number) => V[]` | Samples random item(s) without replacement |
+| `reduce` | `<T>(fn: (acc: T, value: V, key: K, col: this) => T, init: T) => T` | Folds all entries into an accumulated value |
+| `partition` | `(fn: (value: V, key: K, col: this) => boolean) => [Collection, Collection]` | Splits entries into `[matching, nonMatching]` collections |
+| `sweep` | `(fn: (value: V, key: K, col: this) => boolean) => number` | Removes matching entries in place and returns deleted count |
+| `clone` | `() => Collection<K, V>` | Creates a shallow copy of the collection |
+| `concat` | `(...cols: Collection<K, V>[]) => Collection<K, V>` | Combines multiple collections into a new instance |
+| `tap` | `(fn: (col: this) => void) => this` | Runs a callback on the collection and returns `this` |
 | `array` | `() => V[]` | Converts all collection values to an array (`[...this.values()]`) |
 | `keyArray` | `() => K[]` | Converts all collection keys to an array (`[...this.keys()]`) |
 

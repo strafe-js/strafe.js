@@ -1,9 +1,9 @@
 ---
 title: "@strafe-js/collection"
-description: Extended Map<K, V> subclass with functional search, filtering, and transformation methods.
+description: Extended Map<K, V> subclass with search, filtering, and transformation methods.
 ---
 
-`@strafe-js/collection` provides `Collection<K, V>`, an enhanced subclass of JavaScript's built-in `Map<K, V>` that adds array-like functional query and transformation methods. All entity caches on `Client` (`client.spaces`, `client.rooms`, `client.spaceRooms`, `client.members`) are instances of `Collection`.
+`@strafe-js/collection` exports `Collection<K, V>`, a zero-dependency subclass of JavaScript's built-in `Map<K, V>` that adds array-like query and transformation methods. All entity caches on `Client` (`client.spaces`, `client.rooms`, `client.spaceRooms`, `client.members`) are instances of `Collection`.
 
 ## Installation
 
@@ -11,9 +11,9 @@ description: Extended Map<K, V> subclass with functional search, filtering, and 
 npm install @strafe-js/collection
 ```
 
-> Note: `Collection` is also re-exported directly from `@strafe-js/strafebot`.
+> `Collection` is also re-exported from `@strafe-js/strafebot`.
 
-## Quick Example
+## Example Usage
 
 ```ts title="src/collection.ts"
 import { Collection } from '@strafe-js/collection';
@@ -36,14 +36,14 @@ const usernames = members.map((m) => m.username); // ['alice', 'bob', 'charlie']
 
 ## Methods Reference
 
-In addition to all standard `Map<K, V>` properties and methods (`size`, `get`, `set`, `has`, `delete`, `clear`, `keys`, `values`, `entries`, `forEach`), `Collection<K, V>` implements:
+In addition to standard `Map<K, V>` properties and methods (`size`, `get`, `set`, `has`, `delete`, `clear`, `keys`, `values`, `entries`, `forEach`), `Collection<K, V>` implements:
 
 <MethodCard
   name="collection.find"
   signature="(fn: (value: V, key: K, col: this) => boolean) => V | undefined"
   returnType="V | undefined"
   isAsync={false}
-  description="Returns the first value in the collection that satisfies the testing predicate, or undefined if none match."
+  description="Returns the first value in the collection that satisfies the predicate, or undefined if none match."
   parameters={[
     { name: 'fn', type: '(value: V, key: K, col: this) => boolean', required: true, description: 'Predicate function.' },
   ]}

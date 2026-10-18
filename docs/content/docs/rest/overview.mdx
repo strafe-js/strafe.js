@@ -3,7 +3,7 @@ title: REST API SDK (@strafe-js/rest)
 description: Standalone Fetch-based HTTP client with automatic 429 rate-limit retries and typed endpoints for the Strafe API.
 ---
 
-`@strafe-js/rest` provides the `REST` class for interacting with the Strafe HTTP API (`https://app.strafe.chat/api`). It is exposed as `client.rest` on `@strafe-js/strafebot` or can be instantiated standalone.
+`@strafe-js/rest` provides the `REST` class for calling the Strafe HTTP API (`https://app.strafe.chat/api`). It is exposed as `client.rest` on `@strafe-js/strafebot` or can be instantiated standalone.
 
 ## Installation
 
@@ -42,7 +42,7 @@ console.log(`Authenticated as ${me.username}`);
 
 ## Automatic Rate-Limit Handling (`HTTP 429`)
 
-When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()` automatically inspects `retry_after` in the JSON body (or the `Retry-After` HTTP header), sleeps for the required duration, and retries the request up to `retries` times. If retries are exhausted, a `RateLimitError` is thrown.
+When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()` reads `retry_after` from the JSON body (or the `Retry-After` HTTP header), sleeps for that duration, and retries the request up to `retries` times. When all retry attempts fail with `429`, `REST.request()` throws a `RateLimitError`.
 
 ## Endpoint Methods Reference
 
@@ -52,7 +52,7 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
   name="rest.getMe / rest.updateProfile"
   signature="getMe() => Promise<User> | updateProfile(body) => Promise<User>"
   returnType="Promise<User>"
-  description="Fetches (GET /users/@me) or updates (PATCH /users/@me) the currently authenticated bot User profile."
+  description="Fetches (GET /users/@me) or updates (PATCH /users/@me) the authenticated bot User profile."
   example={`const me = await rest.getMe();\nawait rest.updateProfile({ display_name: 'StrafeHelper', bio: 'Moderation bot' });`}
 />
 
@@ -66,16 +66,16 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
 
 <MethodCard
   name="rest.getSpaceRooms / rest.createRoom / rest.editRoom / rest.deleteRoom"
-  signature="(spaceId: Snowflake, ...) => Promise<Room[] | Room | null>"
-  returnType="Promise<Room[] | Room | null>"
-  description="Manages Space rooms (GET /spaces/:id/rooms, POST /spaces/:id/rooms, PATCH /rooms/:id, DELETE /rooms/:id)."
+  signature="(spaceId: Snowflake, ...) => Promise<Room[] | Room | void>"
+  returnType="Promise<Room[] | Room | void>"
+  description="Manages Space rooms (GET /spaces/:id/rooms, POST /spaces/:id/rooms, PATCH /spaces/:id/rooms/:roomId, DELETE /spaces/:id/rooms/:roomId)."
   example={`const rooms = await rest.getSpaceRooms(spaceId);\nconst room = await rest.createRoom(spaceId, { name: 'announcements', type: 3 });`}
 />
 
 <MethodCard
   name="rest.getSpaceMembers / rest.getSpaceMember / rest.setMemberRoles"
   signature="(spaceId: Snowflake, userId: Snowflake, roleIds?: Snowflake[]) => Promise<...>"
-  returnType="Promise<SpaceMember[] | SpaceMember | null>"
+  returnType="Promise<SpaceMember[] | SpaceMember | void>"
   description="Fetches Space members or replaces a member's assigned role list (PUT /spaces/:id/members/:userId/roles)."
   example={`await rest.setMemberRoles(spaceId, userId, [verifiedRoleId]);`}
 />
@@ -84,8 +84,8 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
 
 <MethodCard
   name="rest.createMessage / rest.editMessage / rest.deleteMessage"
-  signature="(roomId: Snowflake, ...) => Promise<Message | null>"
-  returnType="Promise<Message | null>"
+  signature="(roomId: Snowflake, ...) => Promise<Message | void>"
+  returnType="Promise<Message | void>"
   description="Sends (POST /rooms/:id/messages), edits (PATCH /rooms/:id/messages/:msgId), or deletes (DELETE /rooms/:id/messages/:msgId) a room message."
   example={`const msg = await rest.createMessage(roomId, { plaintext: 'Hello Strafe!' });`}
 />
@@ -94,23 +94,23 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
   name="rest.listMessages / rest.searchRoomMessages / rest.searchSpaceMessages"
   signature="(id: Snowflake, params) => Promise<Message[]>"
   returnType="Promise<Message[]>"
-  description="Fetches message history (before/after/limit) or searches messages by query, sender_id, or date range."
+  description="Fetches message history (before, after, limit) or searches messages by query (q) and attachment type (has)."
   example={`const hits = await rest.searchSpaceMessages(spaceId, { q: 'deploy', limit: 20 });`}
 />
 
 <MethodCard
   name="rest.addReaction / rest.removeReaction / rest.getReactions"
-  signature="(roomId: Snowflake, messageId: Snowflake, emoji: string) => Promise<null | User[]>"
-  returnType="Promise<null | User[]>"
-  description="Adds (PUT), removes (DELETE), or lists (GET) reactions on a message. Supports Unicode emoji or custom:<emoji_id>."
-  example={`await rest.addReaction(roomId, messageId, '🔥');`}
+  signature="(roomId: Snowflake, messageId: Snowflake, emoji: string) => Promise<void | User[]>"
+  returnType="Promise<void | User[]>"
+  description="Adds (PUT), removes (DELETE), or lists (GET) reactions on a message. Accepts a Unicode emoji or custom:<emoji_id>."
+  example={`await rest.addReaction(roomId, messageId, 'custom:778899001122334455');`}
 />
 
 <MethodCard
   name="rest.pinMessage / rest.unpinMessage / rest.getPinnedMessages"
-  signature="(roomId: Snowflake, messageId?: Snowflake) => Promise<null | Message[]>"
-  returnType="Promise<null | Message[]>"
-  description="Pins (PUT /rooms/:id/pins/:msgId), unpins (DELETE /rooms/:id/pins/:msgId), or lists pinned messages in a room."
+  signature="(roomId: Snowflake, messageId?: Snowflake) => Promise<void | { items: ...; has_more: boolean }>"
+  returnType="Promise<void | { items: ...; has_more: boolean }>"
+  description="Pins (PUT /rooms/:id/messages/:msgId/pin), unpins (DELETE /rooms/:id/messages/:msgId/pin), or lists pinned messages (GET /rooms/:id/pins)."
   example={`await rest.pinMessage(roomId, messageId);\nconst pins = await rest.getPinnedMessages(roomId);`}
 />
 
@@ -120,7 +120,7 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
   name="rest.createThreadFromMessage / rest.createThread / rest.editThread"
   signature="(roomId: Snowflake, ...) => Promise<Room>"
   returnType="Promise<Room>"
-  description="Creates a thread from a message (POST /rooms/:id/messages/:msgId/threads), standalone thread (POST /rooms/:id/threads), or archives/locks a thread (PATCH /threads/:id)."
+  description="Creates a thread from a message (POST /rooms/:id/messages/:msgId/threads), a standalone thread (POST /rooms/:id/threads), or updates thread state (PATCH /rooms/:threadId/thread)."
   example={`const thread = await rest.createThreadFromMessage(roomId, messageId, { name: 'Bug triage' });`}
 />
 
@@ -134,8 +134,8 @@ When the Strafe API responds with `HTTP 429 Too Many Requests`, `REST.request()`
 
 <MethodCard
   name="rest.kickMember / rest.banMember / rest.unbanMember"
-  signature="(spaceId: Snowflake, userId: Snowflake, reason?: string) => Promise<null>"
-  returnType="Promise<null>"
+  signature="(spaceId: Snowflake, userId: Snowflake, reason?: string) => Promise<void>"
+  returnType="Promise<void>"
   description="Kicks (DELETE /spaces/:id/members/:userId), bans (POST /spaces/:id/bans/:userId), or unbans (DELETE /spaces/:id/bans/:userId) a member."
   example={`await rest.banMember(spaceId, userId, 'Spamming');`}
 />

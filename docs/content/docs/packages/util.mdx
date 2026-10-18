@@ -3,7 +3,7 @@ title: "@strafe-js/util"
 description: Core TypeScript interfaces, 28-bit Strafe Permission bitflags, BitField class, error types, and helpers.
 ---
 
-`@strafe-js/util` is the foundational zero-dependency package of the Strafe.js ecosystem. It defines all shared TypeScript interfaces, the official 28-bit `Permission` bitflags, `BitField`, `RoomType`, `GatewayOp`, `StrafeError`, and `RateLimitError`.
+`@strafe-js/util` is the zero-dependency foundational package of the Strafe.js monorepo. It defines all shared TypeScript interfaces, the 28-bit `Permission` bitflags, `BitField`, `RoomType`, `GatewayOp`, `StrafeError`, and `RateLimitError`.
 
 ## Installation
 
@@ -13,7 +13,7 @@ npm install @strafe-js/util
 
 ## `BitField` Class
 
-`BitField` wraps a 32-bit numeric permission mask and provides ergonomic methods for inspecting and mutating permissions.
+`BitField` wraps a 32-bit numeric permission mask and provides methods for inspecting and mutating permissions.
 
 <MethodCard
   name="new BitField"
@@ -60,7 +60,7 @@ npm install @strafe-js/util
   example={`console.log(bits.toArray()); // ['ViewRoom', 'SendMessages', 'AddReactions']`}
 />
 
-## Official 28-Bit Permission Table (`Permission`)
+## 28-Bit Permission Table (`Permission`)
 
 | Bit | Constant | Value | Category |
 | :--- | :--- | :--- | :--- |
@@ -138,7 +138,7 @@ import { RoomType, GatewayOp } from '@strafe-js/util';
   signature="(id: unknown) => id is Snowflake"
   returnType="boolean"
   isAsync={false}
-  description="Type guard that checks whether a value is a valid 16-20 digit numeric Snowflake string."
+  description="Type guard that checks whether a value is a 16-20 digit numeric Snowflake string."
   parameters={[
     { name: 'id', type: 'unknown', required: true, description: 'Value to validate.' },
   ]}
@@ -164,5 +164,5 @@ import { RoomType, GatewayOp } from '@strafe-js/util';
   returnType="boolean"
   isAsync={false}
   description="Checks whether a Room has E2EE enabled (room.e2ee_enabled), whether a Message contains ciphertext without plaintext, or whether a Message is a server system event (sender_id === '0' or system_type)."
-  example={`if (isEncryptedRoom(room) || isEncryptedMessage(msg)) {\n  // Bots cannot read or send plaintext in E2EE rooms\n}`}
+  example={`if (isEncryptedRoom(room) || isEncryptedMessage(msg)) {\n  return;\n}`}
 />

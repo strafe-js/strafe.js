@@ -1,9 +1,9 @@
 ---
 title: "@strafe-js/formatters"
-description: String formatting utilities for user/role/room mentions, custom emojis, and Markdown escaping.
+description: String formatting helpers for user/role/room mentions, custom emojis, and Markdown escaping.
 ---
 
-`@strafe-js/formatters` provides pure helper functions for formatting mentions, custom emojis, and escaping user-supplied Markdown characters in Strafe Chat messages.
+`@strafe-js/formatters` provides functions for formatting mentions, custom emojis, and escaping user-supplied Markdown characters in Strafe Chat messages.
 
 ## Installation
 
@@ -11,7 +11,7 @@ description: String formatting utilities for user/role/room mentions, custom emo
 npm install @strafe-js/formatters @strafe-js/util
 ```
 
-## Quick Example
+## Example Usage
 
 ```ts title="src/formatters.ts"
 import {
@@ -24,7 +24,7 @@ import {
 
 const msg = [
   `Welcome ${userMention('123456789012345678')}!`,
-  `Check out ${roomMention('234567890123456789')} and ping ${roleMention('345678901234567890')}.`,
+  `Read ${roomMention('234567890123456789')} and ping ${roleMention('345678901234567890')}.`,
   `Reaction: ${customEmoji('party', '456789012345678901', true)}`,
   `Escaped nickname: ${escapeMarkdown('**Admin_User**')}`,
 ].join('\n');
@@ -69,17 +69,17 @@ const msg = [
 />
 
 <MethodCard
-  name="customEmoji"
-  signature="(name: string, id: Snowflake, animated?: boolean) => string"
+  name="customEmoji / customReactionEmoji"
+  signature="customEmoji(name: string, id: Snowflake, animated?: boolean) => string | customReactionEmoji(id: Snowflake) => string"
   returnType="string"
   isAsync={false}
-  description="Formats a static (<:name:id>) or animated (<a:name:id>) custom Strafe emoji tag."
+  description="Formats a static (<:name:id>) or animated (<a:name:id>) custom Strafe emoji tag, or a custom:<id> reaction identifier."
   parameters={[
     { name: 'name', type: 'string', required: true, description: 'Emoji name.' },
     { name: 'id', type: 'Snowflake', required: true, description: 'Emoji Snowflake ID.' },
     { name: 'animated', type: 'boolean', required: false, default: 'false', description: 'Whether the emoji is animated.' },
   ]}
-  example={`customEmoji('wave', '456789012345678901');       // "<:wave:456789012345678901>"\ncustomEmoji('party', '456789012345678901', true); // "<a:party:456789012345678901>"`}
+  example={`customEmoji('wave', '456789012345678901');       // "<:wave:456789012345678901>"\ncustomEmoji('party', '456789012345678901', true); // "<a:party:456789012345678901>"\ncustomReactionEmoji('456789012345678901');         // "custom:456789012345678901"`}
 />
 
 <MethodCard
@@ -87,7 +87,7 @@ const msg = [
   signature="(text: string) => string"
   returnType="string"
   isAsync={false}
-  description="Escapes special Markdown formatting characters (*, _, `, ~, |, \\) to prevent unintended formatting."
+  description="Escapes Markdown formatting characters (*, _, `, ~, |, \\) to prevent unintended formatting."
   parameters={[
     { name: 'text', type: 'string', required: true, description: 'Raw input string to escape.' },
   ]}

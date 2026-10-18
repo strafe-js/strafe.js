@@ -37,7 +37,6 @@ test('Command Registration & Conflict Detection', () => {
     }),
   );
 
-  // Duplicate name check
   assert.throws(() => {
     client.commands.register(
       command({
@@ -47,7 +46,6 @@ test('Command Registration & Conflict Detection', () => {
     );
   }, /Duplicate command name/);
 
-  // Alias collision with existing command name check
   assert.throws(() => {
     client.commands.register(
       command({
@@ -93,10 +91,8 @@ test('Command Framework - Positional & Typed Arguments Parsing', async () => {
     }),
   );
 
-  // Mock REST message reply to avoid network error
   client.rest.createMessage = async () => ({} as Message);
 
-  // Emit message
   const msg: Message = {
     id: 'msg_1',
     room_id: 'room_1',
@@ -155,7 +151,6 @@ test('Command Framework - Bot Permissions & User Permissions Check', async () =>
 
   client.commands.attach();
 
-  // User doesn't have KickMembers permission
   const msg: Message = {
     id: 'msg_1',
     room_id: 'room_1',

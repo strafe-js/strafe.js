@@ -17,7 +17,7 @@
 
 ## Overview
 
-`@strafe-js/formatters` provides lightweight string formatting utilities for constructing user, role, and room mentions, rendering static or animated custom emojis, and safely escaping user-supplied Markdown text.
+`@strafe-js/formatters` provides string formatting functions for user, role, and room mentions, static or animated custom emojis, and Markdown escaping.
 
 ---
 
@@ -37,25 +37,16 @@ import {
   roleMention,
   roomMention,
   customEmoji,
+  customReactionEmoji,
   escapeMarkdown,
 } from '@strafe-js/formatters';
 
-// 1. User Mention: "<@123456789012345678>"
-const user = userMention('123456789012345678');
-
-// 2. Role Mention: "<@&234567890123456789>"
-const role = roleMention('234567890123456789');
-
-// 3. Room Mention: "<#345678901234567890>"
-const room = roomMention('345678901234567890');
-
-// 4. Static Custom Emoji: "<:strafe:456789012345678901>"
-const staticIcon = customEmoji('strafe', '456789012345678901');
-
-// 5. Animated Custom Emoji: "<a:party:456789012345678901>"
-const animIcon = customEmoji('party', '456789012345678901', true);
-
-// 6. Escape Markdown characters (* _ ` ~ | \)
+const user = userMention('123456789012345678'); // "<@123456789012345678>"
+const role = roleMention('234567890123456789'); // "<@&234567890123456789>"
+const room = roomMention('345678901234567890'); // "<#345678901234567890>"
+const staticIcon = customEmoji('strafe', '456789012345678901'); // "<:strafe:456789012345678901>"
+const animIcon = customEmoji('party', '456789012345678901', true); // "<a:party:456789012345678901>"
+const reactionId = customReactionEmoji('456789012345678901'); // "custom:456789012345678901"
 const safeName = escapeMarkdown('**Admin_User**'); // "\\*\\*Admin\\_User\\*\\*"
 ```
 
@@ -65,7 +56,11 @@ const safeName = escapeMarkdown('**Admin_User**'); // "\\*\\*Admin\\_User\\*\\*"
 | `roleMention` | `(id: Snowflake) => string` | `<@&${id}>` |
 | `roomMention` | `(id: Snowflake) => string` | `<#${id}>` |
 | `customEmoji` | `(name: string, id: Snowflake, animated?: boolean) => string` | `<:${name}:${id}>` or `<a:${name}:${id}>` |
+| `customReactionEmoji` | `(id: Snowflake) => string` | `custom:${id}` |
 | `escapeMarkdown` | `(text: string) => string` | Escapes `\*`, `\_`, `` \` ``, `\~`, `\|`, `\\` |
+| `bold` / `italic` / `underline` / `strikethrough` / `spoiler` | `(text: string) => string` | `**text**`, `*text*`, `__text__`, `~~text~~`, `\|\|text\|\|` |
+| `inlineCode` / `codeBlock` | `(code: string, language?: string) => string` | `` `code` `` or fenced code block |
+| `quote` / `blockQuote` / `hyperlink` | `(text: string) => string` / `(label, url) => string` | `> text`, `>>> text`, `[label](url)` |
 
 ## License
 
