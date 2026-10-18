@@ -85,11 +85,43 @@ export function CommandBuilder() {
         .join(',\n')}\n  },\n`
     : '';
 
+  const buildActionLines = () => {
+    const firstArg = args[0]?.name;
+    const secondArg = args[1]?.name;
+    const lowerName = name.trim().toLowerCase();
+
+    if (
+      (lowerName === 'ban' || permissions.includes('BanMembers')) &&
+      firstArg
+    ) {
+      const reasonExpr = secondArg ? `, ${secondArg}` : '';
+      return [
+        `    await ctx.client.rest.banMember(ctx.spaceId!, String(${firstArg})${reasonExpr});`,
+        `    await ctx.reply(\`Banned <@\${${firstArg}}>\`);`,
+      ].join('\n');
+    }
+
+    if (
+      (lowerName === 'kick' || permissions.includes('KickMembers')) &&
+      firstArg
+    ) {
+      return [
+        `    await ctx.client.rest.kickMember(ctx.spaceId!, String(${firstArg}));`,
+        `    await ctx.reply(\`Kicked <@\${${firstArg}}>\`);`,
+      ].join('\n');
+    }
+
+    if (firstArg) {
+      return `    await ctx.reply(\`Executed ${name} on \${${firstArg}}\`);`;
+    }
+    return `    await ctx.reply('Executed ${name}');`;
+  };
+
   const runBodyString = args.length
     ? args.map((a) => `    const ${a.name} = ctx.arguments.get('${a.name}');`).join('\n') +
       '\n\n' +
-      `    await ctx.reply(\`Executed ${name} on \${${args[0]?.name || "'target'"}}\`);`
-    : `    await ctx.reply('Executed ${name}');`;
+      buildActionLines()
+    : buildActionLines();
 
   const codeSnippet = `import { command } from '@strafe-js/strafebot';
 
