@@ -250,7 +250,7 @@ export function CodeWindow({
 
   return (
     <div
-      className={`rounded-xl border border-[#2a2f39] bg-[#0b0d11] shadow-xl overflow-hidden transition-colors hover:border-[#509b6b]/50 ${className}`}
+      className={`rounded-xl border border-[#2a2f39] bg-[#0b0d11] shadow-[0_14px_34px_-8px_rgba(0,0,0,0.65),0_0_0_1px_rgba(80,155,107,0.06)_inset] overflow-hidden transition-all duration-200 hover:border-[#509b6b]/55 hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.75),0_0_24px_-6px_rgba(80,155,107,0.22)] ${className}`}
     >
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#12161d] border-b border-[#252a34] select-none">
         <div className="flex items-center gap-3 min-w-0">

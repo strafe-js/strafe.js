@@ -113,17 +113,16 @@ const PACKAGES = [
 export default function HomePage() {
   return (
     <div className="flex-1 flex flex-col justify-between bg-[#101216] text-[#e6e8ec] min-h-screen">
-      {/* Topbar matching https://app.strafe.chat/docs/ */}
-      <header className="sticky top-0 z-40 h-14 backdrop-blur-md bg-[#101216]/85 border-b border-[#2a2f39]">
+      <header className="strafe-header h-15">
         <div className="max-w-[1380px] mx-auto px-5 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
-            <Link href="/" className="strafe-brand inline-flex items-center gap-2">
+            <Link href="/" className="strafe-brand inline-flex items-center gap-2.5">
               <img
                 src="https://app.strafe.chat/icons/icon-192.png"
                 alt="Strafe"
                 width={24}
                 height={24}
-                className="w-6 h-6 rounded-md"
+                className="strafe-brand-icon w-6 h-6 rounded-md"
               />
               <span>
                 <span className="strafe-brand-mark">Strafe</span>
@@ -132,49 +131,34 @@ export default function HomePage() {
               </span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-1 text-[13px] font-medium text-[#b4bac6]">
-              <Link
-                href="/docs"
-                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
-              >
+            <nav className="hidden md:flex items-center gap-1">
+              <Link href="/docs" className="strafe-nav-pill">
                 Overview
               </Link>
-              <Link
-                href="/docs/strafebot/client"
-                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
-              >
+              <Link href="/docs/strafebot/client" className="strafe-nav-pill">
                 Client & Bots
               </Link>
-              <Link
-                href="/docs/ws/overview"
-                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
-              >
+              <Link href="/docs/ws/overview" className="strafe-nav-pill">
                 Gateway
               </Link>
-              <Link
-                href="/docs/rest/overview"
-                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
-              >
+              <Link href="/docs/rest/overview" className="strafe-nav-pill">
                 REST API
               </Link>
-              <Link
-                href="/docs/tools/permission-calculator"
-                className="px-2.5 py-1.5 rounded-md hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors"
-              >
+              <Link href="/docs/tools/permission-calculator" className="strafe-nav-pill">
                 Permissions
               </Link>
             </nav>
           </div>
 
           <div className="flex items-center gap-2.5 text-xs">
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] bg-[#509b6b]/15 text-[#6ab585] border border-[#509b6b]/30">
+            <span className="hidden sm:inline-flex strafe-version-pill">
               v1.2.0
             </span>
             <a
               href="https://app.strafe.chat/docs/"
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[#b4bac6] hover:text-[#e6e8ec] hover:bg-[#1e222a] transition-colors font-medium"
+              className="hidden sm:inline-flex items-center gap-1 strafe-nav-pill"
             >
               <span>Strafe API Docs</span>
               <ExternalLink className="w-3 h-3" />
@@ -183,7 +167,7 @@ export default function HomePage() {
               href="https://github.com/strafe-js/strafe.js"
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-1.5 rounded-md bg-[#171a20] hover:bg-[#1e222a] text-[#e6e8ec] border border-[#2a2f39] transition-colors font-semibold"
+              className="strafe-header-btn"
             >
               GitHub
             </a>
@@ -217,7 +201,7 @@ export default function HomePage() {
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Link
               href="/docs"
-              className="px-4 py-2 rounded-lg bg-[#509b6b] hover:bg-[#45875d] text-[#e6e8ec] font-semibold text-xs sm:text-sm transition-colors inline-flex items-center gap-1.5"
+              className="strafe-btn-primary text-xs sm:text-sm"
             >
               <BookOpen className="w-4 h-4" />
               <span>Browse Documentation</span>
@@ -225,20 +209,19 @@ export default function HomePage() {
             </Link>
             <Link
               href="/docs/guides/getting-started"
-              className="px-4 py-2 rounded-lg bg-[#171a20] hover:bg-[#1e222a] text-[#e6e8ec] border border-[#2a2f39] hover:border-[#363c48] font-semibold text-xs sm:text-sm transition-colors inline-flex items-center gap-1.5"
+              className="strafe-btn-secondary text-xs sm:text-sm"
             >
               <Layers className="w-4 h-4 text-[#509b6b]" />
               <span>Quickstart Guide</span>
             </Link>
-            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0b0d11] border border-[#2a2f39] font-mono text-xs text-[#b4bac6]">
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0b0d11] border border-[#2a2f39] shadow-inner font-mono text-xs text-[#b4bac6]">
               <Terminal className="w-3.5 h-3.5 text-[#509b6b]" />
               <span>npm create strafebot@latest my-bot</span>
             </div>
           </div>
         </div>
 
-        {/* Documentation Sections Card Grid */}
-        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+        <h2 className="strafe-section-heading">
           Documentation Sections
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-10">
@@ -257,8 +240,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Quick Example */}
-        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+        <h2 className="strafe-section-heading">
           Quick Example
         </h2>
         <div className="mb-10">
@@ -301,8 +283,7 @@ await client.login(process.env.BOT_TOKEN!);`}
           />
         </div>
 
-        {/* Monorepo Packages Table / Cards */}
-        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+        <h2 className="strafe-section-heading">
           Monorepo Packages (v1.2.0)
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-10">
@@ -320,8 +301,7 @@ await client.login(process.env.BOT_TOKEN!);`}
           ))}
         </div>
 
-        {/* Interactive Developer Tools */}
-        <h2 className="text-xl font-bold tracking-[-0.015em] text-[#e6e8ec] pb-2 border-b border-[#2a2f39] mb-4">
+        <h2 className="strafe-section-heading">
           Interactive Developer Tools
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">

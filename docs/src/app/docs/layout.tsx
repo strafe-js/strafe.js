@@ -18,7 +18,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               alt="Strafe"
               width={22}
               height={22}
-              className="w-[22px] h-[22px] rounded-md"
+              className="strafe-brand-icon w-[22px] h-[22px] rounded-md"
             />
             <span>
               <span className="strafe-brand-mark">Strafe</span>
