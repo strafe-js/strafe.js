@@ -118,6 +118,28 @@ Instantiate with `message()` or `new MessageBuilder()`.
   example={`const payload = message().setContent('Ready').toJSON();`}
 />
 
+<MethodCard
+  name="builder.appendContent / addUserMention / addRoleMention / addAttachment"
+  signature="(...) => this"
+  returnType="MessageBuilder"
+  isAsync={false}
+  description="Incrementally appends text content, user mentions, role mentions, or attachment IDs without overwriting existing arrays."
+  example={`const payload = message()\n  .setContent('Header')\n  .appendContent('Body line', '\\n')\n  .addUserMention('123456789012345678')\n  .toJSON();`}
+/>
+
+## `PermissionOverwriteBuilder` Reference
+
+Instantiate with `permissionOverwrite()` or `new PermissionOverwriteBuilder()` to construct room-level `PermissionOverride` entries.
+
+<MethodCard
+  name="permissionOverwrite"
+  signature="() => PermissionOverwriteBuilder"
+  returnType="PermissionOverwriteBuilder"
+  isAsync={false}
+  description="Builds a room permission override for a role (setRole) or member (setUser), automatically clearing conflicting bits between allow() and deny()."
+  example={`const ov = permissionOverwrite()\n  .setRole('234567890123456789')\n  .allow('ViewRoom', 'ReadMessageHistory')\n  .deny('SendMessages')\n  .toJSON();`}
+/>
+
 ## Permission Mask Functions
 
 <MethodCard

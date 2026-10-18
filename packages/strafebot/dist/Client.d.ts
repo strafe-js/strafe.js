@@ -32,6 +32,41 @@ export interface ClientOptions {
     commands?: Partial<CommandHandlerOptions>;
 }
 /**
+ * Options for collecting incoming messages in a room via {@link Client.awaitMessages} or {@link Context.awaitMessages}.
+ */
+export interface AwaitMessagesOptions {
+    /** Optional predicate to filter incoming messages in the target room. */
+    filter?: (message: Message) => boolean | Promise<boolean>;
+    /** Maximum number of matching messages to collect before resolving early. Defaults to `1`. */
+    max?: number;
+    /** Maximum wait duration in milliseconds before resolving with collected messages. Defaults to `30000`. */
+    timeoutMs?: number;
+}
+/**
+ * Payload received when a user adds a reaction to a message (`MESSAGE_REACTION_ADD`).
+ */
+export interface ReactionEventPayload {
+    /** Room Snowflake ID where the reaction occurred. */
+    room_id: Snowflake;
+    /** Target Message Snowflake ID. */
+    message_id: Snowflake;
+    /** User Snowflake ID who added the reaction. */
+    user_id: Snowflake;
+    /** Unicode emoji or `custom:<id>` identifier. */
+    emoji: string;
+}
+/**
+ * Options for collecting incoming reactions on a message via {@link Client.awaitReactions} or {@link Context.awaitReactions}.
+ */
+export interface AwaitReactionsOptions {
+    /** Optional predicate to filter incoming reactions on the target message. */
+    filter?: (reaction: ReactionEventPayload) => boolean | Promise<boolean>;
+    /** Maximum number of matching reactions to collect before resolving early. Defaults to `1`. */
+    max?: number;
+    /** Maximum wait duration in milliseconds before resolving with collected reactions. Defaults to `30000`. */
+    timeoutMs?: number;
+}
+/**
  * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents}, {@link CommandEvents},
  * and E2EE room notifications.
  */
@@ -140,6 +175,35 @@ export declare class Client extends EventEmitter {
      * Bots cannot read or post plaintext messages in encrypted rooms.
      */
     isRoomEncrypted(roomId: Snowflake): boolean;
+    /**
+     * Collects incoming `messageCreate` events in `roomId` that satisfy `opts.filter` up to `opts.max` messages
+     * or until `opts.timeoutMs` elapses.
+     *
+     * @example
+     * ```ts
+     * const collected = await client.awaitMessages(roomId, {
+     *   filter: (m) => m.sender_id === userId,
+     *   max: 1,
+     *   timeoutMs: 15_000,
+     * });
+     * const reply = collected.first();
+     * ```
+     */
+    awaitMessages(roomId: Snowflake, opts?: AwaitMessagesOptions): Promise<Collection<Snowflake, Message>>;
+    /**
+     * Collects incoming `messageReactionAdd` events on `messageId` in `roomId` that satisfy `opts.filter`
+     * up to `opts.max` reactions or until `opts.timeoutMs` elapses.
+     *
+     * @example
+     * ```ts
+     * const reactions = await client.awaitReactions(roomId, promptMsg.id, {
+     *   filter: (r) => r.user_id === authorId && (r.emoji === '👍' || r.emoji === '👎'),
+     *   max: 1,
+     *   timeoutMs: 15_000,
+     * });
+     * ```
+     */
+    awaitReactions(roomId: Snowflake, messageId: Snowflake, opts?: AwaitReactionsOptions): Promise<ReactionEventPayload[]>;
     /**
      * Generates an OAuth2 bot installation link (`/oauth2/authorize?scope=bot...`) for this bot.
      * Defaults `clientId` to `client.user.id` and `baseUrl` to `ClientOptions.apiBase`.

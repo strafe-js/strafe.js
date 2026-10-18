@@ -146,6 +146,19 @@ import { RoomType, GatewayOp } from '@strafe-js/util';
 />
 
 <MethodCard
+  name="deconstructSnowflake / snowflakeTimestamp"
+  signature="(id: Snowflake, epoch?: bigint) => DeconstructedSnowflake | number"
+  returnType="DeconstructedSnowflake | number"
+  isAsync={false}
+  description="Extracts the UNIX millisecond creation timestamp, Date object, workerId, processId, and increment counter from a 64-bit Snowflake ID."
+  parameters={[
+    { name: 'id', type: 'Snowflake', required: true, description: '64-bit Snowflake ID string.' },
+    { name: 'epoch', type: 'bigint', required: false, default: 'STRAFE_EPOCH', description: 'Custom epoch in UNIX milliseconds.' },
+  ]}
+  example={`const info = deconstructSnowflake('2104652899186380800');\nconsole.log(info.date.toISOString());`}
+/>
+
+<MethodCard
   name="isEncryptedRoom / isEncryptedMessage / isSystemMessage"
   signature="(roomOrMsg) => boolean"
   returnType="boolean"

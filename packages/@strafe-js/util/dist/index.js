@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sleep = exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.ALL_ROOM_PERMISSIONS = exports.DEFAULT_EVERYONE_PERMISSIONS = exports.READ_AND_POST_PERMISSIONS = exports.Permission = void 0;
+exports.sleep = exports.STRAFE_EPOCH = exports.BitField = exports.RateLimitError = exports.StrafeError = exports.GatewayOp = exports.RoomType = exports.ALL_PERMISSIONS = exports.ALL_ROOM_PERMISSIONS = exports.DEFAULT_EVERYONE_PERMISSIONS = exports.READ_AND_POST_PERMISSIONS = exports.Permission = void 0;
 exports.resolvePermission = resolvePermission;
 exports.isSnowflake = isSnowflake;
+exports.deconstructSnowflake = deconstructSnowflake;
+exports.snowflakeTimestamp = snowflakeTimestamp;
 exports.isEncryptedRoom = isEncryptedRoom;
 exports.isEncryptedMessage = isEncryptedMessage;
 exports.isSystemMessage = isSystemMessage;
@@ -411,6 +413,48 @@ function resolvePermission(input) {
  */
 function isSnowflake(id) {
     return typeof id === 'string' && /^\d{16,20}$/.test(id);
+}
+/**
+ * Default epoch in milliseconds UNIX (`2024-01-01T00:00:00.000Z`) used to decode Snowflake timestamps.
+ */
+exports.STRAFE_EPOCH = 1704067200000n;
+/**
+ * Extracts the UNIX millisecond timestamp, `Date`, worker ID, process ID, and sequence increment
+ * from a 64-bit {@link Snowflake} string.
+ *
+ * @throws {Error} When `id` is not a numeric string.
+ * @example
+ * ```ts
+ * const info = deconstructSnowflake('2104652899186380800');
+ * console.log(info.date.toISOString());
+ * ```
+ */
+function deconstructSnowflake(id, epoch = exports.STRAFE_EPOCH) {
+    if (typeof id !== 'string' || !/^\d+$/.test(id)) {
+        throw new Error(`Invalid Snowflake ID: ${String(id)}`);
+    }
+    const big = BigInt(id);
+    const timestamp = Number((big >> 22n) + epoch);
+    return {
+        id,
+        timestamp,
+        date: new Date(timestamp),
+        workerId: Number((big >> 17n) & 0x1fn),
+        processId: Number((big >> 12n) & 0x1fn),
+        increment: Number(big & 0xfffn),
+    };
+}
+/**
+ * Computes the creation timestamp in UNIX milliseconds from a 64-bit {@link Snowflake} string.
+ *
+ * @throws {Error} When `id` is not a numeric string.
+ * @example
+ * ```ts
+ * const createdAtMs = snowflakeTimestamp('2104652899186380800');
+ * ```
+ */
+function snowflakeTimestamp(id, epoch = exports.STRAFE_EPOCH) {
+    return deconstructSnowflake(id, epoch).timestamp;
 }
 /**
  * Resolves after `ms` milliseconds using `setTimeout`.

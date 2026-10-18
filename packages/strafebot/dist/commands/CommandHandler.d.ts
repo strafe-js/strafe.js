@@ -9,6 +9,8 @@ import { ArgumentValidationError } from './CommandArgument.js';
 export interface CommandHandlerOptions {
     /** Single prefix string or array of prefixes matched at the start of incoming messages. Defaults to `'!'`. */
     prefix?: string | string[];
+    /** Whether mentioning the bot (`<@botId> cmd`) is accepted as an alternative command prefix. Defaults to `true`. */
+    mentionPrefix?: boolean;
     /** Bot owner user Snowflake IDs allowed to invoke `botOwnerOnly` / `ownerOnly` commands. */
     owners?: Snowflake[];
     /** Whether to ignore messages where `msg.bot === true`. Defaults to `true`. */
@@ -17,6 +19,12 @@ export interface CommandHandlerOptions {
     ignoreSelf?: boolean;
 }
 /**
+ * Middleware callback registered via {@link CommandHandler.use}.
+ * Either call `await next()` to proceed to the next middleware/command, or return `false` from a single-argument
+ * function to cancel command execution.
+ */
+export type CommandMiddleware = (ctx: Context<any>, next: () => Promise<void>) => void | boolean | Promise<void | boolean>;
+/**
  * Command lifecycle events emitted on {@link Client}.
  */
 export interface CommandEvents {
@@ -24,6 +32,8 @@ export interface CommandEvents {
     commandError: (err: unknown, ctx: Context<any>) => void;
     /** Emitted when a command invocation fails `arguments` schema validation with an {@link ArgumentValidationError}. */
     commandArgumentError: (err: ArgumentValidationError, msg: Message, command: Command<any>) => void;
+    /** Emitted when a user invokes a command while their per-user cooldown is still active. */
+    commandCooldown: (remainingMs: number, msg: Message, command: Command<any>) => void;
 }
 /**
  * Registry and dispatcher for prefix commands on a {@link Client}.
@@ -43,15 +53,32 @@ export declare class CommandHandler {
     readonly owners: Set<Snowflake>;
     /** Active command prefixes sorted from longest to shortest so multi-character prefixes match before shorter prefixes. */
     prefixes: string[];
+    /** Whether bot mention prefixes (`<@botId>`) are enabled. */
+    mentionPrefix: boolean;
     /** Whether messages from bot accounts (`msg.bot === true`) are ignored. */
     ignoreBots: boolean;
     /** Whether messages from `client.user.id` are ignored. */
     ignoreSelf: boolean;
+    /** Registered middleware pipeline executed in registration order before `command.run(ctx)`. */
+    readonly middlewares: CommandMiddleware[];
     private _bound;
     /**
      * Creates a new {@link CommandHandler} bound to `client`.
      */
     constructor(client: Client, opts?: CommandHandlerOptions);
+    /**
+     * Appends a middleware function to the execution pipeline.
+     * Middleware runs after guards and argument validation, right before `command.run(ctx)`.
+     *
+     * @example
+     * ```ts
+     * client.commands.use(async (ctx, next) => {
+     *   console.log(`[CMD] ${ctx.commandName} by ${ctx.authorId}`);
+     *   await next();
+     * });
+     * ```
+     */
+    use(fn: CommandMiddleware): this;
     /**
      * Replaces the active prefix list and re-sorts prefixes from longest to shortest.
      */
@@ -82,4 +109,39 @@ export declare class CommandHandler {
     private _onMessage;
     private _safeReply;
 }
+/**
+ * Configuration options for {@link createHelpCommand}.
+ */
+export interface HelpCommandOptions {
+    /** Primary trigger name of the help command. Defaults to `'help'`. */
+    name?: string;
+    /** Alternative trigger names. Defaults to `['commands', 'h']`. */
+    aliases?: string[];
+    /** Description shown in help output. Defaults to `'Displays available commands or detailed info for a specific command'`. */
+    description?: string;
+    /** Category assigned to the help command. Defaults to `'utility'`. */
+    category?: string;
+    /** Optional header line prepended to the full command listing. */
+    title?: string;
+    /** When `true`, includes commands marked with `hidden: true` in the general listing. Defaults to `false`. */
+    includeHidden?: boolean;
+}
+/**
+ * Creates a ready-to-register {@link Command} that lists all registered commands grouped by `category`
+ * or inspects a single command's aliases, usage signature, required permissions, cooldown, and argument schema.
+ *
+ * @example
+ * ```ts
+ * import { Client, createHelpCommand } from '@strafe-js/strafebot';
+ *
+ * client.commands.register(createHelpCommand({ title: '**MyBot Commands**' }));
+ * ```
+ */
+export declare function createHelpCommand(opts?: HelpCommandOptions): Command<{
+    command: {
+        type: "string";
+        required: false;
+        description: string;
+    };
+}>;
 //# sourceMappingURL=CommandHandler.d.ts.map

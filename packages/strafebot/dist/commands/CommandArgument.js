@@ -145,16 +145,52 @@ function parseAndValidateArguments(schema, tokens, attachments = []) {
             result[name] = opt.default ?? undefined;
             continue;
         }
-        tokenIndex++;
+        if (opt.type === 'string' && opt.rest) {
+            rawToken = tokens.slice(tokenIndex).join(' ');
+            tokenIndex = tokens.length;
+        }
+        else {
+            tokenIndex++;
+        }
         let parsedVal;
         switch (opt.type) {
             case 'string': {
                 parsedVal = rawToken;
                 break;
             }
-            case 'user':
-            case 'snowflake': {
+            case 'user': {
                 const match = /^<@!?(\d{16,20})>$/.exec(rawToken);
+                parsedVal = match ? match[1] : rawToken;
+                break;
+            }
+            case 'room': {
+                const match = /^<#(\d{16,20})>$/.exec(rawToken);
+                if (match) {
+                    parsedVal = match[1];
+                }
+                else if (/^\d{16,20}$/.test(rawToken)) {
+                    parsedVal = rawToken;
+                }
+                else {
+                    throw new ArgumentValidationError(name, 'INVALID_TYPE', `Argument "${name}" must be a room mention (<#id>) or Snowflake ID`, 'room', rawToken);
+                }
+                break;
+            }
+            case 'role': {
+                const match = /^<@&(\d{16,20})>$/.exec(rawToken);
+                if (match) {
+                    parsedVal = match[1];
+                }
+                else if (/^\d{16,20}$/.test(rawToken)) {
+                    parsedVal = rawToken;
+                }
+                else {
+                    throw new ArgumentValidationError(name, 'INVALID_TYPE', `Argument "${name}" must be a role mention (<@&id>) or Snowflake ID`, 'role', rawToken);
+                }
+                break;
+            }
+            case 'snowflake': {
+                const match = /^<(?:@!?|@&|#)(\d{16,20})>$/.exec(rawToken);
                 parsedVal = match ? match[1] : rawToken;
                 break;
             }
@@ -201,6 +237,14 @@ function parseAndValidateArguments(schema, tokens, attachments = []) {
             }
             if (opt.max !== undefined && parsedVal > opt.max) {
                 throw new ArgumentValidationError(name, 'OUT_OF_RANGE', `Argument "${name}" must be at most ${opt.max}`, `<= ${opt.max}`, parsedVal);
+            }
+        }
+        if (typeof parsedVal === 'string') {
+            if (opt.minLength !== undefined && parsedVal.length < opt.minLength) {
+                throw new ArgumentValidationError(name, 'OUT_OF_RANGE', `Argument "${name}" must be at least ${opt.minLength} characters long`, `length >= ${opt.minLength}`, parsedVal);
+            }
+            if (opt.maxLength !== undefined && parsedVal.length > opt.maxLength) {
+                throw new ArgumentValidationError(name, 'OUT_OF_RANGE', `Argument "${name}" must be at most ${opt.maxLength} characters long`, `length <= ${opt.maxLength}`, parsedVal);
             }
         }
         result[name] = parsedVal;

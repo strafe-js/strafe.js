@@ -335,6 +335,49 @@ export declare function resolvePermission(input: PermissionResolvable): number;
  */
 export declare function isSnowflake(id: unknown): id is Snowflake;
 /**
+ * Default epoch in milliseconds UNIX (`2024-01-01T00:00:00.000Z`) used to decode Snowflake timestamps.
+ */
+export declare const STRAFE_EPOCH = 1704067200000n;
+/**
+ * Decoded components extracted from a 64-bit {@link Snowflake} ID.
+ */
+export interface DeconstructedSnowflake {
+    /** Original Snowflake string. */
+    id: Snowflake;
+    /** Creation timestamp in UNIX milliseconds (`Number((BigInt(id) >> 22n) + epoch)`). */
+    timestamp: number;
+    /** `Date` instance constructed from `timestamp`. */
+    date: Date;
+    /** 5-bit internal worker ID (`Number((BigInt(id) >> 17n) & 0x1fn)`). */
+    workerId: number;
+    /** 5-bit internal process ID (`Number((BigInt(id) >> 12n) & 0x1fn)`). */
+    processId: number;
+    /** 12-bit per-millisecond sequence counter (`Number(BigInt(id) & 0xfffn)`). */
+    increment: number;
+}
+/**
+ * Extracts the UNIX millisecond timestamp, `Date`, worker ID, process ID, and sequence increment
+ * from a 64-bit {@link Snowflake} string.
+ *
+ * @throws {Error} When `id` is not a numeric string.
+ * @example
+ * ```ts
+ * const info = deconstructSnowflake('2104652899186380800');
+ * console.log(info.date.toISOString());
+ * ```
+ */
+export declare function deconstructSnowflake(id: Snowflake, epoch?: bigint): DeconstructedSnowflake;
+/**
+ * Computes the creation timestamp in UNIX milliseconds from a 64-bit {@link Snowflake} string.
+ *
+ * @throws {Error} When `id` is not a numeric string.
+ * @example
+ * ```ts
+ * const createdAtMs = snowflakeTimestamp('2104652899186380800');
+ * ```
+ */
+export declare function snowflakeTimestamp(id: Snowflake, epoch?: bigint): number;
+/**
  * Resolves after `ms` milliseconds using `setTimeout`.
  *
  * @example

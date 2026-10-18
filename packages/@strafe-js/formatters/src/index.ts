@@ -67,3 +67,105 @@ export const customReactionEmoji = (id: Snowflake): string => `custom:${id}`;
  */
 export const escapeMarkdown = (text: string): string =>
   text.replace(/([*_`~|\\])/g, '\\$1');
+
+/**
+ * Wraps `text` in bold Markdown syntax (`**text**`).
+ *
+ * @example
+ * ```ts
+ * bold('Warning'); // "**Warning**"
+ * ```
+ */
+export const bold = (text: string): string => `**${text}**`;
+
+/**
+ * Wraps `text` in italic Markdown syntax (`*text*`).
+ *
+ * @example
+ * ```ts
+ * italic('note'); // "*note*"
+ * ```
+ */
+export const italic = (text: string): string => `*${text}*`;
+
+/**
+ * Wraps `text` in underline Markdown syntax (`__text__`).
+ *
+ * @example
+ * ```ts
+ * underline('important'); // "__important__"
+ * ```
+ */
+export const underline = (text: string): string => `__${text}__`;
+
+/**
+ * Wraps `text` in strikethrough Markdown syntax (`~~text~~`).
+ *
+ * @example
+ * ```ts
+ * strikethrough('deprecated'); // "~~deprecated~~"
+ * ```
+ */
+export const strikethrough = (text: string): string => `~~${text}~~`;
+
+/**
+ * Wraps `text` in spoiler Markdown syntax (`||text||`).
+ *
+ * @example
+ * ```ts
+ * spoiler('secret code'); // "||secret code||"
+ * ```
+ */
+export const spoiler = (text: string): string => `||${text}||`;
+
+/**
+ * Wraps `text` in single backticks for inline code formatting (`` `text` ``).
+ *
+ * @example
+ * ```ts
+ * inlineCode('npm test'); // "`npm test`"
+ * ```
+ */
+export const inlineCode = (text: string): string => `\`${text}\``;
+
+/**
+ * Wraps `code` in a fenced multi-line Markdown code block (` ```language\ncode\n``` `).
+ *
+ * @example
+ * ```ts
+ * codeBlock('const x = 1;', 'ts'); // "```ts\nconst x = 1;\n```"
+ * ```
+ */
+export const codeBlock = (code: string, language = ''): string =>
+  `\`\`\`${language}\n${code}\n\`\`\``;
+
+/**
+ * Prefixes `text` with `> ` to format a single-line block quote.
+ *
+ * @example
+ * ```ts
+ * quote('Quoted line'); // "> Quoted line"
+ * ```
+ */
+export const quote = (text: string): string => `> ${text}`;
+
+/**
+ * Prefixes `text` with `>>> ` to format a multi-line block quote.
+ *
+ * @example
+ * ```ts
+ * blockQuote('Line 1\nLine 2'); // ">>> Line 1\nLine 2"
+ * ```
+ */
+export const blockQuote = (text: string): string => `>>> ${text}`;
+
+/**
+ * Formats a clickable Markdown link (`[label](url)`).
+ *
+ * @example
+ * ```ts
+ * hyperlink('Strafe Docs', 'https://app.strafe.chat/docs'); // "[Strafe Docs](https://app.strafe.chat/docs)"
+ * ```
+ */
+export const hyperlink = (label: string, url: string): string =>
+  `[${label}](${url})`;

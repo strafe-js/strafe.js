@@ -26,6 +26,10 @@ class Command {
     aliases;
     /** Human-readable command description. */
     description;
+    /** Logical category label used to group commands in help listings (`'general'` by default). */
+    category;
+    /** Whether the command is hidden from general help listings. */
+    hidden;
     /** Usage string displayed when `minArgs` validation fails. */
     usage;
     /** Required caller permission names. */
@@ -74,6 +78,8 @@ class Command {
         this.name = name;
         this.aliases = (opts.aliases ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean);
         this.description = opts.description ?? '';
+        this.category = (opts.category ?? 'general').trim() || 'general';
+        this.hidden = !!opts.hidden;
         this.usage = opts.usage ?? '';
         this.permissions = opts.permissions ?? [];
         this.permissionMask = opts.permissionMask ?? 0;
@@ -96,6 +102,25 @@ class Command {
      */
     get names() {
         return [this.name, ...this.aliases];
+    }
+    /**
+     * Human-readable argument signature generated from `this.usage` or `this.argumentsSchema`
+     * (for example `'<target:user> [reason...:string]'`).
+     */
+    get usageSignature() {
+        if (this.usage)
+            return this.usage;
+        if (!this.argumentsSchema)
+            return '';
+        return Object.entries(this.argumentsSchema)
+            .map(([argName, opt]) => {
+            const restMark = opt.rest ? '...' : '';
+            const typeLabel = opt.choices?.length ? opt.choices.join('|') : opt.type;
+            return opt.required
+                ? `<${argName}${restMark}:${typeLabel}>`
+                : `[${argName}${restMark}:${typeLabel}]`;
+        })
+            .join(' ');
     }
 }
 exports.Command = Command;

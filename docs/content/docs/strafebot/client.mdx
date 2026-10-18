@@ -190,3 +190,11 @@ The `Client` class from `@strafe-js/strafebot` orchestrates the REST client (`cl
   description="Cleanly closes the Gateway WebSocket connection and removes all event listeners."
   example={`client.destroy();`}
 />
+
+<MethodCard
+  name="client.awaitMessages / client.awaitReactions"
+  signature="(roomId: Snowflake, opts?: AwaitMessagesOptions) => Promise<Collection<Snowflake, Message>>"
+  returnType="Promise<Collection<Snowflake, Message>> / Promise<ReactionEventPayload[]>"
+  description="Collects incoming messages in a room or reactions on a specific message matching a filter predicate up to max items or until timeoutMs elapses."
+  example={`const collected = await client.awaitMessages(roomId, {\n  filter: (m) => m.sender_id === userId,\n  max: 1,\n  timeoutMs: 15_000,\n});`}
+/>

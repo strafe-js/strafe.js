@@ -11,7 +11,13 @@ import {
   type User,
   type SpaceMember,
 } from '@strafe-js/util';
-import type { Client } from '../Client.js';
+import type {
+  Client,
+  AwaitMessagesOptions,
+  AwaitReactionsOptions,
+  ReactionEventPayload,
+} from '../Client.js';
+import type { Collection } from '@strafe-js/collection';
 import type { Command } from './Command.js';
 import {
   ParsedArguments,
@@ -213,6 +219,51 @@ export class Context<Schema extends CommandArgumentsSchema = CommandArgumentsSch
   async react(emoji: string): Promise<null> {
     await this.client.rest.addReaction(this.roomId, this.message.id, emoji);
     return null;
+  }
+
+  /**
+   * Deletes the triggering message via `DELETE /rooms/:roomId/messages/:messageId`.
+   */
+  async deleteMessage(): Promise<null> {
+    await this.client.rest.deleteMessage(this.roomId, this.message.id);
+    return null;
+  }
+
+  /**
+   * Returns the caller's {@link SpaceMember} from cache or fetches it via `GET /spaces/:spaceId/members/:userId`.
+   * Returns `null` in Direct Messages or if the member is not found.
+   */
+  async fetchMember(): Promise<SpaceMember | null> {
+    if (!this.spaceId) return null;
+    return this.member ?? this.client.fetchMember(this.spaceId, this.authorId);
+  }
+
+  /**
+   * Collects subsequent messages in the current room via {@link Client.awaitMessages}.
+   *
+   * @example
+   * ```ts
+   * await ctx.reply('Type "confirm" within 10 seconds:');
+   * const replies = await ctx.awaitMessages({
+   *   filter: (m) => m.sender_id === ctx.authorId && m.plaintext === 'confirm',
+   *   max: 1,
+   *   timeoutMs: 10_000,
+   * });
+   * ```
+   */
+  awaitMessages(opts: AwaitMessagesOptions = {}): Promise<Collection<Snowflake, Message>> {
+    return this.client.awaitMessages(this.roomId, opts);
+  }
+
+  /**
+   * Collects reactions on `messageId` (defaults to the triggering message `this.message.id`) in the current room
+   * via {@link Client.awaitReactions}.
+   */
+  awaitReactions(
+    opts: AwaitReactionsOptions = {},
+    messageId: Snowflake = this.message.id,
+  ): Promise<ReactionEventPayload[]> {
+    return this.client.awaitReactions(this.roomId, messageId, opts);
   }
 
   /**

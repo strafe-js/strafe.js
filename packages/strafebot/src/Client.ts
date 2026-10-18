@@ -52,6 +52,44 @@ export interface ClientOptions {
 }
 
 /**
+ * Options for collecting incoming messages in a room via {@link Client.awaitMessages} or {@link Context.awaitMessages}.
+ */
+export interface AwaitMessagesOptions {
+  /** Optional predicate to filter incoming messages in the target room. */
+  filter?: (message: Message) => boolean | Promise<boolean>;
+  /** Maximum number of matching messages to collect before resolving early. Defaults to `1`. */
+  max?: number;
+  /** Maximum wait duration in milliseconds before resolving with collected messages. Defaults to `30000`. */
+  timeoutMs?: number;
+}
+
+/**
+ * Payload received when a user adds a reaction to a message (`MESSAGE_REACTION_ADD`).
+ */
+export interface ReactionEventPayload {
+  /** Room Snowflake ID where the reaction occurred. */
+  room_id: Snowflake;
+  /** Target Message Snowflake ID. */
+  message_id: Snowflake;
+  /** User Snowflake ID who added the reaction. */
+  user_id: Snowflake;
+  /** Unicode emoji or `custom:<id>` identifier. */
+  emoji: string;
+}
+
+/**
+ * Options for collecting incoming reactions on a message via {@link Client.awaitReactions} or {@link Context.awaitReactions}.
+ */
+export interface AwaitReactionsOptions {
+  /** Optional predicate to filter incoming reactions on the target message. */
+  filter?: (reaction: ReactionEventPayload) => boolean | Promise<boolean>;
+  /** Maximum number of matching reactions to collect before resolving early. Defaults to `1`. */
+  max?: number;
+  /** Maximum wait duration in milliseconds before resolving with collected reactions. Defaults to `30000`. */
+  timeoutMs?: number;
+}
+
+/**
  * Combined event map emitted by {@link Client}, merging real-time {@link GatewayEvents}, {@link CommandEvents},
  * and E2EE room notifications.
  */
@@ -249,6 +287,112 @@ export class Client extends EventEmitter {
    */
   isRoomEncrypted(roomId: Snowflake): boolean {
     return isEncryptedRoom(this.rooms.get(roomId));
+  }
+
+  /**
+   * Collects incoming `messageCreate` events in `roomId` that satisfy `opts.filter` up to `opts.max` messages
+   * or until `opts.timeoutMs` elapses.
+   *
+   * @example
+   * ```ts
+   * const collected = await client.awaitMessages(roomId, {
+   *   filter: (m) => m.sender_id === userId,
+   *   max: 1,
+   *   timeoutMs: 15_000,
+   * });
+   * const reply = collected.first();
+   * ```
+   */
+  awaitMessages(
+    roomId: Snowflake,
+    opts: AwaitMessagesOptions = {},
+  ): Promise<Collection<Snowflake, Message>> {
+    const max = opts.max ?? 1;
+    const timeoutMs = opts.timeoutMs ?? 30_000;
+    const collected = new Collection<Snowflake, Message>();
+
+    if (max <= 0) return Promise.resolve(collected);
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const cleanup = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.off('messageCreate', onMessage);
+        resolve(collected);
+      };
+
+      const onMessage = async (msg: Message) => {
+        if (settled || msg.room_id !== roomId) return;
+        try {
+          const matched = opts.filter ? await opts.filter(msg) : true;
+          if (!matched || settled) return;
+          collected.set(msg.id, msg);
+          if (collected.size >= max) {
+            cleanup();
+          }
+        } catch {
+          /* ignore filter errors */
+        }
+      };
+
+      const timer = setTimeout(cleanup, timeoutMs);
+      this.on('messageCreate', onMessage);
+    });
+  }
+
+  /**
+   * Collects incoming `messageReactionAdd` events on `messageId` in `roomId` that satisfy `opts.filter`
+   * up to `opts.max` reactions or until `opts.timeoutMs` elapses.
+   *
+   * @example
+   * ```ts
+   * const reactions = await client.awaitReactions(roomId, promptMsg.id, {
+   *   filter: (r) => r.user_id === authorId && (r.emoji === '👍' || r.emoji === '👎'),
+   *   max: 1,
+   *   timeoutMs: 15_000,
+   * });
+   * ```
+   */
+  awaitReactions(
+    roomId: Snowflake,
+    messageId: Snowflake,
+    opts: AwaitReactionsOptions = {},
+  ): Promise<ReactionEventPayload[]> {
+    const max = opts.max ?? 1;
+    const timeoutMs = opts.timeoutMs ?? 30_000;
+    const collected: ReactionEventPayload[] = [];
+
+    if (max <= 0) return Promise.resolve(collected);
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const cleanup = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.off('messageReactionAdd', onReaction);
+        resolve(collected);
+      };
+
+      const onReaction = async (data: ReactionEventPayload) => {
+        if (settled || data.room_id !== roomId || data.message_id !== messageId) return;
+        try {
+          const matched = opts.filter ? await opts.filter(data) : true;
+          if (!matched || settled) return;
+          collected.push(data);
+          if (collected.length >= max) {
+            cleanup();
+          }
+        } catch {
+          /* ignore filter errors */
+        }
+      };
+
+      const timer = setTimeout(cleanup, timeoutMs);
+      this.on('messageReactionAdd', onReaction);
+    });
   }
 
   /**

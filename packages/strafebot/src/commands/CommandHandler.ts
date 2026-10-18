@@ -12,6 +12,7 @@ import {
   ArgumentValidationError,
   parseAndValidateArguments,
   tokenizeArguments,
+  type CommandArgumentOption,
   type CommandArgumentsSchema,
 } from './CommandArgument.js';
 
@@ -21,6 +22,8 @@ import {
 export interface CommandHandlerOptions {
   /** Single prefix string or array of prefixes matched at the start of incoming messages. Defaults to `'!'`. */
   prefix?: string | string[];
+  /** Whether mentioning the bot (`<@botId> cmd`) is accepted as an alternative command prefix. Defaults to `true`. */
+  mentionPrefix?: boolean;
   /** Bot owner user Snowflake IDs allowed to invoke `botOwnerOnly` / `ownerOnly` commands. */
   owners?: Snowflake[];
   /** Whether to ignore messages where `msg.bot === true`. Defaults to `true`. */
@@ -28,6 +31,16 @@ export interface CommandHandlerOptions {
   /** Whether to ignore messages authored by `client.user.id`. Defaults to `true`. */
   ignoreSelf?: boolean;
 }
+
+/**
+ * Middleware callback registered via {@link CommandHandler.use}.
+ * Either call `await next()` to proceed to the next middleware/command, or return `false` from a single-argument
+ * function to cancel command execution.
+ */
+export type CommandMiddleware = (
+  ctx: Context<any>,
+  next: () => Promise<void>,
+) => void | boolean | Promise<void | boolean>;
 
 /**
  * Command lifecycle events emitted on {@link Client}.
@@ -38,6 +51,12 @@ export interface CommandEvents {
   /** Emitted when a command invocation fails `arguments` schema validation with an {@link ArgumentValidationError}. */
   commandArgumentError: (
     err: ArgumentValidationError,
+    msg: Message,
+    command: Command<any>,
+  ) => void;
+  /** Emitted when a user invokes a command while their per-user cooldown is still active. */
+  commandCooldown: (
+    remainingMs: number,
     msg: Message,
     command: Command<any>,
   ) => void;
@@ -62,10 +81,14 @@ export class CommandHandler {
 
   /** Active command prefixes sorted from longest to shortest so multi-character prefixes match before shorter prefixes. */
   prefixes: string[];
+  /** Whether bot mention prefixes (`<@botId>`) are enabled. */
+  mentionPrefix: boolean;
   /** Whether messages from bot accounts (`msg.bot === true`) are ignored. */
   ignoreBots: boolean;
   /** Whether messages from `client.user.id` are ignored. */
   ignoreSelf: boolean;
+  /** Registered middleware pipeline executed in registration order before `command.run(ctx)`. */
+  readonly middlewares: CommandMiddleware[] = [];
   private _bound = false;
 
   /**
@@ -76,9 +99,27 @@ export class CommandHandler {
     this.prefixes = (Array.isArray(opts.prefix) ? opts.prefix : [opts.prefix ?? '!'])
       .map((p) => p ?? '')
       .sort((a, b) => b.length - a.length);
+    this.mentionPrefix = opts.mentionPrefix !== false;
     this.owners = new Set(opts.owners ?? []);
     this.ignoreBots = opts.ignoreBots !== false;
     this.ignoreSelf = opts.ignoreSelf !== false;
+  }
+
+  /**
+   * Appends a middleware function to the execution pipeline.
+   * Middleware runs after guards and argument validation, right before `command.run(ctx)`.
+   *
+   * @example
+   * ```ts
+   * client.commands.use(async (ctx, next) => {
+   *   console.log(`[CMD] ${ctx.commandName} by ${ctx.authorId}`);
+   *   await next();
+   * });
+   * ```
+   */
+  use(fn: CommandMiddleware): this {
+    this.middlewares.push(fn);
+    return this;
   }
 
   /**
@@ -175,6 +216,13 @@ export class CommandHandler {
         break;
       }
     }
+    if (usedPrefix === null && this.mentionPrefix && this.client.user?.id) {
+      const botId = this.client.user.id;
+      const mentionMatch = new RegExp(`^<@!?${botId}>\\s*`).exec(content);
+      if (mentionMatch) {
+        usedPrefix = mentionMatch[0];
+      }
+    }
     if (usedPrefix === null) return;
 
     const without = content.slice(usedPrefix.length).trim();
@@ -261,7 +309,9 @@ export class CommandHandler {
       const until = this.cooldowns.get(key) ?? 0;
 
       if (now < until) {
-        const left = Math.ceil((until - now) / 1000);
+        const remainingMs = until - now;
+        const left = Math.ceil(remainingMs / 1000);
+        this.client.emit('commandCooldown', remainingMs, msg, command);
         await this._safeReply(msg, `Please wait ${left}s before reusing the \`${command.name}\` command.`);
         return;
       }
@@ -313,7 +363,22 @@ export class CommandHandler {
     });
 
     try {
-      await command.run(ctx);
+      const invokeChain = async (index: number): Promise<void> => {
+        if (index < this.middlewares.length) {
+          const mw = this.middlewares[index]!;
+          if (mw.length >= 2) {
+            await mw(ctx, () => invokeChain(index + 1));
+          } else {
+            const res = await (mw as (c: Context<any>) => boolean | void | Promise<boolean | void>)(ctx);
+            if (res !== false) {
+              await invokeChain(index + 1);
+            }
+          }
+          return;
+        }
+        await command.run(ctx);
+      };
+      await invokeChain(0);
     } catch (err) {
       if (command.onError) {
         try {
@@ -338,4 +403,129 @@ export class CommandHandler {
       /* ignore reply failure safely */
     }
   }
+}
+
+/**
+ * Configuration options for {@link createHelpCommand}.
+ */
+export interface HelpCommandOptions {
+  /** Primary trigger name of the help command. Defaults to `'help'`. */
+  name?: string;
+  /** Alternative trigger names. Defaults to `['commands', 'h']`. */
+  aliases?: string[];
+  /** Description shown in help output. Defaults to `'Displays available commands or detailed info for a specific command'`. */
+  description?: string;
+  /** Category assigned to the help command. Defaults to `'utility'`. */
+  category?: string;
+  /** Optional header line prepended to the full command listing. */
+  title?: string;
+  /** When `true`, includes commands marked with `hidden: true` in the general listing. Defaults to `false`. */
+  includeHidden?: boolean;
+}
+
+/**
+ * Creates a ready-to-register {@link Command} that lists all registered commands grouped by `category`
+ * or inspects a single command's aliases, usage signature, required permissions, cooldown, and argument schema.
+ *
+ * @example
+ * ```ts
+ * import { Client, createHelpCommand } from '@strafe-js/strafebot';
+ *
+ * client.commands.register(createHelpCommand({ title: '**MyBot Commands**' }));
+ * ```
+ */
+export function createHelpCommand(opts: HelpCommandOptions = {}) {
+  const name = opts.name ?? 'help';
+  const aliases = opts.aliases ?? ['commands', 'h'];
+  const description =
+    opts.description ??
+    'Displays available commands or detailed info for a specific command';
+  const category = opts.category ?? 'utility';
+
+  return new Command({
+    name,
+    aliases,
+    description,
+    category,
+    arguments: {
+      command: {
+        type: 'string',
+        required: false,
+        description: 'Command name or alias to inspect',
+      },
+    },
+    async run(ctx) {
+      const targetName = ctx.arguments.get('command');
+      const displayPrefix = ctx.prefix.startsWith('<@')
+        ? ctx.client.commands.prefixes[0] ?? '!'
+        : ctx.prefix;
+
+      if (targetName) {
+        const cmd = ctx.client.commands.get(String(targetName));
+        if (!cmd) {
+          await ctx.reply(`Unknown command: \`${String(targetName)}\``);
+          return;
+        }
+        const sig = cmd.usageSignature;
+        const lines: string[] = [
+          `**${displayPrefix}${cmd.name}${sig ? ` ${sig}` : ''}**`,
+        ];
+        if (cmd.description) lines.push(cmd.description);
+        lines.push(`Category: \`${cmd.category}\``);
+        if (cmd.aliases.length > 0) {
+          lines.push(`Aliases: ${cmd.aliases.map((a) => `\`${a}\``).join(', ')}`);
+        }
+        if (cmd.permissions.length > 0) {
+          lines.push(`Permissions: ${cmd.permissions.map((p) => `\`${p}\``).join(', ')}`);
+        }
+        if (cmd.cooldown > 0) {
+          lines.push(`Cooldown: \`${cmd.cooldown / 1000}s\``);
+        }
+        if (cmd.argumentsSchema) {
+          const schema = cmd.argumentsSchema as Record<string, CommandArgumentOption>;
+          const argLines = Object.entries(schema).map(([argKey, argOpt]) => {
+            const req = argOpt.required ? 'required' : 'optional';
+            const desc = argOpt.description ? ` - ${argOpt.description}` : '';
+            return `  • \`${argKey}\` (\`${argOpt.type}\`, ${req})${desc}`;
+          });
+          if (argLines.length > 0) {
+            lines.push('Arguments:\n' + argLines.join('\n'));
+          }
+        }
+        await ctx.reply(lines.join('\n'));
+        return;
+      }
+
+      const groups = new Map<string, Command<any>[]>();
+      for (const cmd of ctx.client.commands.commands.values()) {
+        if (cmd.hidden && !opts.includeHidden) continue;
+        const cat = cmd.category || 'general';
+        let list = groups.get(cat);
+        if (!list) {
+          list = [];
+          groups.set(cat, list);
+        }
+        list.push(cmd);
+      }
+
+      const sections: string[] = [];
+      if (opts.title) {
+        sections.push(opts.title);
+      }
+      for (const [cat, cmds] of groups.entries()) {
+        const items = cmds
+          .map((c) => {
+            const sig = c.usageSignature ? ` ${c.usageSignature}` : '';
+            const desc = c.description ? ` - ${c.description}` : '';
+            return `• \`${displayPrefix}${c.name}${sig}\`${desc}`;
+          })
+          .join('\n');
+        sections.push(`**[${cat}]**\n${items}`);
+      }
+      sections.push(
+        `Tip: Use \`${displayPrefix}${name} <command>\` for detailed argument information.`,
+      );
+      await ctx.reply(sections.join('\n\n'));
+    },
+  });
 }

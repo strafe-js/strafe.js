@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandHandler = void 0;
+exports.createHelpCommand = createHelpCommand;
 const util_1 = require("@strafe-js/util");
 const Command_js_1 = require("./Command.js");
 const Context_js_1 = require("./Context.js");
@@ -23,10 +24,14 @@ class CommandHandler {
     owners;
     /** Active command prefixes sorted from longest to shortest so multi-character prefixes match before shorter prefixes. */
     prefixes;
+    /** Whether bot mention prefixes (`<@botId>`) are enabled. */
+    mentionPrefix;
     /** Whether messages from bot accounts (`msg.bot === true`) are ignored. */
     ignoreBots;
     /** Whether messages from `client.user.id` are ignored. */
     ignoreSelf;
+    /** Registered middleware pipeline executed in registration order before `command.run(ctx)`. */
+    middlewares = [];
     _bound = false;
     /**
      * Creates a new {@link CommandHandler} bound to `client`.
@@ -36,9 +41,26 @@ class CommandHandler {
         this.prefixes = (Array.isArray(opts.prefix) ? opts.prefix : [opts.prefix ?? '!'])
             .map((p) => p ?? '')
             .sort((a, b) => b.length - a.length);
+        this.mentionPrefix = opts.mentionPrefix !== false;
         this.owners = new Set(opts.owners ?? []);
         this.ignoreBots = opts.ignoreBots !== false;
         this.ignoreSelf = opts.ignoreSelf !== false;
+    }
+    /**
+     * Appends a middleware function to the execution pipeline.
+     * Middleware runs after guards and argument validation, right before `command.run(ctx)`.
+     *
+     * @example
+     * ```ts
+     * client.commands.use(async (ctx, next) => {
+     *   console.log(`[CMD] ${ctx.commandName} by ${ctx.authorId}`);
+     *   await next();
+     * });
+     * ```
+     */
+    use(fn) {
+        this.middlewares.push(fn);
+        return this;
     }
     /**
      * Replaces the active prefix list and re-sorts prefixes from longest to shortest.
@@ -131,6 +153,13 @@ class CommandHandler {
                 break;
             }
         }
+        if (usedPrefix === null && this.mentionPrefix && this.client.user?.id) {
+            const botId = this.client.user.id;
+            const mentionMatch = new RegExp(`^<@!?${botId}>\\s*`).exec(content);
+            if (mentionMatch) {
+                usedPrefix = mentionMatch[0];
+            }
+        }
         if (usedPrefix === null)
             return;
         const without = content.slice(usedPrefix.length).trim();
@@ -207,7 +236,9 @@ class CommandHandler {
             const now = Date.now();
             const until = this.cooldowns.get(key) ?? 0;
             if (now < until) {
-                const left = Math.ceil((until - now) / 1000);
+                const remainingMs = until - now;
+                const left = Math.ceil(remainingMs / 1000);
+                this.client.emit('commandCooldown', remainingMs, msg, command);
                 await this._safeReply(msg, `Please wait ${left}s before reusing the \`${command.name}\` command.`);
                 return;
             }
@@ -257,7 +288,23 @@ class CommandHandler {
             parsedArguments: parsedArgs,
         });
         try {
-            await command.run(ctx);
+            const invokeChain = async (index) => {
+                if (index < this.middlewares.length) {
+                    const mw = this.middlewares[index];
+                    if (mw.length >= 2) {
+                        await mw(ctx, () => invokeChain(index + 1));
+                    }
+                    else {
+                        const res = await mw(ctx);
+                        if (res !== false) {
+                            await invokeChain(index + 1);
+                        }
+                    }
+                    return;
+                }
+                await command.run(ctx);
+            };
+            await invokeChain(0);
         }
         catch (err) {
             if (command.onError) {
@@ -287,4 +334,105 @@ class CommandHandler {
     }
 }
 exports.CommandHandler = CommandHandler;
+/**
+ * Creates a ready-to-register {@link Command} that lists all registered commands grouped by `category`
+ * or inspects a single command's aliases, usage signature, required permissions, cooldown, and argument schema.
+ *
+ * @example
+ * ```ts
+ * import { Client, createHelpCommand } from '@strafe-js/strafebot';
+ *
+ * client.commands.register(createHelpCommand({ title: '**MyBot Commands**' }));
+ * ```
+ */
+function createHelpCommand(opts = {}) {
+    const name = opts.name ?? 'help';
+    const aliases = opts.aliases ?? ['commands', 'h'];
+    const description = opts.description ??
+        'Displays available commands or detailed info for a specific command';
+    const category = opts.category ?? 'utility';
+    return new Command_js_1.Command({
+        name,
+        aliases,
+        description,
+        category,
+        arguments: {
+            command: {
+                type: 'string',
+                required: false,
+                description: 'Command name or alias to inspect',
+            },
+        },
+        async run(ctx) {
+            const targetName = ctx.arguments.get('command');
+            const displayPrefix = ctx.prefix.startsWith('<@')
+                ? ctx.client.commands.prefixes[0] ?? '!'
+                : ctx.prefix;
+            if (targetName) {
+                const cmd = ctx.client.commands.get(String(targetName));
+                if (!cmd) {
+                    await ctx.reply(`Unknown command: \`${String(targetName)}\``);
+                    return;
+                }
+                const sig = cmd.usageSignature;
+                const lines = [
+                    `**${displayPrefix}${cmd.name}${sig ? ` ${sig}` : ''}**`,
+                ];
+                if (cmd.description)
+                    lines.push(cmd.description);
+                lines.push(`Category: \`${cmd.category}\``);
+                if (cmd.aliases.length > 0) {
+                    lines.push(`Aliases: ${cmd.aliases.map((a) => `\`${a}\``).join(', ')}`);
+                }
+                if (cmd.permissions.length > 0) {
+                    lines.push(`Permissions: ${cmd.permissions.map((p) => `\`${p}\``).join(', ')}`);
+                }
+                if (cmd.cooldown > 0) {
+                    lines.push(`Cooldown: \`${cmd.cooldown / 1000}s\``);
+                }
+                if (cmd.argumentsSchema) {
+                    const schema = cmd.argumentsSchema;
+                    const argLines = Object.entries(schema).map(([argKey, argOpt]) => {
+                        const req = argOpt.required ? 'required' : 'optional';
+                        const desc = argOpt.description ? ` - ${argOpt.description}` : '';
+                        return `  • \`${argKey}\` (\`${argOpt.type}\`, ${req})${desc}`;
+                    });
+                    if (argLines.length > 0) {
+                        lines.push('Arguments:\n' + argLines.join('\n'));
+                    }
+                }
+                await ctx.reply(lines.join('\n'));
+                return;
+            }
+            const groups = new Map();
+            for (const cmd of ctx.client.commands.commands.values()) {
+                if (cmd.hidden && !opts.includeHidden)
+                    continue;
+                const cat = cmd.category || 'general';
+                let list = groups.get(cat);
+                if (!list) {
+                    list = [];
+                    groups.set(cat, list);
+                }
+                list.push(cmd);
+            }
+            const sections = [];
+            if (opts.title) {
+                sections.push(opts.title);
+            }
+            for (const [cat, cmds] of groups.entries()) {
+                const items = cmds
+                    .map((c) => {
+                    const sig = c.usageSignature ? ` ${c.usageSignature}` : '';
+                    const desc = c.description ? ` - ${c.description}` : '';
+                    return `• \`${displayPrefix}${c.name}${sig}\`${desc}`;
+                })
+                    .join('\n');
+                sections.push(`**[${cat}]**\n${items}`);
+            }
+            sections.push(`Tip: Use \`${displayPrefix}${name} <command>\` for detailed argument information.`);
+            await ctx.reply(sections.join('\n\n'));
+        },
+    });
+}
 //# sourceMappingURL=CommandHandler.js.map

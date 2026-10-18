@@ -176,6 +176,105 @@ class Client extends node_events_1.EventEmitter {
         return (0, util_1.isEncryptedRoom)(this.rooms.get(roomId));
     }
     /**
+     * Collects incoming `messageCreate` events in `roomId` that satisfy `opts.filter` up to `opts.max` messages
+     * or until `opts.timeoutMs` elapses.
+     *
+     * @example
+     * ```ts
+     * const collected = await client.awaitMessages(roomId, {
+     *   filter: (m) => m.sender_id === userId,
+     *   max: 1,
+     *   timeoutMs: 15_000,
+     * });
+     * const reply = collected.first();
+     * ```
+     */
+    awaitMessages(roomId, opts = {}) {
+        const max = opts.max ?? 1;
+        const timeoutMs = opts.timeoutMs ?? 30_000;
+        const collected = new collection_1.Collection();
+        if (max <= 0)
+            return Promise.resolve(collected);
+        return new Promise((resolve) => {
+            let settled = false;
+            const cleanup = () => {
+                if (settled)
+                    return;
+                settled = true;
+                clearTimeout(timer);
+                this.off('messageCreate', onMessage);
+                resolve(collected);
+            };
+            const onMessage = async (msg) => {
+                if (settled || msg.room_id !== roomId)
+                    return;
+                try {
+                    const matched = opts.filter ? await opts.filter(msg) : true;
+                    if (!matched || settled)
+                        return;
+                    collected.set(msg.id, msg);
+                    if (collected.size >= max) {
+                        cleanup();
+                    }
+                }
+                catch {
+                    /* ignore filter errors */
+                }
+            };
+            const timer = setTimeout(cleanup, timeoutMs);
+            this.on('messageCreate', onMessage);
+        });
+    }
+    /**
+     * Collects incoming `messageReactionAdd` events on `messageId` in `roomId` that satisfy `opts.filter`
+     * up to `opts.max` reactions or until `opts.timeoutMs` elapses.
+     *
+     * @example
+     * ```ts
+     * const reactions = await client.awaitReactions(roomId, promptMsg.id, {
+     *   filter: (r) => r.user_id === authorId && (r.emoji === '👍' || r.emoji === '👎'),
+     *   max: 1,
+     *   timeoutMs: 15_000,
+     * });
+     * ```
+     */
+    awaitReactions(roomId, messageId, opts = {}) {
+        const max = opts.max ?? 1;
+        const timeoutMs = opts.timeoutMs ?? 30_000;
+        const collected = [];
+        if (max <= 0)
+            return Promise.resolve(collected);
+        return new Promise((resolve) => {
+            let settled = false;
+            const cleanup = () => {
+                if (settled)
+                    return;
+                settled = true;
+                clearTimeout(timer);
+                this.off('messageReactionAdd', onReaction);
+                resolve(collected);
+            };
+            const onReaction = async (data) => {
+                if (settled || data.room_id !== roomId || data.message_id !== messageId)
+                    return;
+                try {
+                    const matched = opts.filter ? await opts.filter(data) : true;
+                    if (!matched || settled)
+                        return;
+                    collected.push(data);
+                    if (collected.length >= max) {
+                        cleanup();
+                    }
+                }
+                catch {
+                    /* ignore filter errors */
+                }
+            };
+            const timer = setTimeout(cleanup, timeoutMs);
+            this.on('messageReactionAdd', onReaction);
+        });
+    }
+    /**
      * Generates an OAuth2 bot installation link (`/oauth2/authorize?scope=bot...`) for this bot.
      * Defaults `clientId` to `client.user.id` and `baseUrl` to `ClientOptions.apiBase`.
      *
