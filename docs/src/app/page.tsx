@@ -1,13 +1,8 @@
 import Link from 'next/link';
 import {
-  Shield,
   ArrowRight,
-  Cpu,
-  Wrench,
   Terminal,
   Package,
-  Radio,
-  Sparkles,
   BookOpen,
   Layers,
   ExternalLink,
@@ -307,29 +302,39 @@ await client.login(process.env.BOT_TOKEN!);`}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <Link href="/docs/tools/permission-calculator" className="strafe-card block group">
             <div className="flex items-center gap-2 font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] mb-1.5">
-              <Shield className="w-4 h-4 text-[#509b6b]" />
+              <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-[#509b6b] shrink-0" aria-hidden="true">
+                <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1.4" />
+                <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1.4" />
+                <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
               <span>Permission Calculator</span>
             </div>
             <p className="text-[13px] text-[#b4bac6] leading-snug">
-              Toggle all 28 official Strafe permission bits and generate bitmask code.
+              Toggle all 28 Strafe permission bits on a live 0..27 bit register and export bitmask code.
             </p>
           </Link>
           <Link href="/docs/tools/command-builder" className="strafe-card block group">
             <div className="flex items-center gap-2 font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] mb-1.5">
-              <Sparkles className="w-4 h-4 text-[#509b6b]" />
+              <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-[#509b6b] shrink-0" aria-hidden="true">
+                <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M4.5 6.2L6.8 8L4.5 9.8M8 10H11.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               <span>Command Builder</span>
             </div>
             <p className="text-[13px] text-[#b4bac6] leading-snug">
-              Design typed command schemas visually and export ready-to-run TypeScript.
+              Configure command guards and typed argument schemas, then test input tokenization.
             </p>
           </Link>
           <Link href="/docs/tools/api-playground" className="strafe-card block group">
             <div className="flex items-center gap-2 font-bold text-[15px] text-[#e6e8ec] group-hover:text-[#6ab585] mb-1.5">
-              <Radio className="w-4 h-4 text-[#509b6b]" />
+              <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-[#509b6b] shrink-0" aria-hidden="true">
+                <path d="M1.5 8H4L6 4L8.5 12L10.5 6.5L12 8H14.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               <span>API Playground</span>
             </div>
             <p className="text-[13px] text-[#b4bac6] leading-snug">
-              Inspect Strafe REST endpoints and preview @strafe-js/rest calls.
+              Inspect Strafe HTTP routes and Stargate WebSocket opcodes (op: 0..8).
             </p>
           </Link>
         </div>
