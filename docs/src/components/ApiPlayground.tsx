@@ -393,6 +393,35 @@ console.log(me.id, me.username);`;
     const start = performance.now();
 
     try {
+      const relayRes = await fetch('/_playground-relay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'rest',
+          url: `${base}${path}`,
+          method: verb,
+          authHeader: `${authScheme} ${cleanToken}`,
+          payload: bodyObj,
+        }),
+      });
+
+      if (relayRes.ok) {
+        const relayData = (await relayRes.json()) as Record<string, unknown>;
+        const latencyMs =
+          typeof relayData.latency_ms === 'number'
+            ? relayData.latency_ms
+            : Math.round(performance.now() - start);
+        const statusNum = typeof relayData.status === 'number' ? relayData.status : 0;
+        const statusText = typeof relayData.statusText === 'string' ? relayData.statusText : '';
+        setLastMeta({
+          source: 'live',
+          statusLabel: statusNum ? `${statusNum} ${statusText}`.trim() : 'Network Error',
+          latencyMs,
+        });
+        setResponse(relayData);
+        return;
+      }
+
       const res = await fetch(`${base}${path}`, {
         method: verb,
         headers,
@@ -434,22 +463,13 @@ console.log(me.id, me.username);`;
         live: true,
         error: err instanceof Error ? err.message : String(err),
         request: `${verb} ${base}${path}`,
-        note: 'The browser blocked or failed to complete the fetch call. If the target Strafe server restricts cross-origin browser requests (CORS), run the generated snippet in Node.js using @strafe-js/rest.',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleLiveGateway = () => {
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'Closed by user');
-      wsRef.current = null;
-      setWsConnected(false);
-      setLastMeta({ source: 'live', statusLabel: 'Disconnected (1000)' });
-      return;
-    }
-
+  const executeLiveGateway = async () => {
     const cleanToken = token.trim();
     if (!cleanToken) {
       setLastMeta({ source: 'live', statusLabel: 'Missing Token' });
@@ -459,12 +479,58 @@ console.log(me.id, me.username);`;
       return;
     }
 
+    setIsLoading(true);
+    const start = performance.now();
+
+    try {
+      const relayRes = await fetch('/_playground-relay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'ws',
+          gatewayUrl: gatewayUrl.trim(),
+          authHeader: `${authScheme} ${cleanToken}`,
+          wsFrame,
+          spaceId: spaceId.trim(),
+          roomId: roomId.trim(),
+        }),
+      });
+
+      if (relayRes.ok) {
+        const relayData = (await relayRes.json()) as Record<string, unknown>;
+        const latencyMs =
+          typeof relayData.latency_ms === 'number'
+            ? relayData.latency_ms
+            : Math.round(performance.now() - start);
+        const statusLabel =
+          typeof relayData.statusLabel === 'string' ? relayData.statusLabel : 'WS Completed';
+        setLastMeta({
+          source: 'live',
+          statusLabel,
+          latencyMs,
+        });
+        setResponse(relayData);
+        setIsLoading(false);
+        return;
+      }
+    } catch {
+      // Fallback to direct browser WebSocket when static export is hosted without Node relay
+    }
+
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Closed by user');
+      wsRef.current = null;
+      setWsConnected(false);
+      setIsLoading(false);
+      setLastMeta({ source: 'live', statusLabel: 'Disconnected (1000)' });
+      return;
+    }
+
     try {
       const targetUrl = new URL(gatewayUrl.trim());
       targetUrl.searchParams.set('token', cleanToken);
       const sock = new WebSocket(targetUrl.toString());
       wsRef.current = sock;
-      setIsLoading(true);
 
       sock.onopen = () => {
         setIsLoading(false);
@@ -474,7 +540,7 @@ console.log(me.id, me.username);`;
           sock.send(
             JSON.stringify({
               op: 1,
-              d: { spaces: [spaceId.trim()], rooms: [roomId.trim()] },
+              d: { space_id: spaceId.trim() },
             }),
           );
         } else if (wsFrame === 'pingPong') {
@@ -498,11 +564,11 @@ console.log(me.id, me.username);`;
       sock.onerror = () => {
         setIsLoading(false);
         setWsConnected(false);
-        setLastMeta({ source: 'live', statusLabel: 'WS Handshake Blocked' });
+        setLastMeta({ source: 'live', statusLabel: 'WS Handshake Rejected' });
         setResponse({
           live: true,
-          error: 'WebSocket handshake failed in browser.',
-          note: 'Standard browser WebSocket clients cannot attach custom Authorization headers (Authorization: Bot <token>); Node.js @strafe-js/ws passes the Authorization header directly via the ws package.',
+          error: 'Browser WebSocket handshake failed on static host.',
+          note: 'Stargate accepts Bot tokens exclusively via the HTTP Authorization: Bot <token> upgrade header. Run the docs server locally (npm run docs:dev) or execute the snippet in Node.js with @strafe-js/ws.',
         });
       };
 
@@ -511,7 +577,7 @@ console.log(me.id, me.username);`;
         setWsConnected(false);
         wsRef.current = null;
         setLastMeta((prev) =>
-          prev?.statusLabel === 'WS Handshake Blocked'
+          prev?.statusLabel === 'WS Handshake Rejected'
             ? prev
             : { source: 'live', statusLabel: `Closed (${ev.code})` },
         );
@@ -541,7 +607,7 @@ console.log(me.id, me.username);`;
     if (activeTab === 'rest') {
       void executeLiveRest();
     } else {
-      toggleLiveGateway();
+      void executeLiveGateway();
     }
   };
 
