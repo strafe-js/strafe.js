@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CodeWindow } from './CodeWindow';
 
-type RestEndpointKey = 'createMessage' | 'listMessages' | 'addReaction' | 'kickMember';
+type RestEndpointKey =
+  | 'getMe'
+  | 'createMessage'
+  | 'listMessages'
+  | 'addReaction'
+  | 'kickMember';
 type WsFrameKey = 'messageCreate' | 'ready' | 'subscribe' | 'pingPong';
 
 const REST_ENDPOINTS: Record<
@@ -15,6 +20,12 @@ const REST_ENDPOINTS: Record<
     label: string;
   }
 > = {
+  getMe: {
+    verb: 'GET',
+    route: '/users/@me',
+    status: '200 OK',
+    label: 'getMe()',
+  },
   createMessage: {
     verb: 'POST',
     route: '/rooms/:roomId/messages',
@@ -99,10 +110,32 @@ function ProtocolWaveSvg() {
   );
 }
 
+function ZeroStorageLockSvg() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4 text-[#7fd19c] shrink-0 mt-0.5" aria-hidden="true">
+      <rect x="3.5" y="8.5" width="13" height="9" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M6.5 8.5V6C6.5 4.067 8.067 2.5 10 2.5C11.933 2.5 13.5 4.067 13.5 6V8.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="10" cy="13" r="1.25" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function ApiPlayground() {
   const [activeTab, setActiveTab] = useState<'rest' | 'ws'>('rest');
-  const [method, setMethod] = useState<RestEndpointKey>('createMessage');
+  const [mode, setMode] = useState<'mock' | 'live'>('mock');
+  const [method, setMethod] = useState<RestEndpointKey>('getMe');
   const [wsFrame, setWsFrame] = useState<WsFrameKey>('messageCreate');
+
+  const [apiBase, setApiBase] = useState('https://app.strafe.chat/api');
+  const [gatewayUrl, setGatewayUrl] = useState('wss://app.strafe.chat/gateway/events');
+  const [authScheme, setAuthScheme] = useState<'Bot' | 'Bearer'>('Bot');
+  const [token, setToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
 
   const [roomId, setRoomId] = useState('109876543210987654');
   const [spaceId, setSpaceId] = useState('987654321098765432');
@@ -111,7 +144,25 @@ export function ApiPlayground() {
   const [plaintext, setPlaintext] = useState('Hello from @strafe-js/rest');
   const [emoji, setEmoji] = useState('custom:778899001122334455');
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [lastMeta, setLastMeta] = useState<{
+    source: 'simulated' | 'live';
+    statusLabel: string;
+    latencyMs?: number;
+  } | null>(null);
   const [response, setResponse] = useState<Record<string, unknown> | null>(null);
+
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close(1000, 'Playground unmounted');
+        wsRef.current = null;
+      }
+    };
+  }, []);
 
   const getCodeSnippet = () => {
     if (activeTab === 'ws') {
@@ -119,7 +170,7 @@ export function ApiPlayground() {
         return `import { Gateway } from '@strafe-js/ws';
 
 const gateway = new Gateway({
-  url: 'wss://app.strafe.chat/gateway/events',
+  url: '${gatewayUrl}',
   token: process.env.BOT_TOKEN!,
 });
 
@@ -136,7 +187,7 @@ gateway.connect();`;
         return `import { Gateway } from '@strafe-js/ws';
 
 const gateway = new Gateway({
-  url: 'wss://app.strafe.chat/gateway/events',
+  url: '${gatewayUrl}',
   token: process.env.BOT_TOKEN!,
   heartbeatInterval: 45_000,
 });
@@ -150,7 +201,7 @@ gateway.ping();`;
       return `import { Gateway } from '@strafe-js/ws';
 
 const gateway = new Gateway({
-  url: 'wss://app.strafe.chat/gateway/events',
+  url: '${gatewayUrl}',
   token: process.env.BOT_TOKEN!,
 });
 
@@ -162,6 +213,17 @@ gateway.connect();`;
     }
 
     switch (method) {
+      case 'getMe':
+        return `import { REST } from '@strafe-js/rest';
+
+const rest = new REST({
+  baseUrl: '${apiBase}',
+  token: process.env.BOT_TOKEN,
+  authScheme: '${authScheme}',
+});
+
+const me = await rest.getMe();
+console.log(me.id, me.username);`;
       case 'createMessage':
         return `const message = await client.rest.createMessage('${roomId}', {
   plaintext: '${plaintext}',
@@ -228,6 +290,17 @@ gateway.connect();`;
     }
 
     switch (method) {
+      case 'getMe':
+        return {
+          status: 200,
+          route: 'GET /users/@me',
+          body: {
+            id: '998877665544332211',
+            username: 'strafe-bot',
+            display_name: 'Strafe Helper',
+            is_bot: true,
+          },
+        };
       case 'createMessage':
         return {
           status: 200,
@@ -272,6 +345,206 @@ gateway.connect();`;
     }
   };
 
+  const executeLiveRest = async () => {
+    const cleanToken = token.trim();
+    if (!cleanToken) {
+      setLastMeta({ source: 'live', statusLabel: 'Missing Token' });
+      setResponse({
+        error: 'Provide a Bot or Bearer token in the Live Credentials panel before sending a live request.',
+      });
+      return;
+    }
+
+    const base = apiBase.trim().replace(/\/+$/, '');
+    let path = '/users/@me';
+    let verb: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET';
+    let bodyObj: Record<string, unknown> | undefined;
+
+    if (method === 'getMe') {
+      verb = 'GET';
+      path = '/users/@me';
+    } else if (method === 'createMessage') {
+      verb = 'POST';
+      path = `/rooms/${encodeURIComponent(roomId.trim())}/messages`;
+      bodyObj = { plaintext };
+    } else if (method === 'listMessages') {
+      verb = 'GET';
+      path = `/rooms/${encodeURIComponent(roomId.trim())}/messages?limit=25`;
+    } else if (method === 'addReaction') {
+      verb = 'PUT';
+      path = `/rooms/${encodeURIComponent(roomId.trim())}/messages/${encodeURIComponent(
+        messageId.trim(),
+      )}/reactions/${encodeURIComponent(emoji.trim())}`;
+    } else if (method === 'kickMember') {
+      verb = 'DELETE';
+      path = `/spaces/${encodeURIComponent(spaceId.trim())}/members/${encodeURIComponent(
+        userId.trim(),
+      )}`;
+    }
+
+    const headers: Record<string, string> = {
+      Authorization: `${authScheme} ${cleanToken}`,
+    };
+    if (bodyObj !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    setIsLoading(true);
+    const start = performance.now();
+
+    try {
+      const res = await fetch(`${base}${path}`, {
+        method: verb,
+        headers,
+        body: bodyObj ? JSON.stringify(bodyObj) : undefined,
+      });
+      const latencyMs = Math.round(performance.now() - start);
+
+      let parsedBody: unknown = null;
+      if (res.status !== 204) {
+        const text = await res.text();
+        try {
+          parsedBody = text ? JSON.parse(text) : null;
+        } catch {
+          parsedBody = text;
+        }
+      }
+
+      setLastMeta({
+        source: 'live',
+        statusLabel: `${res.status} ${res.statusText || ''}`.trim(),
+        latencyMs,
+      });
+      setResponse({
+        live: true,
+        status: res.status,
+        ok: res.ok,
+        latency_ms: latencyMs,
+        request: `${verb} ${base}${path}`,
+        body: parsedBody,
+      });
+    } catch (err) {
+      const latencyMs = Math.round(performance.now() - start);
+      setLastMeta({
+        source: 'live',
+        statusLabel: 'Network / CORS Error',
+        latencyMs,
+      });
+      setResponse({
+        live: true,
+        error: err instanceof Error ? err.message : String(err),
+        request: `${verb} ${base}${path}`,
+        note: 'The browser blocked or failed to complete the fetch call. If the target Strafe server restricts cross-origin browser requests (CORS), run the generated snippet in Node.js using @strafe-js/rest.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleLiveGateway = () => {
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Closed by user');
+      wsRef.current = null;
+      setWsConnected(false);
+      setLastMeta({ source: 'live', statusLabel: 'Disconnected (1000)' });
+      return;
+    }
+
+    const cleanToken = token.trim();
+    if (!cleanToken) {
+      setLastMeta({ source: 'live', statusLabel: 'Missing Token' });
+      setResponse({
+        error: 'Provide a Bot or Bearer token before opening a live WebSocket connection.',
+      });
+      return;
+    }
+
+    try {
+      const targetUrl = new URL(gatewayUrl.trim());
+      targetUrl.searchParams.set('token', cleanToken);
+      const sock = new WebSocket(targetUrl.toString());
+      wsRef.current = sock;
+      setIsLoading(true);
+
+      sock.onopen = () => {
+        setIsLoading(false);
+        setWsConnected(true);
+        setLastMeta({ source: 'live', statusLabel: 'WS Connected' });
+        if (wsFrame === 'subscribe') {
+          sock.send(
+            JSON.stringify({
+              op: 1,
+              d: { spaces: [spaceId.trim()], rooms: [roomId.trim()] },
+            }),
+          );
+        } else if (wsFrame === 'pingPong') {
+          sock.send(JSON.stringify({ op: 6 }));
+        }
+      };
+
+      sock.onmessage = (ev) => {
+        try {
+          const frame = JSON.parse(String(ev.data)) as Record<string, unknown>;
+          setLastMeta({
+            source: 'live',
+            statusLabel: `Received op: ${String(frame.op ?? '?')}`,
+          });
+          setResponse(frame);
+        } catch {
+          setResponse({ raw: String(ev.data) });
+        }
+      };
+
+      sock.onerror = () => {
+        setIsLoading(false);
+        setWsConnected(false);
+        setLastMeta({ source: 'live', statusLabel: 'WS Handshake Blocked' });
+        setResponse({
+          live: true,
+          error: 'WebSocket handshake failed in browser.',
+          note: 'Standard browser WebSocket clients cannot attach custom Authorization headers (Authorization: Bot <token>); Node.js @strafe-js/ws passes the Authorization header directly via the ws package.',
+        });
+      };
+
+      sock.onclose = (ev) => {
+        setIsLoading(false);
+        setWsConnected(false);
+        wsRef.current = null;
+        setLastMeta((prev) =>
+          prev?.statusLabel === 'WS Handshake Blocked'
+            ? prev
+            : { source: 'live', statusLabel: `Closed (${ev.code})` },
+        );
+      };
+    } catch (err) {
+      setIsLoading(false);
+      setResponse({
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleRun = () => {
+    if (mode === 'mock') {
+      const preview = buildPayloadPreview();
+      setLastMeta({
+        source: 'simulated',
+        statusLabel:
+          activeTab === 'rest'
+            ? REST_ENDPOINTS[method].status
+            : `op: ${WS_FRAMES[wsFrame].op}`,
+      });
+      setResponse(preview);
+      return;
+    }
+
+    if (activeTab === 'rest') {
+      void executeLiveRest();
+    } else {
+      toggleLiveGateway();
+    }
+  };
+
   const currentRest = REST_ENDPOINTS[method];
   const currentWs = WS_FRAMES[wsFrame];
   const activePayload = response ?? buildPayloadPreview();
@@ -288,42 +561,155 @@ gateway.connect();`;
               REST API & Stargate Frame Inspector
             </h3>
             <p className="text-xs text-[#8f98a8] !m-0 mt-0.5">
-              Inspect HTTP routes, status codes, and Stargate WebSocket opcodes (0..8).
+              Inspect simulated payloads or execute live requests with your own Bot or Bearer token.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 rounded-lg bg-[#0b0d11] border border-[#252a34]">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('rest');
-              setResponse(null);
-            }}
-            className={`px-3 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
-              activeTab === 'rest'
-                ? 'bg-[#509b6b] text-white'
-                : 'text-[#8f98a8] hover:text-[#e6e8ec]'
-            }`}
-          >
-            @strafe-js/rest
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('ws');
-              setResponse(null);
-            }}
-            className={`px-3 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
-              activeTab === 'ws'
-                ? 'bg-[#509b6b] text-white'
-                : 'text-[#8f98a8] hover:text-[#e6e8ec]'
-            }`}
-          >
-            @strafe-js/ws
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0b0d11] border border-[#252a34]">
+            <button
+              type="button"
+              onClick={() => setMode('mock')}
+              className={`px-2.5 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
+                mode === 'mock'
+                  ? 'bg-[#222834] text-[#e6e8ec]'
+                  : 'text-[#8f98a8] hover:text-[#e6e8ec]'
+              }`}
+            >
+              Simulated
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('live')}
+              className={`px-2.5 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                mode === 'live'
+                  ? 'bg-[#509b6b]/25 border border-[#509b6b]/50 text-[#7fd19c]'
+                  : 'text-[#8f98a8] hover:text-[#7fd19c]'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  mode === 'live' ? 'bg-[#7fd19c] shadow-[0_0_6px_#7fd19c]' : 'bg-[#5c6474]'
+                }`}
+              />
+              Use Own Token (Live)
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0b0d11] border border-[#252a34]">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('rest');
+                setResponse(null);
+              }}
+              className={`px-3 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'rest'
+                  ? 'bg-[#509b6b] text-white'
+                  : 'text-[#8f98a8] hover:text-[#e6e8ec]'
+              }`}
+            >
+              @strafe-js/rest
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('ws');
+                setResponse(null);
+              }}
+              className={`px-3 py-1 rounded-md font-mono text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'ws'
+                  ? 'bg-[#509b6b] text-white'
+                  : 'text-[#8f98a8] hover:text-[#e6e8ec]'
+              }`}
+            >
+              @strafe-js/ws
+            </button>
+          </div>
         </div>
       </div>
+
+      {mode === 'live' && (
+        <div className="px-5 py-4 bg-[#0e1218] border-b border-[#262b35] space-y-3.5 text-xs">
+          <div className="p-3 rounded-lg bg-[#509b6b]/[0.08] border border-[#509b6b]/30 flex items-start gap-2.5">
+            <ZeroStorageLockSvg />
+            <div className="space-y-0.5 text-[11px] leading-relaxed text-[#cfd5e0]">
+              <div className="font-bold text-[#7fd19c]">
+                Zero Storage & Direct Client Execution Guarantee
+              </div>
+              <p className="!m-0 text-[#9ba5b6]">
+                We do not store, log, proxy, or transmit your token to any third-party server. The token resides strictly in volatile browser memory (React state) for this tab, is never written to <code className="text-[#7fd19c]">localStorage</code>, <code className="text-[#7fd19c]">sessionStorage</code>, or cookies, and is wiped immediately when you clear the field or close the tab.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <div className="md:col-span-4">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1">
+                {activeTab === 'rest' ? 'REST Base URL' : 'Stargate WS URL'}
+              </label>
+              <input
+                type="text"
+                value={activeTab === 'rest' ? apiBase : gatewayUrl}
+                onChange={(e) =>
+                  activeTab === 'rest'
+                    ? setApiBase(e.target.value)
+                    : setGatewayUrl(e.target.value)
+                }
+                className="w-full px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1">
+                Auth Scheme
+              </label>
+              <select
+                value={authScheme}
+                onChange={(e) => setAuthScheme(e.target.value as 'Bot' | 'Bearer')}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#7fd19c] font-mono text-xs focus:border-[#509b6b] outline-none"
+              >
+                <option value="Bot">Bot</option>
+                <option value="Bearer">Bearer</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-6">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-[#8f98a8] mb-1">
+                Authorization Token (Volatile In-Memory Only)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type={showToken ? 'text' : 'password'}
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Paste Bot or OAuth2 Bearer token..."
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-[#252a34] bg-[#0b0d11] text-[#e6e8ec] font-mono text-xs focus:border-[#509b6b] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowToken((v) => !v)}
+                  className="px-2.5 py-1.5 rounded-lg border border-[#252a34] bg-[#141820] hover:border-[#363c48] text-[#b4bac6] font-mono text-[11px] cursor-pointer"
+                >
+                  {showToken ? 'Hide' : 'Show'}
+                </button>
+                {token && (
+                  <button
+                    type="button"
+                    onClick={() => setToken('')}
+                    className="px-2.5 py-1.5 rounded-lg border border-[#e25555]/40 bg-[#e25555]/10 text-[#f28b8b] font-mono text-[11px] cursor-pointer"
+                  >
+                    Wipe
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-5 py-3 bg-[#0b0d11] border-b border-[#262b35] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
         {activeTab === 'rest' ? (
@@ -338,9 +724,16 @@ gateway.connect();`;
               </span>
               <span className="text-[#cfd5e0]">{currentRest.route}</span>
             </div>
-            <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#7fd19c] text-[11px]">
-              HTTP {currentRest.status}
-            </span>
+            <div className="flex items-center gap-2">
+              {lastMeta?.latencyMs !== undefined && (
+                <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#8f98a8] text-[11px]">
+                  {lastMeta.latencyMs} ms
+                </span>
+              )}
+              <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#7fd19c] text-[11px]">
+                {lastMeta ? lastMeta.statusLabel : `HTTP ${currentRest.status}`}
+              </span>
+            </div>
           </>
         ) : (
           <>
@@ -351,7 +744,7 @@ gateway.connect();`;
               <span className="text-[#cfd5e0]">{currentWs.name}</span>
             </div>
             <span className="px-2 py-0.5 rounded bg-[#141820] border border-[#252a34] text-[#8f98a8] text-[11px]">
-              {currentWs.direction}
+              {lastMeta ? lastMeta.statusLabel : currentWs.direction}
             </span>
           </>
         )}
@@ -375,6 +768,7 @@ gateway.connect();`;
                       onClick={() => {
                         setMethod(key);
                         setResponse(null);
+                        setLastMeta(null);
                       }}
                       className={`p-2.5 rounded-lg border text-left font-mono transition-colors cursor-pointer ${
                         selected
@@ -403,6 +797,7 @@ gateway.connect();`;
                       onClick={() => {
                         setWsFrame(key);
                         setResponse(null);
+                        setLastMeta(null);
                       }}
                       className={`p-2.5 rounded-lg border text-left font-mono transition-colors cursor-pointer ${
                         selected
@@ -429,6 +824,11 @@ gateway.connect();`;
 
             {activeTab === 'rest' ? (
               <div className="space-y-3">
+                {method === 'getMe' && (
+                  <div className="p-2.5 rounded-lg bg-[#0b0d11] border border-[#252a34] font-mono text-[11px] text-[#8f98a8]">
+                    GET /users/@me requires no path parameters; it inspects the authenticated Bot or Bearer token header.
+                  </div>
+                )}
                 {(method === 'createMessage' ||
                   method === 'listMessages' ||
                   method === 'addReaction') && (
@@ -539,10 +939,23 @@ gateway.connect();`;
 
             <button
               type="button"
-              onClick={() => setResponse(buildPayloadPreview())}
-              className="w-full py-2 px-4 rounded-lg bg-[#509b6b] hover:bg-[#45875d] text-white font-mono font-semibold text-xs transition-colors cursor-pointer"
+              disabled={isLoading}
+              onClick={handleRun}
+              className={`w-full py-2 px-4 rounded-lg font-mono font-semibold text-xs transition-colors cursor-pointer ${
+                mode === 'live' && activeTab === 'ws' && wsConnected
+                  ? 'bg-[#e25555] hover:bg-[#c94545] text-white'
+                  : 'bg-[#509b6b] hover:bg-[#45875d] text-white'
+              }`}
             >
-              Generate Frame / Response Snapshot
+              {isLoading
+                ? 'Executing Request...'
+                : mode === 'mock'
+                  ? 'Generate Simulated Snapshot'
+                  : activeTab === 'rest'
+                    ? `Send Live ${currentRest.verb} Request`
+                    : wsConnected
+                      ? 'Disconnect Live WebSocket'
+                      : 'Connect & Send Live WS Frame'}
             </button>
           </div>
         </div>
@@ -552,17 +965,17 @@ gateway.connect();`;
             title={activeTab === 'rest' ? `rest.${method}.ts` : `gateway.${wsFrame}.ts`}
             lang="ts"
             code={getCodeSnippet()}
-            showLineNumbers
           />
           <CodeWindow
             title={
-              activeTab === 'rest'
-                ? `HTTP Response (${currentRest.status})`
-                : `Stargate Frame (op: ${currentWs.op})`
+              mode === 'live'
+                ? `Live Output (${lastMeta?.statusLabel || 'Ready'})`
+                : activeTab === 'rest'
+                  ? `HTTP Response (${currentRest.status})`
+                  : `Stargate Frame (op: ${currentWs.op})`
             }
             lang="json"
             code={JSON.stringify(activePayload, null, 2)}
-            showLineNumbers={false}
           />
         </div>
       </div>
