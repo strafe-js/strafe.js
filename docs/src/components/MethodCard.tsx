@@ -39,7 +39,7 @@ export function MethodCard({
   const [activeTab, setActiveTab] = useState<'details' | 'example'>('details');
 
   return (
-    <div className="my-4 rounded-xl border border-[#262b33] bg-[#15181d] shadow-sm overflow-hidden transition-all duration-200 hover:border-[#509b6b]/50">
+    <div className="my-4 rounded-xl border border-[#2a2f39] bg-[#15181d] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.55),0_1px_0_0_rgba(255,255,255,0.03)_inset] overflow-hidden transition-all duration-200 hover:border-[#509b6b]/60 hover:shadow-[0_14px_34px_-8px_rgba(0,0,0,0.68),0_0_20px_-6px_rgba(80,155,107,0.22)]">
       <div
         className="p-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer bg-[#101317] select-none"
         onClick={() => setIsOpen(!isOpen)}

@@ -15,6 +15,7 @@ import { MethodCard } from '@/components/MethodCard';
 import { OAuth2Generator } from '@/components/OAuth2Generator';
 import { PermissionCalculator } from '@/components/PermissionCalculator';
 import { PropertyTable } from '@/components/PropertyTable';
+import { SdkVersion } from '@/lib/version';
 
 const mdxComponents = {
   ...defaultMdxComponents,
@@ -36,6 +37,7 @@ const mdxComponents = {
   OAuth2Generator,
   PermissionCalculator,
   PropertyTable,
+  SdkVersion,
 };
 
 export default async function Page(props: {

@@ -9,7 +9,7 @@ description: Deep dive into quote-aware tokenization, declarative ArgumentsSchem
 
 When a command message is received, `tokenizeArguments(input)` splits the argument string by whitespace while preserving double-quoted phrases and backslash escapes:
 
-```ts
+```ts title="src/tokenizer.ts"
 import { tokenizeArguments } from '@strafe-js/strafebot';
 
 tokenizeArguments('123456789012345678 "Spamming in #general" --silent');
@@ -36,7 +36,7 @@ Each key in `arguments` defines an `ArgumentSchemaEntry`:
 
 ## 3. Complete Schema Example
 
-```ts
+```ts title="src/commands/timeout.ts"
 import { command } from '@strafe-js/strafebot';
 
 export const timeoutCommand = command({
@@ -90,7 +90,7 @@ export const timeoutCommand = command({
 
 When an argument fails validation, `parseAndValidateArguments` throws an `ArgumentValidationError` with structured diagnostic fields (`argName`, `reason`, `expectedType`, `received`):
 
-```ts
+```ts title="src/index.ts"
 import { ArgumentValidationError } from '@strafe-js/strafebot';
 
 client.on('commandInvalidArguments', async (ctx, cmd, err) => {

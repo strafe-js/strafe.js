@@ -28,7 +28,7 @@ export function PropertyTable({ title = 'Properties Overview', properties }: Pro
   };
 
   return (
-    <div className="my-6 rounded-xl border border-[#262b33] bg-[#15181d] overflow-hidden shadow-sm">
+    <div className="my-6 rounded-xl border border-[#2a2f39] bg-[#15181d] overflow-hidden shadow-[0_10px_28px_-8px_rgba(0,0,0,0.55),0_1px_0_0_rgba(255,255,255,0.03)_inset]">
       {title && (
         <div className="px-4 py-3 bg-[#101317] border-b border-[#262b33] font-semibold text-sm text-[#f3f5f7] flex items-center justify-between">
           <span>{title}</span>

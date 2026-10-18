@@ -218,21 +218,44 @@ function tokenizeLine(line: string, lang: string): TokenSpan[] {
   return spans;
 }
 
+function LangIcon({ lang }: { lang: string }) {
+  if (lang === 'bash' || lang === 'sh') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">
+        <polyline points="4 17 10 11 4 5" />
+        <line x1="12" x2="20" y1="19" y2="19" />
+      </svg>
+    );
+  }
+  if (lang === 'json') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">
+        <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" />
+        <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0">
+      <path d="M3 3h18v18H3V3Zm10.71 14.86c.5.98 1.51 1.73 3.09 1.73 1.6 0 2.8-.83 2.8-2.36 0-1.41-.81-2.04-2.25-2.66l-.42-.18c-.73-.31-1.04-.52-1.04-1.02 0-.41.31-.73.81-.73.48 0 .8.21 1.09.73l1.31-.87c-.55-.96-1.33-1.33-2.4-1.33-1.51 0-2.48.96-2.48 2.23 0 1.38.81 2.03 2.03 2.55l.42.18c.78.34 1.24.55 1.24 1.13 0 .48-.45.83-1.15.83-.83 0-1.31-.43-1.67-1.03l-1.38.8ZM13 11.25H8v1.5h1.5V19h1.75v-6.25H13v-1.5Z" />
+    </svg>
+  );
+}
+
 const LANG_LABELS: Record<string, string> = {
-  ts: 'TypeScript',
-  tsx: 'TSX',
-  js: 'JavaScript',
-  json: 'JSON',
+  ts: 'example.ts',
+  tsx: 'component.tsx',
+  js: 'example.js',
+  json: 'payload.json',
   bash: 'Terminal',
-  sh: 'Shell',
-  ini: 'ENV',
+  sh: 'Terminal',
+  ini: '.env',
 };
 
 export function CodeWindow({
   code,
   title,
   lang = 'ts',
-  showLineNumbers = true,
   className = '',
 }: CodeWindowProps) {
   const [copied, setCopied] = useState(false);
@@ -246,72 +269,44 @@ export function CodeWindow({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isTerminal = lang === 'bash' || lang === 'sh';
-
   return (
-    <div
-      className={`rounded-xl border border-[#2a2f39] bg-[#0b0d11] shadow-xl overflow-hidden transition-colors hover:border-[#509b6b]/50 ${className}`}
+    <figure
+      className={`shiki not-prose my-4 rounded-xl relative border shadow-sm overflow-hidden text-sm ${className}`}
     >
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#12161d] border-b border-[#252a34] select-none">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#e25555]/75" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#e0a526]/75" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#509b6b]/85" />
-          </div>
-          <div className="flex items-center gap-1.5 text-xs font-mono text-[#cfd5e0] truncate">
-            {isTerminal ? (
-              <Terminal className="w-3.5 h-3.5 text-[#509b6b] shrink-0" />
-            ) : (
-              <FileCode2 className="w-3.5 h-3.5 text-[#509b6b] shrink-0" />
-            )}
-            <span className="truncate font-semibold">
-              {title || LANG_LABELS[lang] || lang.toUpperCase()}
-            </span>
-          </div>
+      <div className="flex text-fd-muted-foreground items-center gap-2 h-9.5 border-b px-4">
+        <div className="text-fd-muted-foreground [&_svg]:size-3.5">
+          <LangIcon lang={lang} />
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-[#1b2029] text-[#8f98a8] border border-[#2a2f39]">
-            {LANG_LABELS[lang] || lang}
-          </span>
+        <figcaption className="flex-1 truncate">
+          {title || LANG_LABELS[lang] || lang}
+        </figcaption>
+        <div className="empty:hidden">
           <button
             type="button"
+            aria-label="Copy Text"
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#181c24] border border-[#2a2f39] text-[#b4bac6] hover:text-[#6ab585] hover:border-[#509b6b] transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-xs font-medium transition-colors duration-100 cursor-pointer [&_svg]:size-3.5"
           >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-[#509b6b]" />
-                <span className="text-[#6ab585]">Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" />
-                <span>Copy</span>
-              </>
-            )}
+            {copied ? <Check /> : <Copy />}
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto strafe-code-scroll py-3.5 px-2">
-        <pre className="!m-0 !p-0 !bg-transparent font-mono text-[13px] leading-[1.68]">
-          <code className="grid min-w-full">
+      <div
+        role="region"
+        tabIndex={0}
+        className="text-[0.8125rem] overflow-auto max-h-[600px] strafe-code-scroll"
+      >
+        <pre className="min-w-full w-max *:flex *:flex-col">
+          <code>
             {lines.map((line, i) => {
               const tokens = tokenizeLine(line, lang);
               return (
-                <span
-                  key={i}
-                  className="flex items-baseline px-3 py-0.5 rounded-sm hover:bg-[#509b6b]/[0.06] transition-colors"
-                >
-                  {showLineNumbers && (
-                    <span className="select-none w-7 pr-3 text-right text-[11px] text-[#4d5565] font-mono shrink-0">
-                      {i + 1}
-                    </span>
-                  )}
-                  <span className="whitespace-pre">
-                    {tokens.map((tok, j) => (
+                <span key={i} className="line">
+                  {line.length === 0 ? (
+                    ' '
+                  ) : (
+                    tokens.map((tok, j) => (
                       <span
                         key={j}
                         style={{
@@ -321,14 +316,14 @@ export function CodeWindow({
                       >
                         {tok.text}
                       </span>
-                    ))}
-                  </span>
+                    ))
+                  )}
                 </span>
               );
             })}
           </code>
         </pre>
       </div>
-    </div>
+    </figure>
   );
 }
