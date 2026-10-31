@@ -311,3 +311,6 @@ export class REST {
     return this.request<T>({ method: 'POST', path, body: form });
   }
 }
+
+export { OAuth2Client, OAuth2Error, StrafeOAuth, StrafeOAuthError } from './oauth.js';
+export type { OAuth2ClientOptions } from './oauth.js';
