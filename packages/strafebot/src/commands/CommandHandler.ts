@@ -214,6 +214,10 @@ export class CommandHandler {
 
     let botPermissions = 0;
     const botUserId = this.client.user?.id;
+    // Always resolve bot perms in spaces so ctx.hasBotPermissions is accurate
+    if (botUserId && spaceId) {
+      botPermissions = this.client.resolveMemberPermissions(botUserId, spaceId, msg.room_id);
+    }
     if (command.botPermissions.length || command.botPermissionMask) {
       if (!botUserId) {
         await this._safeReply(msg, 'Unable to verify bot permissions (bot user not loaded).');
