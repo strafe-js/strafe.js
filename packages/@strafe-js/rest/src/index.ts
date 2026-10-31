@@ -3,24 +3,13 @@ import {
   CreateMessageBody,
   EditMessageBody,
   Message,
-  OAuth2Application,
-  OAuth2ApplicationPublic,
-  OAuth2Grant,
-  OAuth2TokenInfo,
-  OAuth2TokenResponse,
-  PermissionOverride,
-  PushPreferences,
-  PushSubscriptionInput,
-  PushSubscriptionRecord,
   RateLimitError,
   Role,
   Room,
-  RoomTypeValue,
   Snowflake,
   Space,
   SpaceMember,
   StrafeError,
-  ThreadMetadata,
   User,
   sleep,
 } from '@strafe-js/util';
@@ -71,6 +60,8 @@ export class REST {
   private authScheme: string;
   private retries: number;
   private userAgent: string;
+  /** path-prefix -> unix ms when we may retry after a 429 */
+  private routeBuckets = new Map<string, number>();
 
   constructor(opts: RESTOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
@@ -117,7 +108,12 @@ export class REST {
       }
     }
 
+    const bucketKey = cleanPath.replace(/\/\d{16,20}/g, '/:id');
     for (let attempt = 0; attempt <= this.retries; attempt++) {
+      const until = this.routeBuckets.get(bucketKey) ?? 0;
+      const wait = until - Date.now();
+      if (wait > 0) await sleep(wait);
+
       const res = await fetch(url, { method: opts.method, headers, body });
 
       if (res.status === 204) return undefined as T;
@@ -143,6 +139,7 @@ export class REST {
           : !Number.isNaN(retryHeader)
           ? retryHeader
           : 1;
+        this.routeBuckets.set(bucketKey, Date.now() + waitSec * 1000);
         if (attempt < this.retries) {
           await sleep(waitSec * 1000);
           continue;
@@ -303,14 +300,16 @@ export class REST {
     filename: string,
   ): Promise<T> {
     const form = new FormData();
-    const blob =
-      file instanceof Blob
-        ? file
-        : new Blob([file as any]);
+    const blob = file instanceof Blob ? file : new Blob([file as any]);
     form.append('file', blob, filename);
     return this.request<T>({ method: 'POST', path, body: form });
   }
 }
 
-export { OAuth2Client, OAuth2Error, StrafeOAuth, StrafeOAuthError } from './oauth.js';
+export {
+  OAuth2Client,
+  OAuth2Error,
+  StrafeOAuth,
+  StrafeOAuthError,
+} from './oauth.js';
 export type { OAuth2ClientOptions } from './oauth.js';
