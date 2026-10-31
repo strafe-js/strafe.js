@@ -15,7 +15,6 @@ import {
 } from '@strafe-js/util';
 
 export interface GatewayOptions {
-  /** Full WebSocket gateway URL (for example `'wss://app.strafe.chat/gateway/events'`). */
   url: string;
   token: string;
   authScheme?: 'Bot' | 'Bearer' | '';
@@ -97,6 +96,9 @@ export class Gateway extends EventEmitter {
   private reconnectDelay: number;
   private maxReconnectDelay: number;
   private reconnectAttempts = 0;
+  private sendTokens = 20;
+  private sendTokenUpdatedAt = Date.now();
+  private sendQueue: Promise<void> = Promise.resolve();
   private ws?: WebSocket;
   private hbTimer?: NodeJS.Timeout;
   private reconnectTimer?: NodeJS.Timeout;
@@ -181,7 +183,31 @@ export class Gateway extends EventEmitter {
   send(op: number, d?: unknown, extra?: Partial<GatewayFrame>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const payload = JSON.stringify({ op, d, ...extra });
+    // Token-bucket for gateway Send (op 2 / typing): burst 20, refill 1/250ms
+    if (op === GatewayOp.Send) {
+      const run = async () => {
+        await this._takeSendToken();
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        this.ws.send(payload);
+      };
+      this.sendQueue = this.sendQueue.then(run).catch(() => {});
+      return;
+    }
     this.ws.send(payload);
+  }
+
+  private async _takeSendToken(): Promise<void> {
+    while (true) {
+      const now = Date.now();
+      const elapsed = now - this.sendTokenUpdatedAt;
+      this.sendTokens = Math.min(20, this.sendTokens + elapsed / 250);
+      this.sendTokenUpdatedAt = now;
+      if (this.sendTokens >= 1) {
+        this.sendTokens -= 1;
+        return;
+      }
+      await new Promise((r) => setTimeout(r, (1 - this.sendTokens) * 250));
+    }
   }
 
   subscribe(spaceOrRoomId: Snowflake): void {
