@@ -154,13 +154,24 @@ export class Context<Schema extends CommandArgumentsSchema = CommandArgumentsSch
     return this.client.awaitReactions(this.roomId, messageId, opts);
   }
 
+  canModerate(targetId: Snowflake): boolean {
+    if (!this.spaceId) return false;
+    return this.client.canModerate(this.authorId, targetId, this.spaceId);
+  }
+
   async kick(userId: Snowflake, reason?: string): Promise<void> {
     if (!this.spaceId) throw new Error('kick() requires a space context');
+    if (!this.client.canModerate(this.client.user?.id ?? this.authorId, userId, this.spaceId)) {
+      throw new Error('Cannot moderate this member (role hierarchy)');
+    }
     await this.client.rest.kickMember(this.spaceId, userId);
   }
 
   async ban(userId: Snowflake, reason?: string): Promise<void> {
     if (!this.spaceId) throw new Error('ban() requires a space context');
+    if (!this.client.canModerate(this.client.user?.id ?? this.authorId, userId, this.spaceId)) {
+      throw new Error('Cannot moderate this member (role hierarchy)');
+    }
     await this.client.rest.banMember(this.spaceId, userId, reason);
   }
 
