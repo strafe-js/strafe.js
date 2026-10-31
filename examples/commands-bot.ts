@@ -5,6 +5,7 @@ const client = new Client({
   gatewayUrl: process.env.STRAFE_GATEWAY || 'wss://app.strafe.chat/gateway/events',
   prefix: ['!', '?'],
   owners: (process.env.OWNERS || '').split(',').filter(Boolean),
+  autoFetchMembersOnReady: true,
 });
 
 client.commands.registerAll([
@@ -55,6 +56,10 @@ client.commands.registerAll([
         await ctx.reply('You cannot kick yourself.');
         return;
       }
+      if (!ctx.canModerate(targetId)) {
+        await ctx.reply('You cannot moderate that member (role hierarchy).');
+        return;
+      }
       await ctx.kick(targetId, reason);
       await ctx.reply(`Kicked <@${targetId}> — ${reason}`);
     },
@@ -80,6 +85,10 @@ client.commands.registerAll([
       }
       if (targetId === ctx.authorId) {
         await ctx.reply('You cannot ban yourself.');
+        return;
+      }
+      if (!ctx.canModerate(targetId)) {
+        await ctx.reply('You cannot moderate that member (role hierarchy).');
         return;
       }
       await ctx.ban(targetId, reason);
@@ -126,7 +135,7 @@ client.on('ready', async (payload) => {
   try {
     client.gateway.setActivity({ name: 'moderating spaces', type: 'playing' });
   } catch {
-    /* ignore */
+    /* ignore until Activity op lands */
   }
   for (const id of client.spaces.keys()) {
     try {
