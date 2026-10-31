@@ -11,6 +11,7 @@ import { StrafeError } from '@strafe-js/util';
 const DEFAULT_AUTHORIZE_URL = 'https://app.strafe.chat/oauth2/authorize';
 const DEFAULT_API_BASE_URL = 'https://app.strafe.chat/api';
 
+/** Thrown when the token or authorize endpoints return a non-2xx response. */
 export class OAuth2Error extends StrafeError {
   constructor(message: string, status: number, body?: unknown) {
     super(message, status, undefined, body);
@@ -21,17 +22,22 @@ export class OAuth2Error extends StrafeError {
 export interface OAuth2ClientOptions {
   clientId: string;
   clientSecret: string;
+  /** Must match a redirect URI registered on the application. */
   redirectUri: string;
-  /** Full authorize URL. Defaults to `https://app.strafe.chat/oauth2/authorize`. */
   authorizeUrl?: string;
-  /** REST API base. Defaults to `https://app.strafe.chat/api`. */
   apiBaseUrl?: string;
+  /** Override for tests / custom runtimes. Defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
 
 /**
- * Server-side OAuth2 helper (authorization code grant).
- * Ported from aunnux/strafechatbot.js — client secret must never ship to browsers.
+ * Server-side OAuth2 (authorization code). Keep the client secret off the browser.
+ *
+ * Typical flow:
+ * 1. `generateState()` → store in session
+ * 2. redirect to `getAuthorizationUrl({ state, scope })`
+ * 3. on callback, verify state, then `exchangeCode(code)`
+ * 4. use `getUser(access_token)` (or refresh later)
  */
 export class OAuth2Client {
   readonly clientId: string;
@@ -43,17 +49,17 @@ export class OAuth2Client {
 
   constructor(opts: OAuth2ClientOptions) {
     if (typeof opts.clientId !== 'string' || !opts.clientId.trim()) {
-      throw new TypeError('A Strafe OAuth client ID is required');
+      throw new TypeError('clientId is required');
     }
     if (typeof opts.clientSecret !== 'string' || !opts.clientSecret.trim()) {
-      throw new TypeError('A Strafe OAuth client secret is required');
+      throw new TypeError('clientSecret is required');
     }
     if (typeof opts.redirectUri !== 'string' || !opts.redirectUri.trim()) {
-      throw new TypeError('A Strafe OAuth redirect URI is required');
+      throw new TypeError('redirectUri is required');
     }
     const fetchImpl = opts.fetchImpl ?? globalThis.fetch;
     if (typeof fetchImpl !== 'function') {
-      throw new TypeError('A Fetch API implementation is required');
+      throw new TypeError('fetch is required');
     }
 
     this.clientId = opts.clientId;
@@ -64,7 +70,7 @@ export class OAuth2Client {
     this.fetch = fetchImpl.bind(globalThis);
   }
 
-  /** Cryptographically random `state` for CSRF protection (store in session). */
+  /** Random state for CSRF checks — store it in the user session. */
   generateState(): string {
     return randomBytes(32).toString('base64url');
   }
@@ -74,7 +80,7 @@ export class OAuth2Client {
     state: string;
   }): string {
     if (typeof opts.state !== 'string' || !opts.state) {
-      throw new TypeError('A per-request OAuth state value is required');
+      throw new TypeError('state is required');
     }
     const requested = Array.isArray(opts.scope)
       ? opts.scope
@@ -85,7 +91,7 @@ export class OAuth2Client {
       requested.length === 0 ||
       requested.some((v) => typeof v !== 'string' || !v.trim())
     ) {
-      throw new TypeError('At least one valid OAuth scope is required');
+      throw new TypeError('at least one scope is required');
     }
     const scopes = requested.map((v) => String(v).trim());
 
@@ -102,7 +108,7 @@ export class OAuth2Client {
 
   exchangeCode(code: string, opts?: { signal?: AbortSignal }): Promise<OAuth2TokenResponse> {
     if (typeof code !== 'string' || !code) {
-      throw new TypeError('An OAuth authorization code is required');
+      throw new TypeError('code is required');
     }
     return this.tokenRequest(
       {
@@ -119,7 +125,7 @@ export class OAuth2Client {
     opts?: { signal?: AbortSignal },
   ): Promise<OAuth2TokenResponse> {
     if (typeof refreshToken !== 'string' || !refreshToken) {
-      throw new TypeError('An OAuth refresh token is required');
+      throw new TypeError('refreshToken is required');
     }
     return this.tokenRequest(
       {
@@ -132,7 +138,7 @@ export class OAuth2Client {
 
   async revokeToken(token: string, opts?: { signal?: AbortSignal }): Promise<void> {
     if (typeof token !== 'string' || !token) {
-      throw new TypeError('An OAuth token is required');
+      throw new TypeError('token is required');
     }
     await this.formRequest('/oauth2/token/revoke', { token }, opts);
   }
@@ -182,7 +188,7 @@ export class OAuth2Client {
     opts?: { signal?: AbortSignal },
   ): Promise<T> {
     if (typeof accessToken !== 'string' || !accessToken) {
-      throw new TypeError('An OAuth access token is required');
+      throw new TypeError('accessToken is required');
     }
     const url = new URL(path.replace(/^\/+/, ''), `${this.apiBaseUrl}/`);
     const response = await this.fetch(url, {
@@ -197,7 +203,7 @@ export class OAuth2Client {
 
   private async readResponse(response: Response): Promise<unknown> {
     const text = await response.text();
-    let body: unknown = undefined;
+    let body: unknown;
     if (text) {
       try {
         body = JSON.parse(text);
@@ -215,5 +221,5 @@ export class OAuth2Client {
   }
 }
 
-/** Alias matching aunnux/strafechatbot.js naming. */
+/** Same as {@link OAuth2Client} — name used by some older examples. */
 export { OAuth2Client as StrafeOAuth, OAuth2Error as StrafeOAuthError };
