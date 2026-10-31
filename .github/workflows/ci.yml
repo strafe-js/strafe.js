@@ -37,3 +37,6 @@ jobs:
             echo "Building $dir"
             (cd "$dir" && npx tsc -p tsconfig.json)
           done
+
+      - name: Test
+        run: node --import tsx --test tests/**/*.test.ts
